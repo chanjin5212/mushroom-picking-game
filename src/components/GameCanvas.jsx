@@ -143,7 +143,7 @@ const GameCanvas = () => {
     const startAutoAttack = () => {
         performAttack();
         if (attackIntervalRef.current) clearInterval(attackIntervalRef.current);
-        attackIntervalRef.current = setInterval(performAttack, 400);
+        attackIntervalRef.current = setInterval(performAttack, 100);
     };
 
     const stopAutoAttack = () => {

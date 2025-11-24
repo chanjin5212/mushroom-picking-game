@@ -42,7 +42,7 @@ const Shop = () => {
     const nextWeapon = WEAPONS[state.currentWeaponId + 1];
 
     // Enhance Logic
-    const enhanceCost = Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.1);
+    const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.02));
     const enhanceSuccessRate = 100 - (state.weaponLevel * 10);
 
     // Evolve Logic

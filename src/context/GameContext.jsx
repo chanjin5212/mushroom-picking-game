@@ -171,13 +171,14 @@ const gameReducer = (state, action) => {
         case 'TOGGLE_PORTAL_MENU':
             return { ...state, isPortalMenuOpen: !state.isPortalMenuOpen };
 
+
         case 'ADD_GOLD':
             return { ...state, gold: state.gold + action.payload };
 
         case 'ENHANCE_WEAPON': {
             const currentWeapon = WEAPONS[state.currentWeaponId];
-            // Cost: Base Cost * (Level + 1) * 0.1, Minimum 10 Gold
-            const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.1));
+            // Cost: Base Cost * (Level + 1) * 0.02, Minimum 10 Gold
+            const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.02));
 
             if (state.gold < enhanceCost) return state;
 
