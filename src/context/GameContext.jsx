@@ -5,7 +5,7 @@ const GameContext = createContext();
 // Generate 50 weapons procedurally with MASSIVE damage scaling
 const generateWeapons = () => {
     const weaponIcons = ['✊', '🌿', '🗡️', '⚔️', '⛏️', '🔨', '🪓', '🏹', '🔱', '⚡',
-        '🔥', '❄️', '�', '🌟', '👑', '🗿', '⚒️', '🛡️', '🎯', '💫',
+        '🔥', '❄️', '', '🌟', '👑', '🗿', '⚒️', '🛡️', '🎯', '💫',
         '🌙', '☄️', '🌊', '🌪️', '🌈', '🦅', '🐉', '🦁', '🐺', '🦈',
         '🦂', '🕷️', '🐍', '🦎', '🐊', '🦖', '🦕', '🐲', '🔮', '📿',
         '⚗️', '🧪', '💉', '🗝️', '🔐', '⚙️', '🔧', '🔩', '⛓️', '👹'];
@@ -22,7 +22,8 @@ const generateWeapons = () => {
     for (let i = 0; i < 50; i++) {
         // MASSIVE damage scaling: 1, 10, 100, 1000, 10000, 100000...
         const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.5) * 10);
-        const cost = i === 0 ? 0 : Math.floor(Math.pow(10, i * 0.6) * 100);
+        // Cost: First weapon is free to equip, but has a 'value' for enhancement calc
+        const cost = i === 0 ? 100 : Math.floor(Math.pow(10, i * 0.6) * 100);
         const upgradeBonus = Math.max(1, Math.floor(baseDamage * 0.3));
 
         weapons[i] = {
@@ -41,12 +42,13 @@ const WEAPONS = generateWeapons();
 // Generate 1000 maps procedurally with MASSIVE HP and reward scaling
 const generateMaps = () => {
     const maps = {};
+    // 20 different positions for mushrooms spread across the map with better spacing
     const positions = [
-        { x: 120, y: 120 },
-        { x: 300, y: 120 },
-        { x: 210, y: 240 },
-        { x: 180, y: 180 },
-        { x: 150, y: 270 }
+        { x: 60, y: 60 }, { x: 180, y: 60 }, { x: 300, y: 60 }, { x: 420, y: 60 },
+        { x: 60, y: 150 }, { x: 180, y: 150 }, { x: 300, y: 150 }, { x: 420, y: 150 },
+        { x: 60, y: 240 }, { x: 180, y: 240 }, { x: 300, y: 240 }, { x: 420, y: 240 },
+        { x: 60, y: 330 }, { x: 180, y: 330 }, { x: 300, y: 330 }, { x: 420, y: 330 },
+        { x: 120, y: 100 }, { x: 240, y: 200 }, { x: 360, y: 100 }, { x: 120, y: 280 }
     ];
 
     const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팽이버섯', '독버섯', '붉은버섯',
@@ -57,11 +59,11 @@ const generateMaps = () => {
     for (let level = 1; level <= 1000; level++) {
         const mapKey = `map_${level}`;
         const mushrooms = [];
-        const mushroomCount = Math.min(3 + Math.floor(level / 100), 5);
+        const mushroomCount = 20; // Fixed 20 mushrooms per map
 
         for (let i = 0; i < mushroomCount; i++) {
-            // MASSIVE HP scaling: exponential growth
-            const baseHp = Math.floor(Math.pow(10, level * 0.05) * 100);
+            // Adjusted HP scaling: Start lower (20 HP) and scale up
+            const baseHp = Math.floor(20 * Math.pow(1.1, level - 1));
             const baseReward = Math.floor(Math.pow(10, level * 0.04) * 50);
             const pos = positions[i % positions.length];
 
@@ -106,6 +108,8 @@ const initialState = {
     isLoading: false,
     isShopOpen: false,
     isPortalMenuOpen: false,
+    lastEnhanceResult: null,
+    lastEvolveResult: null
 };
 
 // LocalStorage key
@@ -150,7 +154,9 @@ const saveState = (state) => {
 
 const calculateDamage = (weaponId, level) => {
     const weapon = WEAPONS[weaponId];
-    return weapon.baseDamage + (level * weapon.upgradeBonus);
+    // Base damage + (Level * 10% of Base Damage), Minimum +1 per level
+    const bonus = Math.ceil(weapon.baseDamage * 0.1 * level);
+    return weapon.baseDamage + bonus;
 };
 
 const gameReducer = (state, action) => {
@@ -167,31 +173,77 @@ const gameReducer = (state, action) => {
         case 'ADD_GOLD':
             return { ...state, gold: state.gold + action.payload };
 
-        case 'BUY_WEAPON':
-            const nextWeaponId = state.currentWeaponId + 1;
-            if (WEAPONS[nextWeaponId] && state.gold >= WEAPONS[nextWeaponId].cost) {
+        case 'ENHANCE_WEAPON': {
+            const currentWeapon = WEAPONS[state.currentWeaponId];
+            // Cost: Base Cost * (Level + 1) * 0.1, Minimum 10 Gold
+            const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.1));
+
+            if (state.gold < enhanceCost) return state;
+
+            // Success Rate: 100% at lv0 -> 10% at lv9
+            const successRate = 100 - (state.weaponLevel * 10);
+            const isSuccess = Math.random() * 100 < successRate;
+
+            if (isSuccess) {
+                const newLevel = state.weaponLevel + 1;
                 return {
                     ...state,
-                    gold: state.gold - WEAPONS[nextWeaponId].cost,
+                    gold: state.gold - enhanceCost,
+                    weaponLevel: newLevel,
+                    clickDamage: calculateDamage(state.currentWeaponId, newLevel),
+                    lastEnhanceResult: 'success'
+                };
+            } else {
+                return {
+                    ...state,
+                    gold: state.gold - enhanceCost,
+                    lastEnhanceResult: 'fail'
+                };
+            }
+        }
+
+        case 'EVOLVE_WEAPON': {
+            const nextWeaponId = state.currentWeaponId + 1;
+            if (!WEAPONS[nextWeaponId]) return state;
+
+            const evolveCost = WEAPONS[nextWeaponId].cost;
+            if (state.gold < evolveCost) return state;
+
+            // Success Rate: Decreases as tier increases. Min 5%.
+            // Tier 0: 100%, Tier 25: 50%, Tier 45+: 10%
+            const successRate = Math.max(5, 100 - (state.currentWeaponId * 2));
+            const destructionRate = 5; // Fixed 5% destruction chance
+
+            const roll = Math.random() * 100;
+
+            if (roll < successRate) {
+                // Success
+                return {
+                    ...state,
+                    gold: state.gold - evolveCost,
                     currentWeaponId: nextWeaponId,
                     weaponLevel: 0,
-                    clickDamage: calculateDamage(nextWeaponId, 0)
+                    clickDamage: calculateDamage(nextWeaponId, 0),
+                    lastEvolveResult: 'success'
                 };
-            }
-            return state;
-
-        case 'UPGRADE_WEAPON':
-            const currentWeapon = WEAPONS[state.currentWeaponId];
-            const upgradeCost = Math.floor(currentWeapon.baseDamage * 2 * Math.pow(1.3, state.weaponLevel));
-            if (state.gold >= upgradeCost) {
+            } else if (roll < successRate + destructionRate) {
+                // Destruction (Reset to 0)
                 return {
                     ...state,
-                    gold: state.gold - upgradeCost,
-                    weaponLevel: state.weaponLevel + 1,
-                    clickDamage: calculateDamage(state.currentWeaponId, state.weaponLevel + 1)
+                    gold: state.gold - evolveCost,
+                    weaponLevel: 0,
+                    clickDamage: calculateDamage(state.currentWeaponId, 0),
+                    lastEvolveResult: 'destroyed'
+                };
+            } else {
+                // Fail (Just gold lost)
+                return {
+                    ...state,
+                    gold: state.gold - evolveCost,
+                    lastEvolveResult: 'fail'
                 };
             }
-            return state;
+        }
 
         case 'SET_PLAYER_POS':
             return { ...state, playerPos: action.payload };
@@ -236,6 +288,9 @@ const gameReducer = (state, action) => {
                     return m;
                 })
             };
+
+        case 'CLEAR_RESULT_MSG':
+            return { ...state, lastEnhanceResult: null, lastEvolveResult: null };
 
         default:
             return state;

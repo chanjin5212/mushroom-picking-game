@@ -8,6 +8,7 @@ import LoadingScreen from './LoadingScreen';
 const GameCanvas = () => {
     const { state, dispatch } = useGame();
     const containerRef = useRef(null);
+    const [damageNumbers, setDamageNumbers] = useState([]);
 
     // Direct DOM Refs
     const playerDOMRef = useRef(null);
@@ -114,6 +115,21 @@ const GameCanvas = () => {
 
             if (dist < range) {
                 const damage = currentState.clickDamage;
+
+                // Create floating damage number
+                const damageId = Date.now() + Math.random();
+                setDamageNumbers(prev => [...prev, {
+                    id: damageId,
+                    damage: damage,
+                    x: mushroom.x,
+                    y: mushroom.y
+                }]);
+
+                // Remove after animation
+                setTimeout(() => {
+                    setDamageNumbers(prev => prev.filter(d => d.id !== damageId));
+                }, 1000);
+
                 dispatch({ type: 'DAMAGE_MUSHROOM', payload: { id: mushroom.id, damage: damage } });
 
                 if (mushroom.hp - damage <= 0) {
@@ -193,8 +209,6 @@ const GameCanvas = () => {
                 updatePlayerDOM();
 
                 // Portal Logic
-                const centerPos = { x: clientWidth / 2 - 20, y: clientHeight / 2 - 20 };
-
                 if (currentState.currentScene === 'village') {
                     // NPC Proximity Check
                     const distToNpc = Math.hypot((x + 20) - npcPos.x, (y + 20) - npcPos.y);
@@ -216,9 +230,6 @@ const GameCanvas = () => {
                     if (showShopBtn) setShowShopBtn(false);
                     if (showPortalBtn) setShowPortalBtn(false);
                 }
-
-                // Return to village from any other scene - removed proximity detection
-                // Now handled by button click
 
                 // Respawn Check
                 currentState.mushrooms.forEach(m => {
@@ -430,6 +441,28 @@ const GameCanvas = () => {
                 </>
             )}
 
+            {/* Floating Damage Numbers */}
+            {damageNumbers.map(dmg => (
+                <div
+                    key={dmg.id}
+                    style={{
+                        position: 'absolute',
+                        left: dmg.x,
+                        top: dmg.y,
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '24px',
+                        fontWeight: 'bold',
+                        color: '#FFD700',
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)',
+                        pointerEvents: 'none',
+                        animation: 'floatUp 1s ease-out forwards',
+                        zIndex: 1000
+                    }}
+                >
+                    -{dmg.damage.toLocaleString()}
+                </div>
+            ))}
+
             {/* ALWAYS RENDER PLAYER, use opacity to hide. Keeps Ref alive and layout valid. */}
             <div style={{ opacity: state.isLoading ? 0 : 1, transition: 'opacity 0.2s' }}>
                 <Player ref={playerDOMRef} />
@@ -473,6 +506,16 @@ const GameCanvas = () => {
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+                @keyframes floatUp {
+                    0% {
+                        opacity: 1;
+                        transform: translate(-50%, -50%) translateY(0);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translate(-50%, -50%) translateY(-60px);
+                    }
                 }
             `}</style>
         </div>

@@ -1,11 +1,10 @@
 import React from 'react';
 
-const Mushroom = ({ x, y, hp, maxHp, type = 'normal', name }) => {
-    const scale = 0.8 + (hp / maxHp) * 0.2;
+const Mushroom = ({ id, x, y, hp, maxHp, type, name, reward, isDead }) => {
+    if (isDead) return null;
 
-    let capColor = '#8d6e63'; // Brown
-    if (type === 'red') capColor = '#e53935'; // Red
-    if (type === 'boss') capColor = '#5e35b1'; // Purple
+    const hpPercent = (hp / maxHp) * 100;
+    const mushroomEmoji = '🍄';
 
     return (
         <div
@@ -13,67 +12,55 @@ const Mushroom = ({ x, y, hp, maxHp, type = 'normal', name }) => {
                 position: 'absolute',
                 left: x,
                 top: y,
-                width: type === 'boss' ? '100px' : '50px',
-                height: type === 'boss' ? '100px' : '50px',
-                backgroundColor: '#d7ccc8',
-                borderRadius: '40% 40% 10% 10%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                transform: `scale(${scale})`,
-                transition: 'transform 0.1s',
-                zIndex: type === 'boss' ? 5 : 1
+                userSelect: 'none',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none' // Clicks handled by GameCanvas or auto-attack
             }}
         >
-            {/* Name Tag */}
+            {/* Mushroom */}
             <div style={{
-                position: 'absolute',
-                top: -20,
-                whiteSpace: 'nowrap',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: 'white',
-                textShadow: '1px 1px 2px black',
-                pointerEvents: 'none'
+                fontSize: '40px',
+                transition: 'transform 0.1s',
+                filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
             }}>
-                {name}
-            </div>
-
-            {/* Cap */}
-            <div style={{
-                width: '100%',
-                height: '40%',
-                backgroundColor: capColor,
-                borderRadius: '50% 50% 10% 10%',
-                position: 'absolute',
-                top: 0,
-                boxShadow: 'inset 0 -2px 5px rgba(0,0,0,0.2)'
-            }}>
-                {/* Spots for Red/Boss mushrooms */}
-                {(type === 'red' || type === 'boss') && (
-                    <>
-                        <div style={{ position: 'absolute', top: '20%', left: '20%', width: '15%', height: '15%', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.7)' }}></div>
-                        <div style={{ position: 'absolute', top: '40%', right: '25%', width: '20%', height: '20%', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.7)' }}></div>
-                    </>
-                )}
+                {mushroomEmoji}
             </div>
 
             {/* HP Bar */}
             <div style={{
                 position: 'absolute',
-                bottom: -10,
-                width: '80%',
+                top: -10,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '50px',
                 height: '6px',
-                backgroundColor: '#444',
+                background: '#333',
                 borderRadius: '3px',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                border: '1px solid #000'
             }}>
                 <div style={{
-                    width: `${(hp / maxHp) * 100}%`,
+                    width: `${hpPercent}%`,
                     height: '100%',
-                    backgroundColor: '#ef5350',
+                    background: type === 'boss' ? '#9C27B0' : type === 'red' ? '#F44336' : '#4CAF50',
                     transition: 'width 0.2s'
-                }}></div>
+                }} />
+            </div>
+
+            {/* Mushroom Name */}
+            <div style={{
+                position: 'absolute',
+                top: -25,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: '10px',
+                color: 'white',
+                fontWeight: 'bold',
+                textShadow: '1px 1px 2px black',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none'
+            }}>
+                {name}
             </div>
         </div>
     );
