@@ -1,0 +1,62 @@
+:root {
+  /* Cute 2D Color Palette */
+  --color-bg: #e0f7fa; /* Light Cyan for sky/background */
+  --color-grass: #aed581; /* Light Green */
+  --color-grass-dark: #8bc34a;
+  --color-primary: #ff7043; /* Coral for action buttons */
+  --color-secondary: #42a5f5; /* Blue for UI accents */
+  --color-text: #37474f; /* Dark Grey for text */
+  --color-white: #ffffff;
+  --color-panel: rgba(255, 255, 255, 0.9);
+  
+  /* Shadows & Borders */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
+  --border-radius: 12px;
+  --border-radius-round: 50px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', sans-serif; /* Modern, rounded font */
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  overflow: hidden; /* Prevent scrolling for game view */
+  user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Utility Classes */
+.pixel-art {
+  image-rendering: pixelated;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
