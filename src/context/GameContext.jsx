@@ -177,8 +177,8 @@ const gameReducer = (state, action) => {
 
         case 'ENHANCE_WEAPON': {
             const currentWeapon = WEAPONS[state.currentWeaponId];
-            // Cost: Base Cost * (Level + 1) * 0.02, Minimum 10 Gold
-            const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.02));
+            // Cost: Base Cost * (Level + 1) * 0.001, Minimum 10 Gold
+            const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.001));
 
             if (state.gold < enhanceCost) return state;
 
