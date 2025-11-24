@@ -24,6 +24,12 @@ body {
   color: var(--color-text);
   overflow: hidden; /* Prevent scrolling for game view */
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  position: fixed;
+  width: 100%;
+  height: 100%;
 }
 
 #root {

@@ -6,33 +6,30 @@ const PortalMenu = () => {
 
     if (state.currentScene !== 'village' || !state.isPortalMenuOpen) return null;
 
-    // Map metadata with display names and level requirements
-    const mapInfo = {
-        forest_1: { name: '🌲 평화로운 숲', level: 1, requiredWeapon: 0, theme: 'beginner' },
-        forest_2: { name: '🌳 깊은 숲', level: 2, requiredWeapon: 0, theme: 'beginner' },
-        forest_3: { name: '🍄 버섯 숲', level: 3, requiredWeapon: 0, theme: 'beginner' },
-        forest_4: { name: '🌿 독버섯 숲', level: 4, requiredWeapon: 1, theme: 'beginner' },
-        forest_5: { name: '🔴 붉은 숲', level: 5, requiredWeapon: 1, theme: 'beginner' },
+    // Generate map info for 1000 maps
+    const generateMapInfo = () => {
+        const mapInfo = {};
+        for (let level = 1; level <= 1000; level++) {
+            const requiredWeapon = Math.floor(level / 20);
+            const mushroomHP = Math.floor(Math.pow(10, level * 0.05) * 100);
+            const reward = Math.floor(Math.pow(10, level * 0.04) * 50);
 
-        cave_1: { name: '🕳️ 동굴 입구', level: 6, requiredWeapon: 1, theme: 'intermediate' },
-        cave_2: { name: '💎 수정 동굴', level: 7, requiredWeapon: 2, theme: 'intermediate' },
-        cave_3: { name: '❄️ 얼음 동굴', level: 8, requiredWeapon: 2, theme: 'intermediate' },
-        cave_4: { name: '🔥 용암 동굴', level: 9, requiredWeapon: 2, theme: 'intermediate' },
-        cave_5: { name: '⚫ 깊은 동굴', level: 10, requiredWeapon: 2, theme: 'intermediate' },
-
-        mountain_1: { name: '⛰️ 산기슭', level: 11, requiredWeapon: 3, theme: 'advanced' },
-        mountain_2: { name: '🏔️ 고산지대', level: 12, requiredWeapon: 3, theme: 'advanced' },
-        mountain_3: { name: '⚡ 천둥산', level: 13, requiredWeapon: 3, theme: 'advanced' },
-        mountain_4: { name: '🗻 거대산', level: 14, requiredWeapon: 3, theme: 'advanced' },
-        mountain_5: { name: '🏔️ 정상', level: 15, requiredWeapon: 3, theme: 'advanced' },
-
-        abyss_1: { name: '🌑 심연 입구', level: 16, requiredWeapon: 4, theme: 'expert' },
-        abyss_2: { name: '⚫ 공허의 땅', level: 17, requiredWeapon: 4, theme: 'expert' },
-        abyss_3: { name: '👿 타락의 땅', level: 18, requiredWeapon: 4, theme: 'expert' },
-        abyss_4: { name: '😈 악마의 땅', level: 19, requiredWeapon: 4, theme: 'expert' },
-
-        throne: { name: '👑 왕좌의 방', level: 20, requiredWeapon: 4, theme: 'boss' },
+            mapInfo[`map_${level}`] = {
+                name: `🗺️ 레벨 ${level}`,
+                level: level,
+                hp: mushroomHP,
+                reward: reward,
+                requiredWeapon: Math.min(requiredWeapon, 49),
+                theme: level <= 200 ? 'beginner' :
+                    level <= 400 ? 'intermediate' :
+                        level <= 600 ? 'advanced' :
+                            level <= 800 ? 'expert' : 'boss'
+            };
+        }
+        return mapInfo;
     };
+
+    const mapInfo = generateMapInfo();
 
     const handleMapSelect = (mapKey) => {
         const map = mapInfo[mapKey];
@@ -47,7 +44,7 @@ const PortalMenu = () => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
         setTimeout(() => {
-            const centerPos = { x: 400, y: 300 };
+            const centerPos = { x: 210, y: 180 };
             dispatch({ type: 'SWITCH_SCENE', payload: { scene: mapKey, pos: centerPos } });
         }, 500);
     };
@@ -63,6 +60,16 @@ const PortalMenu = () => {
         }
     };
 
+    // Format HP for display
+    const formatHP = (hp) => {
+        if (hp >= 1e15) return `${(hp / 1e15).toFixed(1)}P`;
+        if (hp >= 1e12) return `${(hp / 1e12).toFixed(1)}T`;
+        if (hp >= 1e9) return `${(hp / 1e9).toFixed(1)}B`;
+        if (hp >= 1e6) return `${(hp / 1e6).toFixed(1)}M`;
+        if (hp >= 1e3) return `${(hp / 1e3).toFixed(1)}K`;
+        return hp.toString();
+    };
+
     return (
         <div style={{
             position: 'fixed',
@@ -75,20 +82,20 @@ const PortalMenu = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '20px'
+            padding: '10px'
         }}>
             <div style={{
                 backgroundColor: '#fff',
-                borderRadius: '16px',
-                padding: '20px',
-                maxWidth: '800px',
+                borderRadius: '12px',
+                padding: '15px',
                 width: '100%',
-                maxHeight: '90vh',
+                maxWidth: '500px',
+                maxHeight: '80vh',
                 overflow: 'auto',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ margin: 0, color: '#333' }}>🌀 포탈 선택</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', position: 'sticky', top: 0, background: '#fff', paddingBottom: '10px', borderBottom: '2px solid #eee' }}>
+                    <h2 style={{ margin: 0, color: '#333' }}>🌀 포탈 선택 (1-1000)</h2>
                     <button
                         onClick={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
                         style={{
@@ -104,8 +111,8 @@ const PortalMenu = () => {
 
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                    gap: '12px'
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gap: '8px'
                 }}>
                     {Object.entries(mapInfo).map(([key, info]) => {
                         const isLocked = state.currentWeaponId < info.requiredWeapon;
@@ -117,25 +124,28 @@ const PortalMenu = () => {
                                 onClick={() => handleMapSelect(key)}
                                 disabled={isLocked}
                                 style={{
-                                    padding: '16px',
-                                    borderRadius: '12px',
+                                    padding: '10px',
+                                    borderRadius: '8px',
                                     border: `2px solid ${isLocked ? '#ccc' : themeColor}`,
                                     backgroundColor: isLocked ? '#f5f5f5' : '#fff',
                                     cursor: isLocked ? 'not-allowed' : 'pointer',
                                     transition: 'all 0.2s',
                                     opacity: isLocked ? 0.5 : 1,
-                                    textAlign: 'left'
+                                    textAlign: 'center'
                                 }}
                             >
-                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '8px', color: isLocked ? '#999' : themeColor }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '4px', color: isLocked ? '#999' : themeColor }}>
                                     Lv.{info.level}
                                 </div>
-                                <div style={{ fontSize: '0.95rem', color: isLocked ? '#999' : '#333', marginBottom: '4px' }}>
-                                    {info.name}
+                                <div style={{ fontSize: '0.7rem', color: isLocked ? '#999' : '#666', marginBottom: '2px' }}>
+                                    HP: {formatHP(info.hp)}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: isLocked ? '#999' : '#f9a825', fontWeight: 'bold' }}>
+                                    💰 {formatHP(info.reward)}
                                 </div>
                                 {isLocked && (
-                                    <div style={{ fontSize: '0.75rem', color: '#f44336', marginTop: '8px' }}>
-                                        🔒 무기 {info.requiredWeapon + 1} 필요
+                                    <div style={{ fontSize: '0.65rem', color: '#f44336', marginTop: '4px' }}>
+                                        🔒 무기 {info.requiredWeapon + 1}
                                     </div>
                                 )}
                             </button>
