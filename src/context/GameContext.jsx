@@ -62,8 +62,9 @@ const generateMaps = () => {
         const mushroomCount = 20; // Fixed 20 mushrooms per map
 
         for (let i = 0; i < mushroomCount; i++) {
-            // Adjusted HP scaling: Start lower (20 HP) and scale up
-            const baseHp = Math.floor(20 * Math.pow(1.1, level - 1));
+            // MASSIVE HP scaling: exponential growth
+            // Special case: Level 1 starts very easy (20 HP)
+            const baseHp = level === 1 ? 10 : Math.floor(Math.pow(10, level * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, level * 0.04) * 50);
             const pos = positions[i % positions.length];
 

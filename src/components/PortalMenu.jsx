@@ -11,7 +11,8 @@ const PortalMenu = () => {
         const mapInfo = {};
         for (let level = 1; level <= 1000; level++) {
             const requiredWeapon = Math.floor(level / 20);
-            const mushroomHP = Math.floor(Math.pow(10, level * 0.05) * 100);
+            // Special case: Level 1 starts very easy (20 HP)
+            const mushroomHP = level === 1 ? 10 : Math.floor(Math.pow(10, level * 0.05) * 100);
             const reward = Math.floor(Math.pow(10, level * 0.04) * 50);
 
             mapInfo[`map_${level}`] = {
