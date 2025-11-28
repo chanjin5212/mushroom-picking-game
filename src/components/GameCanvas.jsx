@@ -114,13 +114,28 @@ const GameCanvas = () => {
             const range = mushroom.type === 'boss' ? 120 : 80;
 
             if (dist < range) {
-                const damage = currentState.clickDamage;
+                // Calculate damage with crit and hyper crit chance on each attack
+                const baseDamage = currentState.clickDamage;
+                const isCritical = Math.random() * 100 < currentState.criticalChance;
+                let damage = baseDamage;
+                let isHyperCritical = false;
+
+                if (isCritical) {
+                    damage = Math.floor(baseDamage * (currentState.criticalDamage / 100));
+                    // Check for hyper critical (only if normal crit occurred)
+                    isHyperCritical = Math.random() * 100 < currentState.hyperCriticalChance;
+                    if (isHyperCritical) {
+                        damage = Math.floor(damage * (currentState.hyperCriticalDamage / 100));
+                    }
+                }
 
                 // Create floating damage number
                 const damageId = Date.now() + Math.random();
                 setDamageNumbers(prev => [...prev, {
                     id: damageId,
                     damage: damage,
+                    isCritical: isCritical,
+                    isHyperCritical: isHyperCritical,
                     x: mushroom.x,
                     y: mushroom.y
                 }]);
@@ -324,83 +339,32 @@ const GameCanvas = () => {
                     <div style={{ position: 'absolute', top: 200, left: 300, fontSize: '30px' }}>🌳</div>
                     <div style={{ position: 'absolute', top: 400, left: 100, fontSize: '30px' }}>🌳</div>
 
-                    {/* NPC */}
-                    <div style={{
-                        position: 'absolute',
-                        top: npcPos.y - 30,
-                        left: npcPos.x - 30,
-                        fontSize: '60px',
-                        zIndex: 50,
-                        textAlign: 'center'
-                    }}>
-                        🧙‍♂️
-                        <div style={{ fontSize: '14px', fontWeight: 'bold', background: 'rgba(139, 69, 19, 0.8)', color: 'white', borderRadius: '8px', padding: '4px 8px', marginTop: '5px', border: '2px solid #fff' }}>⚔️ 무기 상인</div>
-                    </div>
 
-                    {/* Shop Interaction Button */}
-                    {showShopBtn && !state.isShopOpen && (
-                        <button
-                            onClick={() => dispatch({ type: 'TOGGLE_SHOP' })}
-                            style={{
-                                position: 'absolute',
-                                top: npcPos.y - 70,
-                                left: npcPos.x - 50,
-                                padding: '10px 16px',
-                                backgroundColor: '#ff9800',
-                                color: 'white',
-                                border: '3px solid white',
-                                borderRadius: '25px',
-                                cursor: 'pointer',
-                                zIndex: 100,
-                                fontWeight: 'bold',
-                                fontSize: '16px',
-                                boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                            }}
-                        >
-                            🛒 상점 열기
-                        </button>
-                    )}
 
-                    {/* Portal */}
-                    <div style={{
-                        position: 'absolute',
-                        top: portalPos.y - 40,
-                        left: portalPos.x - 40,
-                        textAlign: 'center',
-                        zIndex: 50
-                    }}>
-                        <div style={{
-                            fontSize: '80px',
-                            animation: 'spin 3s linear infinite'
-                        }}>
-                            🌀
-                        </div>
-                        <div style={{ fontSize: '14px', fontWeight: 'bold', background: 'rgba(75, 0, 130, 0.8)', color: 'white', borderRadius: '8px', padding: '4px 8px', marginTop: '-10px', border: '2px solid #fff' }}>🚪 포탈</div>
-                    </div>
-
-                    {/* Portal Interaction Button */}
-                    {showPortalBtn && !state.isPortalMenuOpen && (
-                        <button
-                            onClick={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
-                            style={{
-                                position: 'absolute',
-                                top: portalPos.y - 80,
-                                left: portalPos.x - 50,
-                                padding: '10px 16px',
-                                backgroundColor: '#9c27b0',
-                                color: 'white',
-                                border: '3px solid white',
-                                borderRadius: '25px',
-                                cursor: 'pointer',
-                                zIndex: 100,
-                                fontWeight: 'bold',
-                                fontSize: '16px',
-                                boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                            }}
-                        >
-                            🌀 포탈 이동
-                        </button>
-                    )}
+                    {/* Portal Button - Fixed Position */}
+                    <button
+                        onClick={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
+                        style={{
+                            position: 'absolute',
+                            top: 70,
+                            right: 15,
+                            padding: '8px 16px',
+                            backgroundColor: '#9c27b0',
+                            color: 'white',
+                            border: '2px solid white',
+                            borderRadius: '20px',
+                            cursor: 'pointer',
+                            zIndex: 100,
+                            fontWeight: 'bold',
+                            fontSize: '0.85rem',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }}
+                    >
+                        🌀 포탈
+                    </button>
                 </>
             )}
 
@@ -414,25 +378,24 @@ const GameCanvas = () => {
                         }}
                         style={{
                             position: 'absolute',
-                            top: 20,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            padding: '12px 24px',
+                            top: 70,
+                            right: 15,
+                            padding: '8px 16px',
                             backgroundColor: '#4caf50',
                             color: 'white',
-                            border: '3px solid white',
-                            borderRadius: '25px',
+                            border: '2px solid white',
+                            borderRadius: '20px',
                             cursor: 'pointer',
                             zIndex: 100,
                             fontWeight: 'bold',
-                            fontSize: '16px',
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                            fontSize: '0.85rem',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px'
+                            gap: '5px'
                         }}
                     >
-                        🏠 마을로 돌아가기
+                        🏠 마을
                     </button>
 
                     {state.mushrooms.map(m => !m.isDead && (
@@ -450,9 +413,9 @@ const GameCanvas = () => {
                         left: dmg.x,
                         top: dmg.y,
                         transform: 'translate(-50%, -50%)',
-                        fontSize: '24px',
+                        fontSize: dmg.isHyperCritical ? '40px' : (dmg.isCritical ? '32px' : '24px'),
                         fontWeight: 'bold',
-                        color: '#FFD700',
+                        color: dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700'),
                         textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)',
                         pointerEvents: 'none',
                         animation: 'floatUp 1s ease-out forwards',

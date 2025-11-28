@@ -1,4 +1,5 @@
-import React, { createContext, useReducer, useContext, useEffect } from 'react';
+import React, { createContext, useReducer, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 const GameContext = createContext();
 
@@ -23,7 +24,8 @@ const generateWeapons = () => {
         // MASSIVE damage scaling: 1, 10, 100, 1000, 10000, 100000...
         const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.5) * 10);
         // Cost: First weapon is free to equip, but has a 'value' for enhancement calc
-        const cost = i === 0 ? 100 : Math.floor(Math.pow(10, i * 0.6) * 100);
+        // Reduced to 1/3 for more affordable evolution
+        const cost = i === 0 ? 100 : Math.floor(Math.pow(10, i * 0.6) * 100 / 3);
         const upgradeBonus = Math.max(1, Math.floor(baseDamage * 0.3));
 
         weapons[i] = {
@@ -42,13 +44,12 @@ const WEAPONS = generateWeapons();
 // Generate 1000 maps procedurally with MASSIVE HP and reward scaling
 const generateMaps = () => {
     const maps = {};
-    // 20 different positions for mushrooms spread across the map with better spacing
+    // 20 different positions for mushrooms in a 5x4 grid with better spacing
     const positions = [
-        { x: 60, y: 60 }, { x: 180, y: 60 }, { x: 300, y: 60 }, { x: 420, y: 60 },
-        { x: 60, y: 150 }, { x: 180, y: 150 }, { x: 300, y: 150 }, { x: 420, y: 150 },
-        { x: 60, y: 240 }, { x: 180, y: 240 }, { x: 300, y: 240 }, { x: 420, y: 240 },
-        { x: 60, y: 330 }, { x: 180, y: 330 }, { x: 300, y: 330 }, { x: 420, y: 330 },
-        { x: 120, y: 100 }, { x: 240, y: 200 }, { x: 360, y: 100 }, { x: 120, y: 280 }
+        { x: 40, y: 120 }, { x: 120, y: 120 }, { x: 200, y: 120 }, { x: 280, y: 120 }, { x: 360, y: 120 },
+        { x: 40, y: 220 }, { x: 120, y: 220 }, { x: 200, y: 220 }, { x: 280, y: 220 }, { x: 360, y: 220 },
+        { x: 40, y: 320 }, { x: 120, y: 320 }, { x: 200, y: 320 }, { x: 280, y: 320 }, { x: 360, y: 320 },
+        { x: 40, y: 420 }, { x: 120, y: 420 }, { x: 200, y: 420 }, { x: 280, y: 420 }, { x: 360, y: 420 }
     ];
 
     const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팽이버섯', '독버섯', '붉은버섯',
@@ -98,6 +99,7 @@ const generateMaps = () => {
 const MAP_DATA = generateMaps();
 
 const initialState = {
+    user: null, // Add user state
     gold: 0,
     currentWeaponId: 0,
     weaponLevel: 0,
@@ -110,32 +112,31 @@ const initialState = {
     isShopOpen: false,
     isPortalMenuOpen: false,
     lastEnhanceResult: null,
-    lastEvolveResult: null
+    lastEvolveResult: null,
+    // New Stats
+    criticalChance: 0, // 0%
+    criticalDamage: 150, // 150%
+    hyperCriticalChance: 0, // 0% (unlocked at 50% crit)
+    hyperCriticalDamage: 200, // 200% (multiplies on top of crit)
+    statLevels: {
+        critChance: 0,
+        critDamage: 0,
+        hyperCritChance: 0,
+        hyperCritDamage: 0
+    }
 };
 
 // LocalStorage key
 const SAVE_KEY = 'mushroom_game_save';
 
+// Removed local storage load logic for now, will rely on auth
 const loadSavedState = () => {
-    try {
-        const saved = localStorage.getItem(SAVE_KEY);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            return {
-                ...initialState,
-                ...parsed,
-                isLoading: false,
-                isShopOpen: false,
-                isPortalMenuOpen: false
-            };
-        }
-    } catch (error) {
-        console.error('Failed to load save:', error);
-    }
     return initialState;
 };
 
-const saveState = (state) => {
+const saveState = async (state) => {
+    if (!state.user) return; // Don't save if not logged in
+
     try {
         const toSave = {
             gold: state.gold,
@@ -145,23 +146,62 @@ const saveState = (state) => {
             moveSpeed: state.moveSpeed,
             playerPos: state.playerPos,
             currentScene: state.currentScene,
-            mushrooms: state.mushrooms
+            mushrooms: state.mushrooms,
+            // Save new stats
+            criticalChance: state.criticalChance,
+            criticalDamage: state.criticalDamage,
+            hyperCriticalChance: state.hyperCriticalChance,
+            hyperCriticalDamage: state.hyperCriticalDamage,
+            statLevels: state.statLevels
         };
+
+        // Save to Supabase
+        const { error } = await supabase
+            .from('users')
+            .update({ game_data: toSave })
+            .eq('id', state.user.id);
+
+        if (error) console.error('Failed to save to Supabase:', error);
+
+        // Also keep local backup
         localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
     } catch (error) {
         console.error('Failed to save:', error);
     }
 };
 
+// Calculate pure weapon damage (no critical)
 const calculateDamage = (weaponId, level) => {
     const weapon = WEAPONS[weaponId];
     // Base damage + (Level * 10% of Base Damage), Minimum +1 per level
     const bonus = Math.ceil(weapon.baseDamage * 0.1 * level);
-    return weapon.baseDamage + bonus;
+    const damage = weapon.baseDamage + bonus;
+    return damage;
 };
 
 const gameReducer = (state, action) => {
     switch (action.type) {
+        case 'SET_USER':
+            return { ...state, user: action.payload };
+
+        case 'LOAD_GAME_DATA':
+            return {
+                ...state,
+                ...action.payload,
+                // Force spawn at village on load
+                currentScene: 'village',
+                playerPos: { x: 400, y: 300 },
+                isLoading: false,
+                isShopOpen: false,
+                isPortalMenuOpen: false
+            };
+
+        case 'LOGOUT':
+            return {
+                ...initialState,
+                user: null
+            };
+
         case 'SET_LOADING':
             return { ...state, isLoading: action.payload };
 
@@ -247,6 +287,45 @@ const gameReducer = (state, action) => {
             }
         }
 
+        case 'UPGRADE_STAT': {
+            const { statType, cost } = action.payload;
+            if (state.gold < cost) return state;
+
+            let newState = { ...state, gold: state.gold - cost };
+
+            if (statType === 'critChance') {
+                if (state.statLevels.critChance >= 100) return state;
+                newState.criticalChance = state.criticalChance + 1;
+                newState.statLevels = {
+                    ...state.statLevels,
+                    critChance: state.statLevels.critChance + 1
+                };
+            } else if (statType === 'critDamage') {
+                newState.criticalDamage = state.criticalDamage + 10;
+                newState.statLevels = {
+                    ...state.statLevels,
+                    critDamage: state.statLevels.critDamage + 1
+                };
+            } else if (statType === 'hyperCritChance') {
+                if (state.statLevels.critChance < 100) return state; // Must have 100 crit levels first
+                if (state.hyperCriticalChance >= 50) return state;
+                newState.hyperCriticalChance = state.hyperCriticalChance + 1;
+                newState.statLevels = {
+                    ...state.statLevels,
+                    hyperCritChance: state.statLevels.hyperCritChance + 1
+                };
+            } else if (statType === 'hyperCritDamage') {
+                if (state.statLevels.critChance < 100) return state; // Must have 100 crit levels first
+                newState.hyperCriticalDamage = state.hyperCriticalDamage + 10;
+                newState.statLevels = {
+                    ...state.statLevels,
+                    hyperCritDamage: state.statLevels.hyperCritDamage + 1
+                };
+            }
+
+            return newState;
+        }
+
         case 'SET_PLAYER_POS':
             return { ...state, playerPos: action.payload };
 
@@ -300,14 +379,143 @@ const gameReducer = (state, action) => {
 };
 
 export const GameProvider = ({ children }) => {
-    const [state, dispatch] = useReducer(gameReducer, initialState, loadSavedState);
+    const [state, dispatch] = useReducer(gameReducer, initialState);
 
+    // Removed auto-save - now manual save only
+
+    // Restore session on mount
     useEffect(() => {
-        saveState(state);
-    }, [state]);
+        const restoreSession = async () => {
+            const storedUser = localStorage.getItem('mushroom_user');
+            if (!storedUser) return;
+
+            try {
+                const user = JSON.parse(storedUser);
+                dispatch({ type: 'SET_LOADING', payload: true });
+
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (data && !error) {
+                    dispatch({ type: 'SET_USER', payload: { id: data.id, username: data.username } });
+                    if (data.game_data) {
+                        dispatch({ type: 'LOAD_GAME_DATA', payload: data.game_data });
+                    }
+                } else {
+                    localStorage.removeItem('mushroom_user');
+                }
+            } catch (err) {
+                console.error('Failed to restore session:', err);
+                localStorage.removeItem('mushroom_user');
+            } finally {
+                dispatch({ type: 'SET_LOADING', payload: false });
+            }
+        };
+
+        restoreSession();
+    }, []);
+
+    const login = async (username, password) => {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .eq('password', password) // Simple plaintext check as requested
+                .single();
+
+            if (error) throw new Error('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
+            if (!data) throw new Error('로그인 실패: 사용자를 찾을 수 없습니다.');
+
+            const user = { id: data.id, username: data.username };
+            localStorage.setItem('mushroom_user', JSON.stringify(user));
+            dispatch({ type: 'SET_USER', payload: user });
+
+            if (data.game_data) {
+                dispatch({ type: 'LOAD_GAME_DATA', payload: data.game_data });
+            }
+        } catch (error) {
+            console.error(error);
+            throw error;
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }
+    };
+
+    const signup = async (username, password) => {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        try {
+            // Check if user exists
+            const { data: existing } = await supabase
+                .from('users')
+                .select('id')
+                .eq('username', username)
+                .single();
+
+            if (existing) throw new Error('이미 존재하는 아이디입니다.');
+
+            // Create new user
+            const { data, error } = await supabase
+                .from('users')
+                .insert([
+                    {
+                        username,
+                        password, // Storing plaintext as requested/implied by "custom auth" without backend
+                        game_data: {
+                            gold: 0,
+                            currentWeaponId: 0,
+                            weaponLevel: 0,
+                            clickDamage: 1,
+                            moveSpeed: 5,
+                            playerPos: { x: 400, y: 300 },
+                            currentScene: 'village',
+                            mushrooms: [],
+                            criticalChance: 0,
+                            criticalDamage: 150,
+                            hyperCriticalChance: 0,
+                            hyperCriticalDamage: 200,
+                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 }
+                        }
+                    }
+                ])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+
+
+            const user = { id: data.id, username: data.username };
+            localStorage.setItem('mushroom_user', JSON.stringify(user));
+            dispatch({ type: 'SET_USER', payload: user });
+            // Initial state is already set in reducer default, so no need to load game data for new user
+        } catch (error) {
+            console.error(error);
+            throw error;
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: false });
+        }
+    };
+
+    const logout = () => {
+        localStorage.removeItem('mushroom_user');
+        dispatch({ type: 'LOGOUT' });
+    };
+
+    const manualSave = () => {
+        if (state.user) {
+            saveState(state);
+            return true;
+        }
+        return false;
+    };
 
     return (
-        <GameContext.Provider value={{ state, dispatch, WEAPONS }}>
+        <GameContext.Provider value={{ state, dispatch, WEAPONS, login, signup, logout, manualSave, isLoading: state.isLoading }}>
             {children}
         </GameContext.Provider>
     );

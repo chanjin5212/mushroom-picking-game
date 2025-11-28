@@ -1,0 +1,445 @@
+import React, { useState, useRef } from 'react';
+import { useGame } from '../context/GameContext';
+
+const BottomPanel = () => {
+    const { state, dispatch, WEAPONS } = useGame();
+    const [isOpen, setIsOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stats'
+
+    // For hold-to-repeat functionality
+    const holdIntervalRef = useRef(null);
+    const holdTimeoutRef = useRef(null);
+
+    const currentWeapon = WEAPONS[state.currentWeaponId];
+    const nextWeapon = WEAPONS[state.currentWeaponId + 1];
+
+    // Enhance Logic
+    const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.001));
+    const enhanceSuccessRate = 100 - (state.weaponLevel * 10);
+
+    // Evolve Logic
+    const evolveCost = nextWeapon ? nextWeapon.cost : 0;
+    const evolveSuccessRate = Math.max(5, 100 - (state.currentWeaponId * 2));
+    const destructionRate = 5;
+
+    // Stat Upgrade Logic - with safe defaults
+    const critChanceCost = Math.floor(1000 * Math.pow((state.statLevels?.critChance || 0) + 1, 1.5));
+    const critDamageCost = Math.floor(500 * Math.pow((state.statLevels?.critDamage || 0) + 1, 1.2));
+    const hyperCritChanceCost = Math.floor(5000 * Math.pow((state.statLevels?.hyperCritChance || 0) + 1, 1.8));
+    const hyperCritDamageCost = Math.floor(2500 * Math.pow((state.statLevels?.hyperCritDamage || 0) + 1, 1.5));
+
+    const handleEnhance = () => {
+        if (state.gold >= enhanceCost) {
+            dispatch({ type: 'ENHANCE_WEAPON' });
+        }
+    };
+
+    const handleEvolve = () => {
+        if (nextWeapon && state.gold >= evolveCost) {
+            dispatch({ type: 'EVOLVE_WEAPON' });
+        }
+    };
+
+    const handleUpgradeStat = (statType) => {
+        let cost;
+        if (statType === 'critChance') cost = critChanceCost;
+        else if (statType === 'critDamage') cost = critDamageCost;
+        else if (statType === 'hyperCritChance') cost = hyperCritChanceCost;
+        else if (statType === 'hyperCritDamage') cost = hyperCritDamageCost;
+
+        if (state.gold >= cost) {
+            dispatch({ type: 'UPGRADE_STAT', payload: { statType, cost } });
+        }
+    };
+
+    // Hold to repeat handlers
+    const startHold = (action) => {
+        // Execute immediately
+        action();
+
+        // Start repeating after 500ms delay
+        holdTimeoutRef.current = setTimeout(() => {
+            holdIntervalRef.current = setInterval(() => {
+                action();
+            }, 100); // Repeat every 100ms
+        }, 500);
+    };
+
+    const stopHold = () => {
+        if (holdTimeoutRef.current) {
+            clearTimeout(holdTimeoutRef.current);
+            holdTimeoutRef.current = null;
+        }
+        if (holdIntervalRef.current) {
+            clearInterval(holdIntervalRef.current);
+            holdIntervalRef.current = null;
+        }
+    };
+
+    return (
+        <div style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: '60vh',
+            backgroundColor: 'rgba(30, 30, 30, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderTopLeftRadius: '20px',
+            borderTopRightRadius: '20px',
+            transform: isOpen ? 'translateY(0)' : 'translateY(calc(100% - 40px))',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            zIndex: 1000,
+            color: 'white',
+            boxShadow: '0 -5px 20px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            {/* Handle / Toggle Button */}
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    height: '40px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    borderTopLeftRadius: '20px',
+                    borderTopRightRadius: '20px'
+                }}
+            >
+                <div style={{
+                    width: '40px',
+                    height: '4px',
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                    borderRadius: '2px'
+                }} />
+                <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#aaa' }}>
+                    {isOpen ? '▼ Close' : '▲ Upgrade'}
+                </span>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <button
+                    onClick={() => setActiveTab('weapon')}
+                    style={{
+                        flex: 1,
+                        padding: '15px',
+                        background: activeTab === 'weapon' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        border: 'none',
+                        color: activeTab === 'weapon' ? '#fff' : '#888',
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    ⚔️ Weapon
+                </button>
+                <button
+                    onClick={() => setActiveTab('stats')}
+                    style={{
+                        flex: 1,
+                        padding: '15px',
+                        background: activeTab === 'stats' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        border: 'none',
+                        color: activeTab === 'stats' ? '#fff' : '#888',
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    📊 Stats
+                </button>
+            </div>
+
+            {/* Content Area */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                {activeTab === 'weapon' && (
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '10px' }}>{currentWeapon.icon}</div>
+                        <h2 style={{ margin: '0 0 5px 0' }}>{currentWeapon.name} <span style={{ color: '#4caf50' }}>+{state.weaponLevel}</span></h2>
+                        <p style={{ color: '#aaa', margin: '0 0 20px 0' }}>Damage: {state.clickDamage.toLocaleString()}</p>
+
+                        {state.weaponLevel < 10 ? (
+                            <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <span>Success Rate: <span style={{ color: '#4caf50' }}>{enhanceSuccessRate}%</span></span>
+                                    <span>Cost: <span style={{ color: '#ffeb3b' }}>{enhanceCost.toLocaleString()} G</span></span>
+                                </div>
+                                <button
+                                    onMouseDown={() => startHold(handleEnhance)}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(handleEnhance)}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < enhanceCost}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        backgroundColor: state.gold >= enhanceCost ? '#2196f3' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '1rem',
+                                        fontWeight: 'bold',
+                                        cursor: state.gold >= enhanceCost ? 'pointer' : 'not-allowed'
+                                    }}
+                                >
+                                    Enhance Weapon (Hold to repeat)
+                                </button>
+                            </div>
+                        ) : nextWeapon ? (
+                            <div style={{ backgroundColor: 'rgba(255,152,0,0.1)', padding: '15px', borderRadius: '10px', border: '1px solid rgba(255,152,0,0.3)' }}>
+                                <h3 style={{ color: '#ff9800', margin: '0 0 10px 0' }}>Evolution Available!</h3>
+                                <div style={{ marginBottom: '10px', fontSize: '0.9rem' }}>
+                                    <div>Next: {nextWeapon.icon} {nextWeapon.name}</div>
+                                    <div>Success: {evolveSuccessRate}% | Break: {destructionRate}%</div>
+                                    <div>Cost: <span style={{ color: '#ffeb3b' }}>{evolveCost.toLocaleString()} G</span></div>
+                                </div>
+                                <button
+                                    onClick={handleEvolve}
+                                    disabled={state.gold < evolveCost}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        backgroundColor: state.gold >= evolveCost ? '#9c27b0' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '1rem',
+                                        fontWeight: 'bold',
+                                        cursor: state.gold >= evolveCost ? 'pointer' : 'not-allowed'
+                                    }}
+                                >
+                                    Evolve Weapon
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ color: '#aaa' }}>Max Tier Reached!</div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'stats' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        {/* Crit Chance */}
+                        <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>🎯 Critical Chance</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Level: {state.statLevels?.critChance || 0}/100 ({state.criticalChance}%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4caf50' }}>
+                                    Lv.{state.statLevels?.critChance || 0}
+                                </div>
+                            </div>
+                            {(state.statLevels?.critChance || 0) < 100 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('critChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('critChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < critChanceCost}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= critChanceCost ? '#4caf50' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= critChanceCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>Upgrade (+1%) - Hold to repeat</span>
+                                    <span style={{ color: '#ffeb3b' }}>{critChanceCost.toLocaleString()} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>MAXED OUT</div>
+                            )}
+                        </div>
+
+                        {/* Crit Damage */}
+                        <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 Critical Damage</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.criticalDamage}%</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f44336' }}>
+                                    Lv.{state.statLevels?.critDamage || 0}
+                                </div>
+                            </div>
+                            <button
+                                onMouseDown={() => startHold(() => handleUpgradeStat('critDamage'))}
+                                onMouseUp={stopHold}
+                                onMouseLeave={stopHold}
+                                onTouchStart={() => startHold(() => handleUpgradeStat('critDamage'))}
+                                onTouchEnd={stopHold}
+                                disabled={state.gold < critDamageCost}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    backgroundColor: state.gold >= critDamageCost ? '#f44336' : '#555',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: state.gold >= critDamageCost ? 'pointer' : 'not-allowed',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <span>Upgrade (+10%) - Hold to repeat</span>
+                                <span style={{ color: '#ffeb3b' }}>{critDamageCost.toLocaleString()} G</span>
+                            </button>
+                        </div>
+
+                        {/* Hyper Critical Section - Always visible, locked until level 100 crit */}
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '10px',
+                            background: (state.statLevels?.critChance || 0) >= 100 ? 'linear-gradient(90deg, #ff6b6b, #ff8e53)' : 'rgba(100,100,100,0.3)',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            marginBottom: '10px',
+                            opacity: (state.statLevels?.critChance || 0) >= 100 ? 1 : 0.5
+                        }}>
+                            {(state.statLevels?.critChance || 0) >= 100 ? '⚡ HYPER CRITICAL UNLOCKED ⚡' : '🔒 HYPER CRITICAL (Unlock at Crit Lv.100)'}
+                        </div>
+
+                        {/* Hyper Crit Chance */}
+                        <div style={{
+                            backgroundColor: 'rgba(255,107,107,0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255,107,107,0.3)',
+                            opacity: (state.statLevels?.critChance || 0) >= 100 ? 1 : 0.5,
+                            position: 'relative'
+                        }}>
+                            {(state.statLevels?.critChance || 0) < 100 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '3rem',
+                                    zIndex: 10
+                                }}>
+                                    🔒
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>⚡ Hyper Crit Chance</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.hyperCriticalChance}% (Max 50%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff6b6b' }}>
+                                    Lv.{state.statLevels?.hyperCritChance || 0}
+                                </div>
+                            </div>
+                            {state.hyperCriticalChance < 50 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('hyperCritChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < hyperCritChanceCost || (state.statLevels?.critChance || 0) < 100}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 100) ? '#ff6b6b' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 100) ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>Upgrade (+1%) - Hold to repeat</span>
+                                    <span style={{ color: '#ffeb3b' }}>{hyperCritChanceCost.toLocaleString()} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#ff6b6b', fontWeight: 'bold' }}>MAXED OUT</div>
+                            )}
+                        </div>
+
+                        {/* Hyper Crit Damage */}
+                        <div style={{
+                            backgroundColor: 'rgba(255,107,107,0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255,107,107,0.3)',
+                            opacity: (state.statLevels?.critChance || 0) >= 100 ? 1 : 0.5,
+                            position: 'relative'
+                        }}>
+                            {(state.statLevels?.critChance || 0) < 100 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '3rem',
+                                    zIndex: 10
+                                }}>
+                                    🔒
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 Hyper Crit Damage</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.hyperCriticalDamage}%</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff8e53' }}>
+                                    Lv.{state.statLevels?.hyperCritDamage || 0}
+                                </div>
+                            </div>
+                            <button
+                                onMouseDown={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
+                                onMouseUp={stopHold}
+                                onMouseLeave={stopHold}
+                                onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
+                                onTouchEnd={stopHold}
+                                disabled={state.gold < hyperCritDamageCost || (state.statLevels?.critChance || 0) < 100}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    backgroundColor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 100) ? '#ff8e53' : '#555',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 100) ? 'pointer' : 'not-allowed',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <span>Upgrade (+10%) - Hold to repeat</span>
+                                <span style={{ color: '#ffeb3b' }}>{hyperCritDamageCost.toLocaleString()} G</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default BottomPanel;
