@@ -19,20 +19,25 @@ const GameCanvas = () => {
     const keysRef = useRef({});
     const joystickRef = useRef({ x: 0, y: 0 });
     const requestRef = useRef();
-    const attackIntervalRef = useRef(null);
+    // Removed attackIntervalRef, using game loop for attacks
+    const lastAttackTimeRef = useRef(0);
+    const isManualAttackingRef = useRef(false);
 
     // Game Loop Logic (Ref-based to avoid stale closures)
     const loopRef = useRef();
     const lastFrameTimeRef = useRef(Date.now());
     const watchdogRef = useRef(null);
 
-    // NPC Logic - will be positioned dynamically based on container size
+    // NPC Logic
     const [npcPos, setNpcPos] = useState({ x: 250, y: 250 });
     const [showShopBtn, setShowShopBtn] = useState(false);
 
-    // Portal Logic - positioned dynamically
+    // Portal Logic
     const [portalPos, setPortalPos] = useState({ x: 600, y: 300 });
-    const [showPortalBtn, setShowPortalBtn] = useState(false);
+
+    // Auto Hunt State
+    const [isAutoHunting, setIsAutoHunting] = useState(false);
+    const autoHuntTargetRef = useRef(null);
 
     // Update NPC and Portal positions based on container size
     useEffect(() => {
@@ -57,10 +62,7 @@ const GameCanvas = () => {
     // Force Position Update ONLY when Loading Finishes
     useEffect(() => {
         if (!state.isLoading) {
-            // Sync local ref with global state when loading finishes
             playerPosRef.current = { ...state.playerPos };
-
-            // Force DOM update immediately
             if (playerDOMRef.current) {
                 playerDOMRef.current.style.transform = `translate(${state.playerPos.x}px, ${state.playerPos.y}px)`;
             }
@@ -114,7 +116,7 @@ const GameCanvas = () => {
             const range = mushroom.type === 'boss' ? 120 : 80;
 
             if (dist < range) {
-                // Calculate damage with crit and hyper crit chance on each attack
+                // Calculate damage
                 const baseDamage = currentState.clickDamage;
                 const isCritical = Math.random() * 100 < currentState.criticalChance;
                 let damage = baseDamage;
@@ -122,7 +124,6 @@ const GameCanvas = () => {
 
                 if (isCritical) {
                     damage = Math.floor(baseDamage * (currentState.criticalDamage / 100));
-                    // Check for hyper critical (only if normal crit occurred)
                     isHyperCritical = Math.random() * 100 < currentState.hyperCriticalChance;
                     if (isHyperCritical) {
                         damage = Math.floor(damage * (currentState.hyperCriticalDamage / 100));
@@ -140,7 +141,6 @@ const GameCanvas = () => {
                     y: mushroom.y
                 }]);
 
-                // Remove after animation
                 setTimeout(() => {
                     setDamageNumbers(prev => prev.filter(d => d.id !== damageId));
                 }, 1000);
@@ -154,27 +154,28 @@ const GameCanvas = () => {
         });
     };
 
-    // Auto Attack Management
-    const startAutoAttack = () => {
-        performAttack();
-        if (attackIntervalRef.current) clearInterval(attackIntervalRef.current);
-        attackIntervalRef.current = setInterval(performAttack, 100);
+    // Manual Attack Handling
+    const startManualAttack = () => {
+        isManualAttackingRef.current = true;
     };
 
-    const stopAutoAttack = () => {
-        if (attackIntervalRef.current) {
-            clearInterval(attackIntervalRef.current);
-            attackIntervalRef.current = null;
-        }
+    const stopManualAttack = () => {
+        isManualAttackingRef.current = false;
     };
 
     // Spacebar Listeners
     useEffect(() => {
         const handleDown = (e) => {
-            if (e.code === 'Space' && !attackIntervalRef.current) startAutoAttack();
+            if (e.code === 'Space') {
+                e.preventDefault();
+                isManualAttackingRef.current = true;
+            }
         };
         const handleKeyUp = (e) => {
-            if (e.code === 'Space') stopAutoAttack();
+            if (e.code === 'Space') {
+                e.preventDefault();
+                isManualAttackingRef.current = false;
+            }
         };
         window.addEventListener('keydown', handleDown);
         window.addEventListener('keyup', handleKeyUp);
@@ -184,6 +185,12 @@ const GameCanvas = () => {
         };
     }, []);
 
+    // Stop manual attack when auto hunting is toggled (safety)
+    useEffect(() => {
+        if (!isAutoHunting) {
+            autoHuntTargetRef.current = null;
+        }
+    }, [isAutoHunting]);
 
     // Game Loop
     const update = () => {
@@ -210,6 +217,60 @@ const GameCanvas = () => {
                     dy += joystickRef.current.y * speed;
                 }
 
+                let shouldAutoAttack = false;
+
+                // Auto Hunt Logic
+                if (isAutoHunting && currentState.currentScene !== 'village') {
+                    // 1. Find Target
+                    let target = currentState.mushrooms.find(m => m.id === autoHuntTargetRef.current && !m.isDead);
+
+                    if (!target) {
+                        // Find nearest living mushroom
+                        let minDist = Infinity;
+                        currentState.mushrooms.forEach(m => {
+                            if (!m.isDead) {
+                                const mX = m.x + (m.type === 'boss' ? 50 : 25);
+                                const mY = m.y + (m.type === 'boss' ? 50 : 25);
+                                const dist = Math.hypot((x + 20) - mX, (y + 20) - mY);
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    target = m;
+                                }
+                            }
+                        });
+                        if (target) autoHuntTargetRef.current = target.id;
+                    }
+
+                    // 2. Move & Attack
+                    if (target) {
+                        const targetX = target.x + (target.type === 'boss' ? 50 : 25);
+                        const targetY = target.y + (target.type === 'boss' ? 50 : 25);
+                        const dist = Math.hypot((x + 20) - targetX, (y + 20) - targetY);
+                        const range = target.type === 'boss' ? 120 : 80;
+
+                        if (dist > range - 20) {
+                            // Move towards target
+                            const angle = Math.atan2(targetY - (y + 20), targetX - (x + 20));
+                            dx += Math.cos(angle) * speed;
+                            dy += Math.sin(angle) * speed;
+                        }
+
+                        // Auto Hunt Attack Logic handled below in unified attack block
+                        if (dist <= range) {
+                            shouldAutoAttack = true;
+                        }
+                    }
+                }
+
+                // Unified Attack Logic (Manual + Auto)
+                const now = Date.now();
+                if (now - lastAttackTimeRef.current >= 100) { // 100ms cooldown
+                    if (isManualAttackingRef.current || shouldAutoAttack) {
+                        performAttack();
+                        lastAttackTimeRef.current = now;
+                    }
+                }
+
                 x += dx;
                 y += dy;
 
@@ -223,27 +284,16 @@ const GameCanvas = () => {
                 // Direct DOM Update
                 updatePlayerDOM();
 
-                // Portal Logic
+                // Portal Logic (Village only)
                 if (currentState.currentScene === 'village') {
-                    // NPC Proximity Check
                     const distToNpc = Math.hypot((x + 20) - npcPos.x, (y + 20) - npcPos.y);
                     if (distToNpc < 80) {
                         if (!showShopBtn) setShowShopBtn(true);
                     } else {
                         if (showShopBtn) setShowShopBtn(false);
                     }
-
-                    // Portal Proximity Check
-                    const distToPortal = Math.hypot((x + 20) - portalPos.x, (y + 20) - portalPos.y);
-                    if (distToPortal < 100) {
-                        if (!showPortalBtn) setShowPortalBtn(true);
-                    } else {
-                        if (showPortalBtn) setShowPortalBtn(false);
-                    }
                 } else {
-                    // Hide buttons if not in village
                     if (showShopBtn) setShowShopBtn(false);
-                    if (showPortalBtn) setShowPortalBtn(false);
                 }
 
                 // Respawn Check
@@ -260,22 +310,18 @@ const GameCanvas = () => {
         requestRef.current = requestAnimationFrame(loopRef.current);
     };
 
-    // Store the latest update function in a ref
     useEffect(() => {
         loopRef.current = update;
     });
 
-    // Start/Stop Loop & Watchdog
     useEffect(() => {
         const startLoop = () => {
             if (!requestRef.current) {
                 requestRef.current = requestAnimationFrame(loopRef.current);
             }
         };
-
         startLoop();
 
-        // Watchdog: Restart loop if it hangs
         watchdogRef.current = setInterval(() => {
             const timeSinceLastFrame = Date.now() - lastFrameTimeRef.current;
             if (timeSinceLastFrame > 1000) {
@@ -293,29 +339,11 @@ const GameCanvas = () => {
     }, []);
 
     const triggerSceneSwitch = (scene, targetPos) => {
-        // Prevent multiple triggers
         if (stateRef.current.isLoading) return;
-
         dispatch({ type: 'SET_LOADING', payload: true });
-
         setTimeout(() => {
-            keysRef.current = {};
-            joystickRef.current = { x: 0, y: 0 };
-
-            // We update the global state, and let the useEffect sync it back to local ref
             dispatch({ type: 'SWITCH_SCENE', payload: { scene, pos: targetPos } });
-        }, 1000);
-    };
-
-    // Background Color based on scene
-    const getBackgroundColor = () => {
-        if (state.currentScene === 'village') return '#a5d6a7';
-        if (state.currentScene.startsWith('forest')) return '#81c784';
-        if (state.currentScene.startsWith('cave')) return '#424242';
-        if (state.currentScene.startsWith('mountain')) return '#5d4037';
-        if (state.currentScene.startsWith('abyss')) return '#1a1a1a';
-        if (state.currentScene === 'throne') return '#4a148c';
-        return '#a5d6a7';
+        }, 500);
     };
 
     return (
@@ -325,23 +353,34 @@ const GameCanvas = () => {
                 position: 'relative',
                 width: '100%',
                 height: '100%',
-                backgroundColor: getBackgroundColor(),
+                backgroundColor: '#333',
                 overflow: 'hidden',
-                transition: 'background-color 0.5s'
+                touchAction: 'none'
             }}
         >
             {state.isLoading && <LoadingScreen />}
 
-            {/* Village Scene */}
+            {/* Background */}
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundImage: state.currentScene === 'village'
+                    ? 'url("/assets/village_bg.png")'
+                    : 'linear-gradient(#444 1px, transparent 1px), linear-gradient(90deg, #444 1px, transparent 1px)',
+                backgroundSize: state.currentScene === 'village' ? 'cover' : '40px 40px',
+                backgroundPosition: 'center',
+                opacity: state.currentScene === 'village' ? 1 : 0.2
+            }} />
+
+            {/* Village UI */}
             {!state.isLoading && state.currentScene === 'village' && (
                 <>
-                    <div style={{ position: 'absolute', top: 50, left: 100, fontSize: '50px' }}>🏠</div>
-                    <div style={{ position: 'absolute', top: 200, left: 300, fontSize: '30px' }}>🌳</div>
-                    <div style={{ position: 'absolute', top: 400, left: 100, fontSize: '30px' }}>🌳</div>
+                    {/* NPC & Portal Emojis Removed as per request */}
 
-
-
-                    {/* Portal Button - Fixed Position */}
+                    {/* Portal Button - Always visible in village */}
                     <button
                         onClick={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
                         style={{
@@ -426,19 +465,20 @@ const GameCanvas = () => {
                 </div>
             ))}
 
-            {/* ALWAYS RENDER PLAYER, use opacity to hide. Keeps Ref alive and layout valid. */}
+            {/* Player */}
             <div style={{ opacity: state.isLoading ? 0 : 1, transition: 'opacity 0.2s' }}>
                 <Player ref={playerDOMRef} />
             </div>
 
             <Joystick onMove={(vec) => joystickRef.current = vec} />
 
+            {/* Attack Button */}
             <button
-                onMouseDown={startAutoAttack}
-                onMouseUp={stopAutoAttack}
-                onMouseLeave={stopAutoAttack}
-                onTouchStart={(e) => { e.preventDefault(); startAutoAttack(); }}
-                onTouchEnd={(e) => { e.preventDefault(); stopAutoAttack(); }}
+                onMouseDown={(e) => { e.preventDefault(); startManualAttack(); }}
+                onMouseUp={(e) => { e.preventDefault(); stopManualAttack(); }}
+                onMouseLeave={(e) => { e.preventDefault(); stopManualAttack(); }}
+                onTouchStart={(e) => { e.preventDefault(); startManualAttack(); }}
+                onTouchEnd={(e) => { e.preventDefault(); stopManualAttack(); }}
                 style={{
                     position: 'absolute',
                     bottom: 40,
@@ -449,38 +489,54 @@ const GameCanvas = () => {
                     backgroundColor: state.currentScene === 'village' ? '#ccc' : 'var(--color-primary)',
                     border: '4px solid white',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                    color: 'white',
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    zIndex: 100,
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
+                    fontSize: '2rem',
+                    cursor: 'pointer',
                     userSelect: 'none',
-                    transform: 'scale(1)',
-                    transition: 'transform 0.05s'
+                    zIndex: 100
                 }}
             >
                 ⚔️
             </button>
 
-            <style>{`
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @keyframes floatUp {
-                    0% {
-                        opacity: 1;
-                        transform: translate(-50%, -50%) translateY(0);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translate(-50%, -50%) translateY(-60px);
-                    }
-                }
-            `}</style>
+            {/* Auto Hunt Toggle Button */}
+            {state.currentScene !== 'village' && (
+                <button
+                    onClick={() => {
+                        const newState = !isAutoHunting;
+                        setIsAutoHunting(newState);
+                        // Reset target when starting to ensure we find the nearest one from CURRENT position
+                        if (newState) {
+                            autoHuntTargetRef.current = null;
+                        }
+                    }}
+                    style={{
+                        position: 'absolute',
+                        bottom: 130, // Above attack button
+                        right: 50,
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        backgroundColor: isAutoHunting ? '#4caf50' : 'rgba(0,0,0,0.5)',
+                        border: '3px solid white',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                        zIndex: 100,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <span>AUTO</span>
+                    <span style={{ fontSize: '0.7rem' }}>{isAutoHunting ? 'ON' : 'OFF'}</span>
+                </button>
+            )}
         </div>
     );
 };

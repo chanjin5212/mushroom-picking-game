@@ -13,8 +13,8 @@ const Player = forwardRef((props, ref) => {
         position: 'absolute',
         left: 0,
         top: 0,
-        width: '40px',
-        height: '40px',
+        width: '60px',
+        height: '60px',
         zIndex: 10,
         pointerEvents: 'none',
         display: 'flex',
@@ -24,97 +24,30 @@ const Player = forwardRef((props, ref) => {
         willChange: 'transform'
       }}
     >
-      {/* Character Body - Pixel Art Style */}
-      <div style={{
-        position: 'relative',
-        width: '32px',
-        height: '40px'
-      }}>
-        {/* Head */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: '8px',
-          width: '16px',
-          height: '16px',
-          borderRadius: '50%',
-          background: '#ffdbac',
-          border: '2px solid #d4a574',
-          boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.1)'
-        }}>
-          {/* Eyes */}
-          <div style={{ position: 'absolute', top: '5px', left: '3px', width: '3px', height: '3px', borderRadius: '50%', background: '#000' }} />
-          <div style={{ position: 'absolute', top: '5px', right: '3px', width: '3px', height: '3px', borderRadius: '50%', background: '#000' }} />
-          {/* Smile */}
-          <div style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)', width: '8px', height: '3px', borderBottom: '2px solid #000', borderRadius: '0 0 50% 50%' }} />
-        </div>
+      {/* Character Image */}
+      <img
+        src="/assets/player.png"
+        alt="Player"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.3))',
+          imageRendering: 'pixelated',
+          mixBlendMode: 'multiply' // Make white background transparent
+        }}
+      />
 
-        {/* Body */}
-        <div style={{
-          position: 'absolute',
-          top: '16px',
-          left: '6px',
-          width: '20px',
-          height: '14px',
-          background: 'linear-gradient(135deg, #4a90e2 0%, #357abd 100%)',
-          borderRadius: '4px',
-          border: '2px solid #2c5f8d',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }} />
-
-        {/* Arms */}
-        <div style={{
-          position: 'absolute',
-          top: '18px',
-          left: '2px',
-          width: '6px',
-          height: '10px',
-          background: '#ffdbac',
-          borderRadius: '3px',
-          border: '1px solid #d4a574'
-        }} />
-        <div style={{
-          position: 'absolute',
-          top: '18px',
-          right: '2px',
-          width: '6px',
-          height: '10px',
-          background: '#ffdbac',
-          borderRadius: '3px',
-          border: '1px solid #d4a574'
-        }} />
-
-        {/* Legs */}
-        <div style={{
-          position: 'absolute',
-          top: '30px',
-          left: '8px',
-          width: '6px',
-          height: '10px',
-          background: '#2c3e50',
-          borderRadius: '2px',
-          border: '1px solid #1a252f'
-        }} />
-        <div style={{
-          position: 'absolute',
-          top: '30px',
-          right: '8px',
-          width: '6px',
-          height: '10px',
-          background: '#2c3e50',
-          borderRadius: '2px',
-          border: '1px solid #1a252f'
-        }} />
-      </div>
-
-      {/* Weapon Icon */}
+      {/* Weapon Icon - Positioned at hand */}
       <div style={{
         position: 'absolute',
-        bottom: -5,
-        right: -8,
-        fontSize: '18px',
+        top: '25px', // Adjusted for larger size and hand position
+        right: '5px', // Adjusted for extended hand
+        fontSize: '24px', // Larger weapon
         filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.5))',
-        transform: 'rotate(25deg)'
+        transform: 'rotate(45deg)',
+        zIndex: 2,
+        transformOrigin: 'bottom left'
       }}>
         {currentWeapon.icon}
       </div>

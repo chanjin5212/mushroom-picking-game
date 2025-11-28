@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 
 const BottomPanel = () => {
@@ -13,8 +13,8 @@ const BottomPanel = () => {
     const currentWeapon = WEAPONS[state.currentWeaponId];
     const nextWeapon = WEAPONS[state.currentWeaponId + 1];
 
-    // Enhance Logic
-    const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.001));
+    // Enhance Logic - increased cost with exponential scaling
+    const enhanceCost = Math.max(100, Math.floor(currentWeapon.cost * Math.pow(state.weaponLevel + 1, 1.5) * 0.01));
     const enhanceSuccessRate = 100 - (state.weaponLevel * 10);
 
     // Evolve Logic
@@ -22,13 +22,27 @@ const BottomPanel = () => {
     const evolveSuccessRate = Math.max(5, 100 - (state.currentWeaponId * 2));
     const destructionRate = 5;
 
-    // Stat Upgrade Logic - with safe defaults
-    const critChanceCost = Math.floor(1000 * Math.pow((state.statLevels?.critChance || 0) + 1, 1.5));
-    const critDamageCost = Math.floor(500 * Math.pow((state.statLevels?.critDamage || 0) + 1, 1.2));
-    const hyperCritChanceCost = Math.floor(5000 * Math.pow((state.statLevels?.hyperCritChance || 0) + 1, 1.8));
-    const hyperCritDamageCost = Math.floor(2500 * Math.pow((state.statLevels?.hyperCritDamage || 0) + 1, 1.5));
+    // Tiered Cost Calculation Helper
+    const calculateTieredCost = (baseCost, level) => {
+        let exponent = 1.5;
+        if (level >= 100) exponent = 3.0; // Very steep for high levels
+        else if (level >= 10) exponent = 2.0; // Steeper for mid levels
+
+        return Math.floor(baseCost * Math.pow(level + 1, exponent));
+    };
+
+    // Stat Upgrade Logic - with tiered scaling
+    const critChanceCost = calculateTieredCost(1000, state.statLevels?.critChance || 0);
+    const critDamageCost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
+    const hyperCritChanceCost = calculateTieredCost(10000000, state.statLevels?.hyperCritChance || 0);
+    const hyperCritDamageCost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
 
     const handleEnhance = () => {
+        // Safety check: stop if weapon level is 10 or higher
+        if (state.weaponLevel >= 10) {
+            stopHold();
+            return;
+        }
         if (state.gold >= enhanceCost) {
             dispatch({ type: 'ENHANCE_WEAPON' });
         }
@@ -75,6 +89,13 @@ const BottomPanel = () => {
             holdIntervalRef.current = null;
         }
     };
+
+    // Stop hold when weapon level changes (e.g., reaches level 10)
+    useEffect(() => {
+        return () => {
+            stopHold();
+        };
+    }, [state.weaponLevel]);
 
     return (
         <div style={{
@@ -230,13 +251,13 @@ const BottomPanel = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>🎯 Critical Chance</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Level: {state.statLevels?.critChance || 0}/100 ({state.criticalChance}%)</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Level: {state.statLevels?.critChance || 0}/1000 ({state.criticalChance.toFixed(1)}%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4caf50' }}>
                                     Lv.{state.statLevels?.critChance || 0}
                                 </div>
                             </div>
-                            {(state.statLevels?.critChance || 0) < 100 ? (
+                            {(state.statLevels?.critChance || 0) < 1000 ? (
                                 <button
                                     onMouseDown={() => startHold(() => handleUpgradeStat('critChance'))}
                                     onMouseUp={stopHold}
@@ -257,7 +278,7 @@ const BottomPanel = () => {
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>Upgrade (+1%) - Hold to repeat</span>
+                                    <span>Upgrade (+0.1%) - Hold to repeat</span>
                                     <span style={{ color: '#ffeb3b' }}>{critChanceCost.toLocaleString()} G</span>
                                 </button>
                             ) : (
@@ -305,13 +326,13 @@ const BottomPanel = () => {
                         <div style={{
                             textAlign: 'center',
                             padding: '10px',
-                            background: (state.statLevels?.critChance || 0) >= 100 ? 'linear-gradient(90deg, #ff6b6b, #ff8e53)' : 'rgba(100,100,100,0.3)',
+                            background: (state.statLevels?.critChance || 0) >= 1000 ? 'linear-gradient(90deg, #ff6b6b, #ff8e53)' : 'rgba(100,100,100,0.3)',
                             borderRadius: '8px',
                             fontWeight: 'bold',
                             marginBottom: '10px',
-                            opacity: (state.statLevels?.critChance || 0) >= 100 ? 1 : 0.5
+                            opacity: (state.statLevels?.critChance || 0) >= 1000 ? 1 : 0.5
                         }}>
-                            {(state.statLevels?.critChance || 0) >= 100 ? '⚡ HYPER CRITICAL UNLOCKED ⚡' : '🔒 HYPER CRITICAL (Unlock at Crit Lv.100)'}
+                            {(state.statLevels?.critChance || 0) >= 1000 ? '⚡ HYPER CRITICAL UNLOCKED ⚡' : '🔒 HYPER CRITICAL (Unlock at Crit Lv.1000)'}
                         </div>
 
                         {/* Hyper Crit Chance */}
@@ -320,10 +341,10 @@ const BottomPanel = () => {
                             padding: '15px',
                             borderRadius: '10px',
                             border: '1px solid rgba(255,107,107,0.3)',
-                            opacity: (state.statLevels?.critChance || 0) >= 100 ? 1 : 0.5,
+                            opacity: (state.statLevels?.critChance || 0) >= 1000 ? 1 : 0.5,
                             position: 'relative'
                         }}>
-                            {(state.statLevels?.critChance || 0) < 100 && (
+                            {(state.statLevels?.critChance || 0) < 1000 && (
                                 <div style={{
                                     position: 'absolute',
                                     top: 0,
@@ -342,34 +363,34 @@ const BottomPanel = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>⚡ Hyper Crit Chance</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.hyperCriticalChance}% (Max 50%)</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.hyperCriticalChance.toFixed(1)}% (Max 100%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff6b6b' }}>
                                     Lv.{state.statLevels?.hyperCritChance || 0}
                                 </div>
                             </div>
-                            {state.hyperCriticalChance < 50 ? (
+                            {state.hyperCriticalChance < 100 ? (
                                 <button
                                     onMouseDown={() => startHold(() => handleUpgradeStat('hyperCritChance'))}
                                     onMouseUp={stopHold}
                                     onMouseLeave={stopHold}
                                     onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritChance'))}
                                     onTouchEnd={stopHold}
-                                    disabled={state.gold < hyperCritChanceCost || (state.statLevels?.critChance || 0) < 100}
+                                    disabled={state.gold < hyperCritChanceCost || (state.statLevels?.critChance || 0) < 1000}
                                     style={{
                                         width: '100%',
                                         padding: '10px',
-                                        backgroundColor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 100) ? '#ff6b6b' : '#555',
+                                        backgroundColor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff6b6b' : '#555',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 100) ? 'pointer' : 'not-allowed',
+                                        cursor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>Upgrade (+1%) - Hold to repeat</span>
+                                    <span>Upgrade (+0.1%) - Hold to repeat</span>
                                     <span style={{ color: '#ffeb3b' }}>{hyperCritChanceCost.toLocaleString()} G</span>
                                 </button>
                             ) : (
@@ -383,10 +404,10 @@ const BottomPanel = () => {
                             padding: '15px',
                             borderRadius: '10px',
                             border: '1px solid rgba(255,107,107,0.3)',
-                            opacity: (state.statLevels?.critChance || 0) >= 100 ? 1 : 0.5,
+                            opacity: (state.statLevels?.critChance || 0) >= 1000 ? 1 : 0.5,
                             position: 'relative'
                         }}>
-                            {(state.statLevels?.critChance || 0) < 100 && (
+                            {(state.statLevels?.critChance || 0) < 1000 && (
                                 <div style={{
                                     position: 'absolute',
                                     top: 0,
@@ -417,15 +438,15 @@ const BottomPanel = () => {
                                 onMouseLeave={stopHold}
                                 onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
                                 onTouchEnd={stopHold}
-                                disabled={state.gold < hyperCritDamageCost || (state.statLevels?.critChance || 0) < 100}
+                                disabled={state.gold < hyperCritDamageCost || (state.statLevels?.critChance || 0) < 1000}
                                 style={{
                                     width: '100%',
                                     padding: '10px',
-                                    backgroundColor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 100) ? '#ff8e53' : '#555',
+                                    backgroundColor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff8e53' : '#555',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
-                                    cursor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 100) ? 'pointer' : 'not-allowed',
+                                    cursor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center'

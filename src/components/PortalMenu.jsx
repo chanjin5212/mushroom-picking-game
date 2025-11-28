@@ -32,6 +32,13 @@ const PortalMenu = () => {
 
     const mapInfo = generateMapInfo();
 
+    // Find recommended map: Highest level where HP <= Damage * 10
+    // This means you can kill it in about 10 hits (without crits), which is good for farming
+    const recommendedMap = Object.values(mapInfo)
+        .sort((a, b) => a.level - b.level)
+        .filter(info => info.hp <= state.clickDamage * 10)
+        .pop() || mapInfo['map_1']; // Default to map 1 if none found
+
     const handleMapSelect = (mapKey) => {
         const map = mapInfo[mapKey];
         const isLocked = state.currentWeaponId < map.requiredWeapon;
@@ -118,6 +125,7 @@ const PortalMenu = () => {
                     {Object.entries(mapInfo).map(([key, info]) => {
                         const isLocked = state.currentWeaponId < info.requiredWeapon;
                         const themeColor = getThemeColor(info.theme);
+                        const isRecommended = recommendedMap && info.level === recommendedMap.level;
 
                         return (
                             <button
@@ -127,17 +135,38 @@ const PortalMenu = () => {
                                 style={{
                                     padding: '10px',
                                     borderRadius: '8px',
-                                    border: `2px solid ${isLocked ? '#ccc' : themeColor}`,
-                                    backgroundColor: isLocked ? '#f5f5f5' : '#fff',
+                                    border: isRecommended ? '3px solid #ffeb3b' : `2px solid ${isLocked ? '#ccc' : themeColor}`,
+                                    backgroundColor: isLocked ? '#f5f5f5' : (isRecommended ? 'rgba(255, 235, 59, 0.1)' : '#fff'),
                                     cursor: isLocked ? 'not-allowed' : 'pointer',
                                     transition: 'all 0.2s',
                                     opacity: isLocked ? 0.5 : 1,
-                                    textAlign: 'center'
+                                    textAlign: 'center',
+                                    position: 'relative',
+                                    transform: isRecommended ? 'scale(1.05)' : 'scale(1)',
+                                    zIndex: isRecommended ? 10 : 1
                                 }}
                             >
                                 <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '4px', color: isLocked ? '#999' : themeColor }}>
-                                    Lv.{info.level}
+                                    Lv.{info.level} {isRecommended && <span style={{ fontSize: '0.8rem' }}>👍</span>}
                                 </div>
+                                {isRecommended && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '-10px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        backgroundColor: '#ffeb3b',
+                                        color: '#000',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 'bold',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        추천 사냥터
+                                    </div>
+                                )}
                                 <div style={{ fontSize: '0.7rem', color: isLocked ? '#999' : '#666', marginBottom: '2px' }}>
                                     HP: {formatHP(info.hp)}
                                 </div>

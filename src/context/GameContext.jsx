@@ -217,8 +217,8 @@ const gameReducer = (state, action) => {
 
         case 'ENHANCE_WEAPON': {
             const currentWeapon = WEAPONS[state.currentWeaponId];
-            // Cost: Base Cost * (Level + 1) * 0.001, Minimum 10 Gold
-            const enhanceCost = Math.max(10, Math.floor(currentWeapon.cost * (state.weaponLevel + 1) * 0.001));
+            // Cost: Increased with exponential scaling, Minimum 100 Gold
+            const enhanceCost = Math.max(100, Math.floor(currentWeapon.cost * Math.pow(state.weaponLevel + 1, 1.5) * 0.01));
 
             if (state.gold < enhanceCost) return state;
 
@@ -294,32 +294,38 @@ const gameReducer = (state, action) => {
             let newState = { ...state, gold: state.gold - cost };
 
             if (statType === 'critChance') {
-                if (state.statLevels.critChance >= 100) return state;
-                newState.criticalChance = state.criticalChance + 1;
-                newState.statLevels = {
-                    ...state.statLevels,
-                    critChance: state.statLevels.critChance + 1
-                };
+                // Increment by 0.1
+                const currentVal = newState.criticalChance;
+                const nextVal = parseFloat((currentVal + 0.1).toFixed(1));
+                if (nextVal <= 100) { // Max 100%
+                    newState.criticalChance = nextVal;
+                    newState.statLevels = {
+                        ...newState.statLevels,
+                        critChance: (newState.statLevels.critChance || 0) + 1
+                    };
+                }
             } else if (statType === 'critDamage') {
-                newState.criticalDamage = state.criticalDamage + 10;
+                newState.criticalDamage += 10;
                 newState.statLevels = {
-                    ...state.statLevels,
-                    critDamage: state.statLevels.critDamage + 1
+                    ...newState.statLevels,
+                    critDamage: (newState.statLevels.critDamage || 0) + 1
                 };
             } else if (statType === 'hyperCritChance') {
-                if (state.statLevels.critChance < 100) return state; // Must have 100 crit levels first
-                if (state.hyperCriticalChance >= 50) return state;
-                newState.hyperCriticalChance = state.hyperCriticalChance + 1;
-                newState.statLevels = {
-                    ...state.statLevels,
-                    hyperCritChance: state.statLevels.hyperCritChance + 1
-                };
+                // Increment by 0.1
+                const currentVal = newState.hyperCriticalChance;
+                const nextVal = parseFloat((currentVal + 0.1).toFixed(1));
+                if (nextVal <= 100) { // Max 100%
+                    newState.hyperCriticalChance = nextVal;
+                    newState.statLevels = {
+                        ...newState.statLevels,
+                        hyperCritChance: (newState.statLevels.hyperCritChance || 0) + 1
+                    };
+                }
             } else if (statType === 'hyperCritDamage') {
-                if (state.statLevels.critChance < 100) return state; // Must have 100 crit levels first
-                newState.hyperCriticalDamage = state.hyperCriticalDamage + 10;
+                newState.hyperCriticalDamage += 10;
                 newState.statLevels = {
-                    ...state.statLevels,
-                    hyperCritDamage: state.statLevels.hyperCritDamage + 1
+                    ...newState.statLevels,
+                    hyperCritDamage: (newState.statLevels.hyperCritDamage || 0) + 1
                 };
             }
 
