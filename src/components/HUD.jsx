@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { formatNumber } from '../utils/formatNumber';
 
 const HUD = () => {
-    const { state, logout, manualSave } = useGame();
+    const { state, logout, manualSave, resetGame } = useGame();
     const [menuOpen, setMenuOpen] = useState(false);
     const [showToast, setShowToast] = useState(false);
 
@@ -30,6 +31,19 @@ const HUD = () => {
     const handleLogout = () => {
         setMenuOpen(false);
         logout();
+    };
+
+    const handleReset = async () => {
+        if (window.confirm('정말로 게임을 초기화하시겠습니까? 모든 진행 상황이 삭제됩니다!')) {
+            const success = await resetGame();
+            if (success) {
+                setMenuOpen(false);
+                setShowToast(true);
+                setTimeout(() => {
+                    setShowToast(false);
+                }, 2000);
+            }
+        }
     };
 
     return (
@@ -83,7 +97,7 @@ const HUD = () => {
                     }}>
                         <span style={{ fontSize: '1.1rem' }}>⚔️</span>
                         <span style={{ color: '#ab47bc', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                            {combatPower.toLocaleString()}
+                            {formatNumber(combatPower)}
                         </span>
                     </div>
                     <div style={{
@@ -97,7 +111,7 @@ const HUD = () => {
                     }}>
                         <span style={{ fontSize: '1.1rem' }}>💰</span>
                         <span style={{ color: '#ffc107', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                            {state.gold.toLocaleString()}
+                            {formatNumber(state.gold)}
                         </span>
                     </div>
                 </div>
@@ -184,6 +198,39 @@ const HUD = () => {
                                 >
                                     <span>💾</span>
                                     <span>저장</span>
+                                </button>
+
+                                <div style={{
+                                    height: '1px',
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    margin: '0'
+                                }} />
+
+                                <button
+                                    onClick={handleReset}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        backgroundColor: 'transparent',
+                                        color: '#ff9800',
+                                        border: 'none',
+                                        textAlign: 'left',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.backgroundColor = 'rgba(255,152,0,0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.backgroundColor = 'transparent';
+                                    }}
+                                >
+                                    <span>🔄</span>
+                                    <span>초기화</span>
                                 </button>
 
                                 <div style={{

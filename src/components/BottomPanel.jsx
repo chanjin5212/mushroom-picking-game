@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
+import { formatNumber } from '../utils/formatNumber';
 
 const BottomPanel = () => {
     const { state, dispatch, WEAPONS } = useGame();
@@ -15,27 +16,34 @@ const BottomPanel = () => {
 
     // Enhance Logic - increased cost with exponential scaling
     const enhanceCost = Math.max(100, Math.floor(currentWeapon.cost * Math.pow(state.weaponLevel + 1, 1.5) * 0.01));
-    const enhanceSuccessRate = 100 - (state.weaponLevel * 10);
+    const enhanceSuccessRate = 100 - (state.weaponLevel * 5);
 
     // Evolve Logic
     const evolveCost = nextWeapon ? nextWeapon.cost : 0;
     const evolveSuccessRate = Math.max(5, 100 - (state.currentWeaponId * 2));
     const destructionRate = 5;
 
-    // Tiered Cost Calculation Helper
+
+    // Tiered Cost Calculation Helper (for Damage stats)
     const calculateTieredCost = (baseCost, level) => {
-        let exponent = 1.5;
-        if (level >= 100) exponent = 3.0; // Very steep for high levels
-        else if (level >= 10) exponent = 2.0; // Steeper for mid levels
+        let exponent = 1.2;
+        if (level >= 100) exponent = 2.0; // Steep for high levels
+        else if (level >= 10) exponent = 1.5; // Moderate for mid levels
 
         return Math.floor(baseCost * Math.pow(level + 1, exponent));
     };
 
-    // Stat Upgrade Logic - with tiered scaling
-    const critChanceCost = calculateTieredCost(1000, state.statLevels?.critChance || 0);
+    // Linear Cost Calculation Helper (for Chance stats)
+    const calculateLinearCost = (baseCost, level) => {
+        return Math.floor(baseCost * (level + 1));
+    };
+
+    // Stat Upgrade Logic - linear for Chance, tiered for Damage
+    const critChanceCost = calculateLinearCost(1000, state.statLevels?.critChance || 0);
     const critDamageCost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
-    const hyperCritChanceCost = calculateTieredCost(10000000, state.statLevels?.hyperCritChance || 0);
+    const hyperCritChanceCost = calculateLinearCost(10000000, state.statLevels?.hyperCritChance || 0);
     const hyperCritDamageCost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
+
 
     const handleEnhance = () => {
         // Safety check: stop if weapon level is 10 or higher
@@ -66,16 +74,29 @@ const BottomPanel = () => {
         }
     };
 
-    // Hold to repeat handlers
+    // Hold to repeat handlers with progressive acceleration
     const startHold = (action) => {
         // Execute immediately
         action();
 
+        let currentInterval = 100; // Start at 100ms
+        const minInterval = 20; // Maximum speed at 20ms
+        const acceleration = 5; // Decrease interval by 5ms each iteration
+
         // Start repeating after 500ms delay
         holdTimeoutRef.current = setTimeout(() => {
-            holdIntervalRef.current = setInterval(() => {
+            const repeatAction = () => {
                 action();
-            }, 100); // Repeat every 100ms
+
+                // Decrease interval for next iteration (speed up)
+                currentInterval = Math.max(minInterval, currentInterval - acceleration);
+
+                // Schedule next action with new interval
+                holdIntervalRef.current = setTimeout(repeatAction, currentInterval);
+            };
+
+            // Start the progressive acceleration
+            repeatAction();
         }, 500);
     };
 
@@ -85,7 +106,7 @@ const BottomPanel = () => {
             holdTimeoutRef.current = null;
         }
         if (holdIntervalRef.current) {
-            clearInterval(holdIntervalRef.current);
+            clearTimeout(holdIntervalRef.current); // Changed from clearInterval to clearTimeout
             holdIntervalRef.current = null;
         }
     };
@@ -138,7 +159,7 @@ const BottomPanel = () => {
                     borderRadius: '2px'
                 }} />
                 <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#aaa' }}>
-                    {isOpen ? '▼ Close' : '▲ Upgrade'}
+                    {isOpen ? '▼ 닫기' : '▲ 업그레이드'}
                 </span>
             </div>
 
@@ -157,7 +178,7 @@ const BottomPanel = () => {
                         cursor: 'pointer'
                     }}
                 >
-                    ⚔️ Weapon
+                    ⚔️ 무기
                 </button>
                 <button
                     onClick={() => setActiveTab('stats')}
@@ -172,7 +193,7 @@ const BottomPanel = () => {
                         cursor: 'pointer'
                     }}
                 >
-                    📊 Stats
+                    📊 스탯
                 </button>
             </div>
 
@@ -182,13 +203,13 @@ const BottomPanel = () => {
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '4rem', marginBottom: '10px' }}>{currentWeapon.icon}</div>
                         <h2 style={{ margin: '0 0 5px 0' }}>{currentWeapon.name} <span style={{ color: '#4caf50' }}>+{state.weaponLevel}</span></h2>
-                        <p style={{ color: '#aaa', margin: '0 0 20px 0' }}>Damage: {state.clickDamage.toLocaleString()}</p>
+                        <p style={{ color: '#aaa', margin: '0 0 20px 0' }}>공격력: {formatNumber(state.clickDamage)}</p>
 
                         {state.weaponLevel < 10 ? (
                             <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                    <span>Success Rate: <span style={{ color: '#4caf50' }}>{enhanceSuccessRate}%</span></span>
-                                    <span>Cost: <span style={{ color: '#ffeb3b' }}>{enhanceCost.toLocaleString()} G</span></span>
+                                    <span>성공 확률: <span style={{ color: '#4caf50' }}>{enhanceSuccessRate}%</span></span>
+                                    <span>비용: <span style={{ color: '#ffeb3b' }}>{formatNumber(enhanceCost)} G</span></span>
                                 </div>
                                 <button
                                     onMouseDown={() => startHold(handleEnhance)}
@@ -209,16 +230,16 @@ const BottomPanel = () => {
                                         cursor: state.gold >= enhanceCost ? 'pointer' : 'not-allowed'
                                     }}
                                 >
-                                    Enhance Weapon (Hold to repeat)
+                                    무기 강화 (누르고 있으면 반복)
                                 </button>
                             </div>
                         ) : nextWeapon ? (
                             <div style={{ backgroundColor: 'rgba(255,152,0,0.1)', padding: '15px', borderRadius: '10px', border: '1px solid rgba(255,152,0,0.3)' }}>
-                                <h3 style={{ color: '#ff9800', margin: '0 0 10px 0' }}>Evolution Available!</h3>
+                                <h3 style={{ color: '#ff9800', margin: '0 0 10px 0' }}>진화 가능!</h3>
                                 <div style={{ marginBottom: '10px', fontSize: '0.9rem' }}>
-                                    <div>Next: {nextWeapon.icon} {nextWeapon.name}</div>
-                                    <div>Success: {evolveSuccessRate}% | Break: {destructionRate}%</div>
-                                    <div>Cost: <span style={{ color: '#ffeb3b' }}>{evolveCost.toLocaleString()} G</span></div>
+                                    <div>다음: {nextWeapon.icon} {nextWeapon.name}</div>
+                                    <div>성공: {evolveSuccessRate}% | 파괴: {destructionRate}%</div>
+                                    <div>비용: <span style={{ color: '#ffeb3b' }}>{formatNumber(evolveCost)} G</span></div>
                                 </div>
                                 <button
                                     onClick={handleEvolve}
@@ -235,11 +256,11 @@ const BottomPanel = () => {
                                         cursor: state.gold >= evolveCost ? 'pointer' : 'not-allowed'
                                     }}
                                 >
-                                    Evolve Weapon
+                                    무기 진화
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ color: '#aaa' }}>Max Tier Reached!</div>
+                            <div style={{ color: '#aaa' }}>최고 등급 도달!</div>
                         )}
                     </div>
                 )}
@@ -250,8 +271,8 @@ const BottomPanel = () => {
                         <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>🎯 Critical Chance</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Level: {state.statLevels?.critChance || 0}/1000 ({state.criticalChance.toFixed(1)}%)</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>🎯 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.critChance || 0}/1000 ({state.criticalChance.toFixed(1)}%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4caf50' }}>
                                     Lv.{state.statLevels?.critChance || 0}
@@ -278,11 +299,11 @@ const BottomPanel = () => {
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>Upgrade (+0.1%) - Hold to repeat</span>
-                                    <span style={{ color: '#ffeb3b' }}>{critChanceCost.toLocaleString()} G</span>
+                                    <span>강화 (+0.1%) - 누르고 있으면 반복</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(critChanceCost)} G</span>
                                 </button>
                             ) : (
-                                <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>MAXED OUT</div>
+                                <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>최대 레벨</div>
                             )}
                         </div>
 
@@ -290,8 +311,8 @@ const BottomPanel = () => {
                         <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 Critical Damage</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.criticalDamage}%</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.criticalDamage}%</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f44336' }}>
                                     Lv.{state.statLevels?.critDamage || 0}
@@ -317,8 +338,8 @@ const BottomPanel = () => {
                                     alignItems: 'center'
                                 }}
                             >
-                                <span>Upgrade (+10%) - Hold to repeat</span>
-                                <span style={{ color: '#ffeb3b' }}>{critDamageCost.toLocaleString()} G</span>
+                                <span>강화 (+1%) - 누르고 있으면 반복</span>
+                                <span style={{ color: '#ffeb3b' }}>{formatNumber(critDamageCost)} G</span>
                             </button>
                         </div>
 
@@ -332,7 +353,7 @@ const BottomPanel = () => {
                             marginBottom: '10px',
                             opacity: (state.statLevels?.critChance || 0) >= 1000 ? 1 : 0.5
                         }}>
-                            {(state.statLevels?.critChance || 0) >= 1000 ? '⚡ HYPER CRITICAL UNLOCKED ⚡' : '🔒 HYPER CRITICAL (Unlock at Crit Lv.1000)'}
+                            {(state.statLevels?.critChance || 0) >= 1000 ? '⚡ 하이퍼 크리티컬 해제됨 ⚡' : '🔒 하이퍼 크리티컬 (치명타 Lv.1000 해제)'}
                         </div>
 
                         {/* Hyper Crit Chance */}
@@ -362,8 +383,8 @@ const BottomPanel = () => {
                             )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>⚡ Hyper Crit Chance</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.hyperCriticalChance.toFixed(1)}% (Max 100%)</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>⚡ 하이퍼 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.hyperCriticalChance.toFixed(1)}% (최대 100%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff6b6b' }}>
                                     Lv.{state.statLevels?.hyperCritChance || 0}
@@ -390,11 +411,11 @@ const BottomPanel = () => {
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>Upgrade (+0.1%) - Hold to repeat</span>
-                                    <span style={{ color: '#ffeb3b' }}>{hyperCritChanceCost.toLocaleString()} G</span>
+                                    <span>강화 (+0.1%) - 누르고 있으면 반복</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritChanceCost)} G</span>
                                 </button>
                             ) : (
-                                <div style={{ textAlign: 'center', color: '#ff6b6b', fontWeight: 'bold' }}>MAXED OUT</div>
+                                <div style={{ textAlign: 'center', color: '#ff6b6b', fontWeight: 'bold' }}>최대 레벨</div>
                             )}
                         </div>
 
@@ -425,8 +446,8 @@ const BottomPanel = () => {
                             )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 Hyper Crit Damage</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>Current: {state.hyperCriticalDamage}%</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 하이퍼 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.hyperCriticalDamage}%</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff8e53' }}>
                                     Lv.{state.statLevels?.hyperCritDamage || 0}
@@ -452,8 +473,8 @@ const BottomPanel = () => {
                                     alignItems: 'center'
                                 }}
                             >
-                                <span>Upgrade (+10%) - Hold to repeat</span>
-                                <span style={{ color: '#ffeb3b' }}>{hyperCritDamageCost.toLocaleString()} G</span>
+                                <span>강화 (+1%) - 누르고 있으면 반복</span>
+                                <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageCost)} G</span>
                             </button>
                         </div>
                     </div>

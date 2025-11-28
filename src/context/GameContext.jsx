@@ -228,11 +228,16 @@ const gameReducer = (state, action) => {
 
             if (isSuccess) {
                 const newLevel = state.weaponLevel + 1;
+                const weapon = WEAPONS[state.currentWeaponId];
+                // Ensure minimum +1 damage per level
+                const damagePerLevel = Math.max(1, weapon.upgradeBonus);
+                const newDamage = weapon.baseDamage + (damagePerLevel * newLevel);
+
                 return {
                     ...state,
                     gold: state.gold - enhanceCost,
                     weaponLevel: newLevel,
-                    clickDamage: calculateDamage(state.currentWeaponId, newLevel),
+                    clickDamage: newDamage,
                     lastEnhanceResult: 'success'
                 };
             } else {
@@ -305,7 +310,7 @@ const gameReducer = (state, action) => {
                     };
                 }
             } else if (statType === 'critDamage') {
-                newState.criticalDamage += 10;
+                newState.criticalDamage += 1;
                 newState.statLevels = {
                     ...newState.statLevels,
                     critDamage: (newState.statLevels.critDamage || 0) + 1
@@ -322,7 +327,7 @@ const gameReducer = (state, action) => {
                     };
                 }
             } else if (statType === 'hyperCritDamage') {
-                newState.hyperCriticalDamage += 10;
+                newState.hyperCriticalDamage += 1;
                 newState.statLevels = {
                     ...newState.statLevels,
                     hyperCritDamage: (newState.statLevels.hyperCritDamage || 0) + 1
@@ -378,6 +383,13 @@ const gameReducer = (state, action) => {
 
         case 'CLEAR_RESULT_MSG':
             return { ...state, lastEnhanceResult: null, lastEvolveResult: null };
+
+        case 'RESET_GAME':
+            return {
+                ...initialState,
+                user: state.user, // Keep user logged in
+                isLoading: false
+            };
 
         default:
             return state;
@@ -520,8 +532,45 @@ export const GameProvider = ({ children }) => {
         return false;
     };
 
+    const resetGame = async () => {
+        if (!state.user) return false;
+
+        try {
+            // Reset game data in database
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    game_data: {
+                        gold: 0,
+                        currentWeaponId: 0,
+                        weaponLevel: 0,
+                        clickDamage: 1,
+                        moveSpeed: 5,
+                        playerPos: { x: 400, y: 300 },
+                        currentScene: 'village',
+                        mushrooms: [],
+                        criticalChance: 0,
+                        criticalDamage: 150,
+                        hyperCriticalChance: 0,
+                        hyperCriticalDamage: 200,
+                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 }
+                    }
+                })
+                .eq('id', state.user.id);
+
+            if (error) throw error;
+
+            // Reset local state
+            dispatch({ type: 'RESET_GAME' });
+            return true;
+        } catch (error) {
+            console.error('Reset failed:', error);
+            return false;
+        }
+    };
+
     return (
-        <GameContext.Provider value={{ state, dispatch, WEAPONS, login, signup, logout, manualSave, isLoading: state.isLoading }}>
+        <GameContext.Provider value={{ state, dispatch, WEAPONS, login, signup, logout, manualSave, resetGame, isLoading: state.isLoading }}>
             {children}
         </GameContext.Provider>
     );
