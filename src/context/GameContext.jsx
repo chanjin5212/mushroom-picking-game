@@ -222,8 +222,8 @@ const gameReducer = (state, action) => {
 
             if (state.gold < enhanceCost) return state;
 
-            // Success Rate: 100% at lv0 -> 10% at lv9
-            const successRate = 100 - (state.weaponLevel * 10);
+            // Success Rate: 100% at lv0 -> 50% at lv10
+            const successRate = 100 - (state.weaponLevel * 5);
             const isSuccess = Math.random() * 100 < successRate;
 
             if (isSuccess) {
@@ -296,45 +296,58 @@ const gameReducer = (state, action) => {
             const { statType, cost } = action.payload;
             if (state.gold < cost) return state;
 
-            let newState = { ...state, gold: state.gold - cost };
-
+            // Check if stat can actually be upgraded before deducting gold
             if (statType === 'critChance') {
-                // Increment by 0.1
-                const currentVal = newState.criticalChance;
+                const currentVal = state.criticalChance;
                 const nextVal = parseFloat((currentVal + 0.1).toFixed(1));
-                if (nextVal <= 100) { // Max 100%
-                    newState.criticalChance = nextVal;
-                    newState.statLevels = {
-                        ...newState.statLevels,
-                        critChance: (newState.statLevels.critChance || 0) + 1
-                    };
-                }
+                if (nextVal > 100) return state; // Already at max, don't deduct gold
+
+                return {
+                    ...state,
+                    gold: state.gold - cost,
+                    criticalChance: nextVal,
+                    statLevels: {
+                        ...state.statLevels,
+                        critChance: (state.statLevels.critChance || 0) + 1
+                    }
+                };
             } else if (statType === 'critDamage') {
-                newState.criticalDamage += 1;
-                newState.statLevels = {
-                    ...newState.statLevels,
-                    critDamage: (newState.statLevels.critDamage || 0) + 1
+                return {
+                    ...state,
+                    gold: state.gold - cost,
+                    criticalDamage: state.criticalDamage + 1,
+                    statLevels: {
+                        ...state.statLevels,
+                        critDamage: (state.statLevels.critDamage || 0) + 1
+                    }
                 };
             } else if (statType === 'hyperCritChance') {
-                // Increment by 0.1
-                const currentVal = newState.hyperCriticalChance;
+                const currentVal = state.hyperCriticalChance;
                 const nextVal = parseFloat((currentVal + 0.1).toFixed(1));
-                if (nextVal <= 100) { // Max 100%
-                    newState.hyperCriticalChance = nextVal;
-                    newState.statLevels = {
-                        ...newState.statLevels,
-                        hyperCritChance: (newState.statLevels.hyperCritChance || 0) + 1
-                    };
-                }
+                if (nextVal > 100) return state; // Already at max, don't deduct gold
+
+                return {
+                    ...state,
+                    gold: state.gold - cost,
+                    hyperCriticalChance: nextVal,
+                    statLevels: {
+                        ...state.statLevels,
+                        hyperCritChance: (state.statLevels.hyperCritChance || 0) + 1
+                    }
+                };
             } else if (statType === 'hyperCritDamage') {
-                newState.hyperCriticalDamage += 1;
-                newState.statLevels = {
-                    ...newState.statLevels,
-                    hyperCritDamage: (newState.statLevels.hyperCritDamage || 0) + 1
+                return {
+                    ...state,
+                    gold: state.gold - cost,
+                    hyperCriticalDamage: state.hyperCriticalDamage + 1,
+                    statLevels: {
+                        ...state.statLevels,
+                        hyperCritDamage: (state.statLevels.hyperCritDamage || 0) + 1
+                    }
                 };
             }
 
-            return newState;
+            return state;
         }
 
         case 'SET_PLAYER_POS':
