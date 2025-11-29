@@ -49,6 +49,12 @@ const BottomPanel = () => {
     const critDamageCost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
     const hyperCritChanceCost = calculateLinearCost(10000000, state.statLevels?.hyperCritChance || 0);
     const hyperCritDamageCost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
+    const moveSpeedCost = calculateLinearCost(500, state.statLevels?.moveSpeed || 0);
+
+    // Move speed max level check
+    const moveSpeedMaxLevel = 3000;
+    const moveSpeedLevel = state.statLevels?.moveSpeed || 0;
+    const isMaxMoveSpeed = moveSpeedLevel >= moveSpeedMaxLevel;
 
 
     const handleEnhance = () => {
@@ -60,6 +66,17 @@ const BottomPanel = () => {
             stopHold();
             return;
         }
+
+        // Calculate current enhance cost
+        const currentWeapon = WEAPONS[currentState.currentWeaponId];
+        const currentEnhanceCost = Math.max(100, Math.floor(currentWeapon.cost * Math.pow(currentState.weaponLevel + 1, 1.5) * 0.01));
+
+        // Stop if not enough gold
+        if (currentState.gold < currentEnhanceCost) {
+            stopHold();
+            return;
+        }
+
         // Reducer will check gold and calculate cost based on current state
         dispatch({ type: 'ENHANCE_WEAPON' });
     };
@@ -71,6 +88,43 @@ const BottomPanel = () => {
     };
 
     const handleUpgradeStat = (statType) => {
+        const currentState = stateRef.current;
+
+        // Calculate cost based on stat type
+        let cost;
+        if (statType === 'critChance') {
+            cost = calculateLinearCost(1000, currentState.statLevels?.critChance || 0);
+            // Check if already at max (100%)
+            if (currentState.criticalChance >= 100) {
+                stopHold();
+                return;
+            }
+        } else if (statType === 'critDamage') {
+            cost = calculateTieredCost(800, currentState.statLevels?.critDamage || 0);
+        } else if (statType === 'hyperCritChance') {
+            cost = calculateLinearCost(10000000, currentState.statLevels?.hyperCritChance || 0);
+            // Check if already at max (100%)
+            if (currentState.hyperCriticalChance >= 100) {
+                stopHold();
+                return;
+            }
+        } else if (statType === 'hyperCritDamage') {
+            cost = calculateTieredCost(5000000, currentState.statLevels?.hyperCritDamage || 0);
+        } else if (statType === 'moveSpeed') {
+            cost = calculateLinearCost(500, currentState.statLevels?.moveSpeed || 0);
+            // Check if already at max (3000 levels)
+            if ((currentState.statLevels?.moveSpeed || 0) >= 3000) {
+                stopHold();
+                return;
+            }
+        }
+
+        // Stop if not enough gold
+        if (currentState.gold < cost) {
+            stopHold();
+            return;
+        }
+
         // Cost is now calculated in the reducer based on current state
         dispatch({ type: 'UPGRADE_STAT', payload: { statType } });
     };
@@ -112,6 +166,13 @@ const BottomPanel = () => {
             holdIntervalRef.current = null;
         }
     };
+
+    // Stop hold when weapon level reaches 10 (evolve becomes available)
+    useEffect(() => {
+        if (state.weaponLevel >= 10) {
+            stopHold();
+        }
+    }, [state.weaponLevel]);
 
 
     return (
@@ -472,6 +533,49 @@ const BottomPanel = () => {
                                 <span>강화 (+1%) - 누르고 있으면 반복</span>
                                 <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageCost)} G</span>
                             </button>
+                        </div>
+
+                        {/* Move Speed */}
+                        <div style={{
+                            backgroundColor: 'rgba(76,175,80,0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(76,175,80,0.3)'
+                        }}>
+                            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 'bold', color: '#4caf50' }}>🏃 이동속도</span>
+                                <span style={{ color: '#fff' }}>{state.moveSpeed.toFixed(2)}</span>
+                            </div>
+                            <div style={{ marginBottom: '10px', fontSize: '0.85rem', color: '#aaa' }}>
+                                레벨: {moveSpeedLevel} / {moveSpeedMaxLevel} (최대 3배)
+                            </div>
+                            {!isMaxMoveSpeed ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('moveSpeed'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('moveSpeed'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < moveSpeedCost}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= moveSpeedCost ? '#4caf50' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= moveSpeedCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 - 누르고 있으면 반복</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(moveSpeedCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
                         </div>
                     </div>
                 )}

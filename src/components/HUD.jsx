@@ -36,7 +36,7 @@ const HUD = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0 15px',
-                zIndex: 100,
+                zIndex: 1100,
                 borderBottom: '1px solid rgba(255,255,255,0.1)'
             }}>
                 {/* Left: User Info */}

@@ -122,7 +122,8 @@ const initialState = {
         critChance: 0,
         critDamage: 0,
         hyperCritChance: 0,
-        hyperCritDamage: 0
+        hyperCritDamage: 0,
+        moveSpeed: 0
     },
     obtainedWeapons: [0] // Start with weapon 0 (맨손)
 };
@@ -378,6 +379,30 @@ const gameReducer = (state, action) => {
                         hyperCritDamage: (state.statLevels.hyperCritDamage || 0) + 1
                     }
                 };
+            } else if (statType === 'moveSpeed') {
+                const currentLevel = state.statLevels?.moveSpeed || 0;
+                const maxLevel = 3000; // Max level for 3x speed
+
+                if (currentLevel >= maxLevel) return state; // Already at max
+
+                cost = calculateLinearCost(500, currentLevel); // Base cost 500
+
+                if (state.gold < cost) return state;
+
+                // Calculate new speed: base 5, increases to 15 at level 3000
+                // Formula: 5 + (10 * level / 3000) = 5 to 15
+                const newLevel = currentLevel + 1;
+                const newSpeed = 5 + (10 * newLevel / maxLevel);
+
+                return {
+                    ...state,
+                    gold: state.gold - cost,
+                    moveSpeed: newSpeed,
+                    statLevels: {
+                        ...state.statLevels,
+                        moveSpeed: newLevel
+                    }
+                };
             }
 
             return state;
@@ -542,7 +567,7 @@ export const GameProvider = ({ children }) => {
                             criticalDamage: 150,
                             hyperCriticalChance: 0,
                             hyperCriticalDamage: 200,
-                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 },
+                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0 },
                             obtainedWeapons: [0]
                         }
                     }
@@ -628,7 +653,7 @@ export const GameProvider = ({ children }) => {
                         criticalDamage: 150,
                         hyperCriticalChance: 0,
                         hyperCriticalDamage: 200,
-                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 },
+                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0 },
                         obtainedWeapons: [0]
                     }
                 })
