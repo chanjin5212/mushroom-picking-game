@@ -195,8 +195,12 @@ const gameReducer = (state, action) => {
             return {
                 ...state,
                 ...action.payload,
-                // Force spawn at village on load
-                currentScene: 'village',
+                // Ensure stage state exists if loading old data
+                stage: action.payload.stage || { chapter: 1, level: 1 },
+                stageProgress: action.payload.stageProgress || 0,
+                maxStage: action.payload.maxStage || { chapter: 1, level: 1 },
+                isBossActive: false,
+                // Force spawn at village on load? No, let's stay in current stage but reset pos
                 playerPos: { x: 400, y: 300 },
                 isLoading: false,
                 isShopOpen: false,
@@ -422,6 +426,7 @@ const gameReducer = (state, action) => {
             return { ...state, playerPos: action.payload };
 
         case 'SWITCH_SCENE':
+            // Deprecated but kept for compatibility if needed, though we use NEXT_STAGE now
             const newScene = action.payload.scene;
             let newMushrooms = [];
             if (MAP_DATA[newScene]) {
@@ -436,6 +441,92 @@ const gameReducer = (state, action) => {
                 isShopOpen: false
             };
 
+        case 'NEXT_STAGE': {
+            // Advance stage logic
+            let nextChapter = state.stage.chapter;
+            let nextLevel = state.stage.level + 1;
+
+            if (nextLevel > 10) {
+                nextChapter += 1;
+                nextLevel = 1;
+            }
+
+            const newStage = { chapter: nextChapter, level: nextLevel };
+
+            // Update max stage if reached new peak
+            let newMaxStage = state.maxStage;
+            if (nextChapter > state.maxStage.chapter || (nextChapter === state.maxStage.chapter && nextLevel > state.maxStage.level)) {
+                newMaxStage = newStage;
+            }
+
+            // Generate mobs for new stage
+            // Difficulty scaling: (Chapter - 1) * 10 + Level
+            const difficultyLevel = (nextChapter - 1) * 10 + nextLevel;
+
+            // Generate 20 mobs
+            const stageMushrooms = [];
+            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팽이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
+
+            for (let i = 0; i < 20; i++) {
+                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+
+                // Random position
+                const x = 40 + Math.random() * 320;
+                const y = 120 + Math.random() * 300;
+
+                stageMushrooms.push({
+                    id: Date.now() + i,
+                    x, y,
+                    hp: baseHp,
+                    maxHp: baseHp,
+                    type: 'normal',
+                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
+                    reward: baseReward,
+                    isDead: false,
+                    respawnTime: 0
+                });
+            }
+
+            return {
+                ...state,
+                stage: newStage,
+                stageProgress: 0,
+                maxStage: newMaxStage,
+                isBossActive: false,
+                mushrooms: stageMushrooms,
+                playerPos: { x: 400, y: 300 } // Reset player pos
+            };
+        }
+
+        case 'SPAWN_BOSS': {
+            // Clear all mobs and spawn ONE big boss
+            const difficultyLevel = (state.stage.chapter - 1) * 10 + state.stage.level;
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+            const bossHp = baseHp * 1000; // 1000x HP
+            const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100; // 100x Reward
+
+            const bossMushroom = {
+                id: 'BOSS',
+                x: 200,
+                y: 200,
+                hp: bossHp,
+                maxHp: bossHp,
+                type: 'boss',
+                name: `Chapter ${state.stage.chapter} BOSS`,
+                reward: bossReward,
+                isDead: false,
+                respawnTime: 0,
+                scale: 3 // Visual scale
+            };
+
+            return {
+                ...state,
+                isBossActive: true,
+                mushrooms: [bossMushroom]
+            };
+        }
+
         case 'DAMAGE_MUSHROOM':
             return {
                 ...state,
@@ -443,6 +534,9 @@ const gameReducer = (state, action) => {
                     if (m.id === action.payload.id) {
                         const newHp = m.hp - action.payload.damage;
                         if (newHp <= 0) {
+                            // If boss is killed, auto advance to next stage (which will be X-1)
+                            // But we might want to let user see the victory first?
+                            // For now, just mark dead. The KILL_MUSHROOM reducer will handle progress.
                             return { ...m, hp: 0, isDead: true, respawnTime: Date.now() + 1000 };
                         }
                         return { ...m, hp: newHp };
@@ -451,11 +545,34 @@ const gameReducer = (state, action) => {
                 })
             };
 
+        case 'KILL_MUSHROOM': {
+            // Called when animation finishes or logic detects death
+            // Increment progress
+            const newProgress = state.stageProgress + 1;
+
+            // If boss was killed, we should probably trigger something special or allow next stage
+            // But for now, just increment progress. 
+            // If it was a boss stage (level 10) and boss died, progress should be set to 100 (complete)
+
+            let finalProgress = newProgress;
+            if (state.isBossActive) {
+                // Boss killed!
+                finalProgress = 100; // Force complete
+            }
+
+            return {
+                ...state,
+                stageProgress: finalProgress
+            };
+        }
+
         case 'RESPAWN_MUSHROOM':
             return {
                 ...state,
                 mushrooms: state.mushrooms.map(m => {
                     if (m.id === action.payload.id) {
+                        // Don't respawn boss
+                        if (m.type === 'boss') return m;
                         return { ...m, hp: m.maxHp, isDead: false, respawnTime: 0 };
                     }
                     return m;
