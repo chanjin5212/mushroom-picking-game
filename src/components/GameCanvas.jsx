@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { formatDamage } from '../utils/formatNumber';
 import Player from './Player';
 import Mushroom from './Mushroom';
 import Joystick from './Joystick';
@@ -452,16 +453,17 @@ const GameCanvas = () => {
                         left: dmg.x,
                         top: dmg.y,
                         transform: 'translate(-50%, -50%)',
-                        fontSize: dmg.isHyperCritical ? '40px' : (dmg.isCritical ? '32px' : '24px'),
+                        fontSize: dmg.isHyperCritical ? '28px' : (dmg.isCritical ? '22px' : '16px'),
                         fontWeight: 'bold',
                         color: dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700'),
                         textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)',
                         pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
                         animation: 'floatUp 1s ease-out forwards',
                         zIndex: 1000
                     }}
                 >
-                    -{dmg.damage.toLocaleString()}
+                    -{formatDamage(dmg.damage)}
                 </div>
             ))}
 

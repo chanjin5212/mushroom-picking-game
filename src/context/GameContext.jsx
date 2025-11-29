@@ -123,7 +123,8 @@ const initialState = {
         critDamage: 0,
         hyperCritChance: 0,
         hyperCritDamage: 0
-    }
+    },
+    obtainedWeapons: [0] // Start with weapon 0 (맨손)
 };
 
 // LocalStorage key
@@ -152,7 +153,8 @@ const saveState = async (state) => {
             criticalDamage: state.criticalDamage,
             hyperCriticalChance: state.hyperCriticalChance,
             hyperCriticalDamage: state.hyperCriticalDamage,
-            statLevels: state.statLevels
+            statLevels: state.statLevels,
+            obtainedWeapons: state.obtainedWeapons
         };
 
         // Save to Supabase
@@ -264,13 +266,18 @@ const gameReducer = (state, action) => {
             const roll = Math.random() * 100;
 
             if (roll < successRate) {
-                // Success
+                // Success - add new weapon to obtained list
+                const newObtainedWeapons = state.obtainedWeapons.includes(nextWeaponId)
+                    ? state.obtainedWeapons
+                    : [...state.obtainedWeapons, nextWeaponId];
+
                 return {
                     ...state,
                     gold: state.gold - evolveCost,
                     currentWeaponId: nextWeaponId,
                     weaponLevel: 0,
                     clickDamage: calculateDamage(nextWeaponId, 0),
+                    obtainedWeapons: newObtainedWeapons,
                     lastEvolveResult: 'success'
                 };
             } else if (roll < successRate + destructionRate) {
@@ -535,7 +542,8 @@ export const GameProvider = ({ children }) => {
                             criticalDamage: 150,
                             hyperCriticalChance: 0,
                             hyperCriticalDamage: 200,
-                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 }
+                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 },
+                            obtainedWeapons: [0]
                         }
                     }
                 ])
@@ -571,6 +579,34 @@ export const GameProvider = ({ children }) => {
         return false;
     };
 
+    const fetchRankings = async () => {
+        try {
+            // Fetch all users (limit to 100 for performance)
+            const { data, error } = await supabase
+                .from('users')
+                .select('username, game_data')
+                .limit(100);
+
+            if (error) throw error;
+
+            // Sort by Weapon ID (desc) then Weapon Level (desc)
+            const sorted = data.sort((a, b) => {
+                const weaponIdA = a.game_data?.currentWeaponId || 0;
+                const weaponIdB = b.game_data?.currentWeaponId || 0;
+                if (weaponIdA !== weaponIdB) return weaponIdB - weaponIdA;
+
+                const levelA = a.game_data?.weaponLevel || 0;
+                const levelB = b.game_data?.weaponLevel || 0;
+                return levelB - levelA;
+            });
+
+            return sorted;
+        } catch (error) {
+            console.error('Failed to fetch rankings:', error);
+            return [];
+        }
+    };
+
     const resetGame = async () => {
         if (!state.user) return false;
 
@@ -592,7 +628,8 @@ export const GameProvider = ({ children }) => {
                         criticalDamage: 150,
                         hyperCriticalChance: 0,
                         hyperCriticalDamage: 200,
-                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 }
+                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0 },
+                        obtainedWeapons: [0]
                     }
                 })
                 .eq('id', state.user.id);
@@ -609,7 +646,7 @@ export const GameProvider = ({ children }) => {
     };
 
     return (
-        <GameContext.Provider value={{ state, dispatch, WEAPONS, login, signup, logout, manualSave, resetGame, isLoading: state.isLoading }}>
+        <GameContext.Provider value={{ state, dispatch, WEAPONS, login, signup, logout, manualSave, resetGame, fetchRankings, isLoading: state.isLoading }}>
             {children}
         </GameContext.Provider>
     );

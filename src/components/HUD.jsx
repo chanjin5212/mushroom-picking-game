@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatNumber } from '../utils/formatNumber';
+import RankingBoard from './RankingBoard';
+import UserInfoModal from './UserInfoModal';
+import WeaponCollection from './WeaponCollection';
 
 const HUD = () => {
-    const { state, logout, manualSave, resetGame } = useGame();
+    const { state } = useGame();
     const [menuOpen, setMenuOpen] = useState(false);
-    const [showToast, setShowToast] = useState(false);
+    const [showRanking, setShowRanking] = useState(false);
+    const [showUserInfo, setShowUserInfo] = useState(false);
+    const [showCollection, setShowCollection] = useState(false);
 
     // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100)
     const calculateCombatPower = () => {
@@ -16,35 +21,6 @@ const HUD = () => {
     };
 
     const combatPower = calculateCombatPower();
-
-    const handleSave = () => {
-        const success = manualSave();
-        if (success) {
-            setMenuOpen(false);
-            setShowToast(true);
-            setTimeout(() => {
-                setShowToast(false);
-            }, 2000);
-        }
-    };
-
-    const handleLogout = () => {
-        setMenuOpen(false);
-        logout();
-    };
-
-    const handleReset = async () => {
-        if (window.confirm('정말로 게임을 초기화하시겠습니까? 모든 진행 상황이 삭제됩니다!')) {
-            const success = await resetGame();
-            if (success) {
-                setMenuOpen(false);
-                setShowToast(true);
-                setTimeout(() => {
-                    setShowToast(false);
-                }, 2000);
-            }
-        }
-    };
 
     return (
         <>
@@ -174,12 +150,15 @@ const HUD = () => {
                                 zIndex: 100
                             }}>
                                 <button
-                                    onClick={handleSave}
+                                    onClick={() => {
+                                        setMenuOpen(false);
+                                        setShowRanking(true);
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '12px 16px',
                                         backgroundColor: 'transparent',
-                                        color: '#4caf50',
+                                        color: '#ffd700',
                                         border: 'none',
                                         textAlign: 'left',
                                         cursor: 'pointer',
@@ -190,14 +169,14 @@ const HUD = () => {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.target.style.backgroundColor = 'rgba(76,175,80,0.1)';
+                                        e.target.style.backgroundColor = 'rgba(255,215,0,0.1)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.target.style.backgroundColor = 'transparent';
                                     }}
                                 >
-                                    <span>💾</span>
-                                    <span>저장</span>
+                                    <span>🏆</span>
+                                    <span>랭킹</span>
                                 </button>
 
                                 <div style={{
@@ -207,7 +186,10 @@ const HUD = () => {
                                 }} />
 
                                 <button
-                                    onClick={handleReset}
+                                    onClick={() => {
+                                        setMenuOpen(false);
+                                        setShowCollection(true);
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '12px 16px',
@@ -229,8 +211,8 @@ const HUD = () => {
                                         e.target.style.backgroundColor = 'transparent';
                                     }}
                                 >
-                                    <span>🔄</span>
-                                    <span>초기화</span>
+                                    <span>📖</span>
+                                    <span>도감</span>
                                 </button>
 
                                 <div style={{
@@ -240,12 +222,15 @@ const HUD = () => {
                                 }} />
 
                                 <button
-                                    onClick={handleLogout}
+                                    onClick={() => {
+                                        setMenuOpen(false);
+                                        setShowUserInfo(true);
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '12px 16px',
                                         backgroundColor: 'transparent',
-                                        color: '#f44336',
+                                        color: '#fff',
                                         border: 'none',
                                         textAlign: 'left',
                                         cursor: 'pointer',
@@ -256,14 +241,14 @@ const HUD = () => {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.target.style.backgroundColor = 'rgba(244,67,54,0.1)';
+                                        e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.target.style.backgroundColor = 'transparent';
                                     }}
                                 >
-                                    <span>🚪</span>
-                                    <span>로그아웃</span>
+                                    <span>👤</span>
+                                    <span>내 정보</span>
                                 </button>
                             </div>
                         </>
@@ -271,43 +256,19 @@ const HUD = () => {
                 </div>
             </div>
 
-            {/* Toast Notification */}
-            {showToast && (
-                <div style={{
-                    position: 'fixed',
-                    top: '80px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(76,175,80,0.95)',
-                    color: 'white',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                    zIndex: 1000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    fontSize: '0.95rem',
-                    fontWeight: '500',
-                    animation: 'slideDown 0.3s ease-out'
-                }}>
-                    <span style={{ fontSize: '1.2rem' }}>✓</span>
-                    <span>저장되었습니다</span>
-                </div>
+            {/* Modals */}
+            {showRanking && (
+                <RankingBoard onClose={() => setShowRanking(false)} />
             )}
 
-            <style>{`
-                @keyframes slideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0);
-                    }
-                }
-            `}</style>
+            {showUserInfo && (
+                <UserInfoModal onClose={() => setShowUserInfo(false)} />
+            )}
+
+            {/* Weapon Collection Modal */}
+            {showCollection && (
+                <WeaponCollection onClose={() => setShowCollection(false)} />
+            )}
         </>
     );
 };
