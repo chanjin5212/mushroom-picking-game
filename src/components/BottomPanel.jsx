@@ -11,6 +11,12 @@ const BottomPanel = () => {
     const holdIntervalRef = useRef(null);
     const holdTimeoutRef = useRef(null);
 
+    // Keep track of latest state for hold actions
+    const stateRef = useRef(state);
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
+
     const currentWeapon = WEAPONS[state.currentWeaponId];
     const nextWeapon = WEAPONS[state.currentWeaponId + 1];
 
@@ -46,14 +52,16 @@ const BottomPanel = () => {
 
 
     const handleEnhance = () => {
+        // Use stateRef to get the latest state even inside closures
+        const currentState = stateRef.current;
+
         // Safety check: stop if weapon level is 10 or higher
-        if (state.weaponLevel >= 10) {
+        if (currentState.weaponLevel >= 10) {
             stopHold();
             return;
         }
-        if (state.gold >= enhanceCost) {
-            dispatch({ type: 'ENHANCE_WEAPON' });
-        }
+        // Reducer will check gold and calculate cost based on current state
+        dispatch({ type: 'ENHANCE_WEAPON' });
     };
 
     const handleEvolve = () => {
@@ -63,16 +71,10 @@ const BottomPanel = () => {
     };
 
     const handleUpgradeStat = (statType) => {
-        let cost;
-        if (statType === 'critChance') cost = critChanceCost;
-        else if (statType === 'critDamage') cost = critDamageCost;
-        else if (statType === 'hyperCritChance') cost = hyperCritChanceCost;
-        else if (statType === 'hyperCritDamage') cost = hyperCritDamageCost;
-
-        if (state.gold >= cost) {
-            dispatch({ type: 'UPGRADE_STAT', payload: { statType, cost } });
-        }
+        // Cost is now calculated in the reducer based on current state
+        dispatch({ type: 'UPGRADE_STAT', payload: { statType } });
     };
+
 
     // Hold to repeat handlers with progressive acceleration
     const startHold = (action) => {
@@ -111,12 +113,6 @@ const BottomPanel = () => {
         }
     };
 
-    // Stop hold when weapon level changes (e.g., reaches level 10)
-    useEffect(() => {
-        return () => {
-            stopHold();
-        };
-    }, [state.weaponLevel]);
 
     return (
         <div style={{

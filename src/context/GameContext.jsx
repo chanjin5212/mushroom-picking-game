@@ -293,7 +293,33 @@ const gameReducer = (state, action) => {
         }
 
         case 'UPGRADE_STAT': {
-            const { statType, cost } = action.payload;
+            const { statType } = action.payload;
+
+            // Helper functions to calculate costs
+            const calculateTieredCost = (baseCost, level) => {
+                let exponent = 1.2;
+                if (level >= 100) exponent = 2.0;
+                else if (level >= 10) exponent = 1.5;
+                return Math.floor(baseCost * Math.pow(level + 1, exponent));
+            };
+
+            const calculateLinearCost = (baseCost, level) => {
+                return Math.floor(baseCost * (level + 1));
+            };
+
+            // Calculate cost based on CURRENT state
+            let cost;
+            if (statType === 'critChance') {
+                cost = calculateLinearCost(1000, state.statLevels?.critChance || 0);
+            } else if (statType === 'critDamage') {
+                cost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
+            } else if (statType === 'hyperCritChance') {
+                cost = calculateLinearCost(10000000, state.statLevels?.hyperCritChance || 0);
+            } else if (statType === 'hyperCritDamage') {
+                cost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
+            }
+
+            // Check if we have enough gold
             if (state.gold < cost) return state;
 
             // Check if stat can actually be upgraded before deducting gold
