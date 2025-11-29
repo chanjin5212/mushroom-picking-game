@@ -305,7 +305,7 @@ const gameReducer = (state, action) => {
         }
 
         case 'UPGRADE_STAT': {
-            const { statType } = action.payload;
+            const { statType, count = 1 } = action.payload;
 
             // Helper functions to calculate costs
             const calculateTieredCost = (baseCost, level) => {
@@ -319,121 +319,103 @@ const gameReducer = (state, action) => {
                 return Math.floor(baseCost * (level + 1));
             };
 
-            // Calculate cost based on CURRENT state
-            let cost;
+            let totalCost = 0;
+            let currentLevel = 0;
+            let currentVal = 0;
+            let maxLevel = 0;
+            let baseCost = 0;
+            let isTiered = false;
+
+            // Determine stat parameters
             if (statType === 'critChance') {
-                cost = calculateLinearCost(1000, state.statLevels?.critChance || 0);
+                currentLevel = state.statLevels?.critChance || 0;
+                currentVal = state.criticalChance;
+                maxLevel = 1000;
+                baseCost = 1000;
+                isTiered = false;
             } else if (statType === 'critDamage') {
-                cost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
+                currentLevel = state.statLevels?.critDamage || 0;
+                currentVal = state.criticalDamage;
+                maxLevel = Infinity;
+                baseCost = 800;
+                isTiered = true;
             } else if (statType === 'hyperCritChance') {
-                cost = calculateLinearCost(10000000, state.statLevels?.hyperCritChance || 0);
+                currentLevel = state.statLevels?.hyperCritChance || 0;
+                currentVal = state.hyperCriticalChance;
+                maxLevel = 1000;
+                baseCost = 10000000;
+                isTiered = false;
             } else if (statType === 'hyperCritDamage') {
-                cost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
-            }
-
-            // Check if we have enough gold
-            if (state.gold < cost) return state;
-
-            // Check if stat can actually be upgraded before deducting gold
-            if (statType === 'critChance') {
-                const currentVal = state.criticalChance;
-                const nextVal = parseFloat((currentVal + 0.1).toFixed(1));
-                if (nextVal > 100) return state; // Already at max, don't deduct gold
-
-                return {
-                    ...state,
-                    gold: state.gold - cost,
-                    criticalChance: nextVal,
-                    statLevels: {
-                        ...state.statLevels,
-                        critChance: (state.statLevels.critChance || 0) + 1
-                    }
-                };
-            } else if (statType === 'critDamage') {
-                return {
-                    ...state,
-                    gold: state.gold - cost,
-                    criticalDamage: state.criticalDamage + 1,
-                    statLevels: {
-                        ...state.statLevels,
-                        critDamage: (state.statLevels.critDamage || 0) + 1
-                    }
-                };
-            } else if (statType === 'hyperCritChance') {
-                const currentVal = state.hyperCriticalChance;
-                const nextVal = parseFloat((currentVal + 0.1).toFixed(1));
-                if (nextVal > 100) return state; // Already at max, don't deduct gold
-
-                return {
-                    ...state,
-                    gold: state.gold - cost,
-                    hyperCriticalChance: nextVal,
-                    statLevels: {
-                        ...state.statLevels,
-                        hyperCritChance: (state.statLevels.hyperCritChance || 0) + 1
-                    }
-                };
-            } else if (statType === 'hyperCritDamage') {
-                return {
-                    ...state,
-                    gold: state.gold - cost,
-                    hyperCriticalDamage: state.hyperCriticalDamage + 1,
-                    statLevels: {
-                        ...state.statLevels,
-                        hyperCritDamage: (state.statLevels.hyperCritDamage || 0) + 1
-                    }
-                };
+                currentLevel = state.statLevels?.hyperCritDamage || 0;
+                currentVal = state.hyperCriticalDamage;
+                maxLevel = Infinity;
+                baseCost = 5000000;
+                isTiered = true;
             } else if (statType === 'moveSpeed') {
-                const currentLevel = state.statLevels?.moveSpeed || 0;
-                const maxLevel = 300; // Max level for 3x speed
-
-                if (currentLevel >= maxLevel) return state; // Already at max
-
-                cost = calculateTieredCost(500, currentLevel); // Steeper cost scaling
-
-                if (state.gold < cost) return state;
-
-                // Calculate new speed: base 5, increases to 15 at level 300
-                // Formula: 5 + (10 * level / 300) = 5 to 15
-                const newLevel = currentLevel + 1;
-                const newSpeed = 5 + (10 * newLevel / maxLevel);
-
-                return {
-                    ...state,
-                    gold: state.gold - cost,
-                    moveSpeed: newSpeed,
-                    statLevels: {
-                        ...state.statLevels,
-                        moveSpeed: newLevel
-                    }
-                };
+                currentLevel = state.statLevels?.moveSpeed || 0;
+                currentVal = state.moveSpeed;
+                maxLevel = 300;
+                baseCost = 500;
+                isTiered = true;
             } else if (statType === 'attackRange') {
-                const currentLevel = state.statLevels?.attackRange || 0;
-                const maxLevel = 300; // Max level for 2x range (changed from 3x)
-
-                if (currentLevel >= maxLevel) return state; // Already at max
-
-                cost = calculateTieredCost(500, currentLevel); // Steeper cost scaling
-
-                if (state.gold < cost) return state;
-
-                // Calculate new range: base 80, increases to 160 at level 300
-                // Formula: 80 + (80 * level / 300) = 80 to 160
-                const newLevel = currentLevel + 1;
-                const newRange = 80 + (80 * newLevel / maxLevel);
-
-                return {
-                    ...state,
-                    gold: state.gold - cost,
-                    attackRange: newRange,
-                    statLevels: {
-                        ...state.statLevels,
-                        attackRange: newLevel
-                    }
-                };
+                currentLevel = state.statLevels?.attackRange || 0;
+                currentVal = state.attackRange;
+                maxLevel = 300;
+                baseCost = 500;
+                isTiered = true;
             }
 
-            return state;
+            // Calculate total cost and valid count
+            let validCount = 0;
+            let tempLevel = currentLevel;
+
+            for (let i = 0; i < count; i++) {
+                if (tempLevel >= maxLevel && maxLevel !== Infinity) break;
+
+                let stepCost = isTiered
+                    ? calculateTieredCost(baseCost, tempLevel)
+                    : calculateLinearCost(baseCost, tempLevel);
+
+                totalCost += stepCost;
+                tempLevel++;
+                validCount++;
+            }
+
+            if (validCount === 0) return state;
+            if (state.gold < totalCost) return state;
+
+            // Apply upgrades
+            const newState = {
+                ...state,
+                gold: state.gold - totalCost,
+                statLevels: { ...state.statLevels }
+            };
+
+            if (statType === 'critChance') {
+                newState.criticalChance = parseFloat((state.criticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.critChance = currentLevel + validCount;
+            } else if (statType === 'critDamage') {
+                newState.criticalDamage = state.criticalDamage + (1 * validCount);
+                newState.statLevels.critDamage = currentLevel + validCount;
+            } else if (statType === 'hyperCritChance') {
+                newState.hyperCriticalChance = parseFloat((state.hyperCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.hyperCritChance = currentLevel + validCount;
+            } else if (statType === 'hyperCritDamage') {
+                newState.hyperCriticalDamage = state.hyperCriticalDamage + (1 * validCount);
+                newState.statLevels.hyperCritDamage = currentLevel + validCount;
+            } else if (statType === 'moveSpeed') {
+                // Formula: 5 + (10 * level / 300)
+                const newLevel = currentLevel + validCount;
+                newState.moveSpeed = 5 + (10 * newLevel / 300);
+                newState.statLevels.moveSpeed = newLevel;
+            } else if (statType === 'attackRange') {
+                // Formula: 80 + (80 * level / 300)
+                const newLevel = currentLevel + validCount;
+                newState.attackRange = 80 + (80 * newLevel / 300);
+                newState.statLevels.attackRange = newLevel;
+            }
+
+            return newState;
         }
 
         case 'SET_PLAYER_POS':

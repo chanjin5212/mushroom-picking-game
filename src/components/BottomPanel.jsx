@@ -6,6 +6,7 @@ const BottomPanel = () => {
     const { state, dispatch, WEAPONS } = useGame();
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stats'
+    const [upgradeMultiplier, setUpgradeMultiplier] = useState(1);
 
     // For hold-to-repeat functionality
     const holdIntervalRef = useRef(null);
@@ -44,16 +45,72 @@ const BottomPanel = () => {
         return Math.floor(baseCost * (level + 1));
     };
 
-    // Stat Upgrade Logic - linear for Chance, tiered for Damage
-    const critChanceCost = calculateLinearCost(1000, state.statLevels?.critChance || 0);
-    const critDamageCost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
-    const hyperCritChanceCost = calculateLinearCost(10000000, state.statLevels?.hyperCritChance || 0);
-    const hyperCritDamageCost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
-    const moveSpeedCost = calculateTieredCost(500, state.statLevels?.moveSpeed || 0);
-    const attackRangeCost = calculateTieredCost(500, state.statLevels?.attackRange || 0);
+    // Helper to calculate bulk cost and valid count
+    const calculateBulkUpgrade = (statType, currentLevel, count) => {
+        let totalCost = 0;
+        let validCount = 0;
+        let tempLevel = currentLevel;
+        let maxLevel = Infinity;
+        let baseCost = 0;
+        let isTiered = false;
+
+        // Determine params (must match GameContext logic)
+        if (statType === 'critChance') {
+            maxLevel = 1000;
+            baseCost = 1000;
+            isTiered = false;
+        } else if (statType === 'critDamage') {
+            maxLevel = Infinity;
+            baseCost = 800;
+            isTiered = true;
+        } else if (statType === 'hyperCritChance') {
+            maxLevel = 1000;
+            baseCost = 10000000;
+            isTiered = false;
+        } else if (statType === 'hyperCritDamage') {
+            maxLevel = Infinity;
+            baseCost = 5000000;
+            isTiered = true;
+        } else if (statType === 'moveSpeed') {
+            maxLevel = 300;
+            baseCost = 500;
+            isTiered = true;
+        } else if (statType === 'attackRange') {
+            maxLevel = 300;
+            baseCost = 500;
+            isTiered = true;
+        }
+
+        for (let i = 0; i < count; i++) {
+            if (tempLevel >= maxLevel && maxLevel !== Infinity) break;
+
+            let stepCost = isTiered
+                ? calculateTieredCost(baseCost, tempLevel)
+                : calculateLinearCost(baseCost, tempLevel);
+
+            totalCost += stepCost;
+            tempLevel++;
+            validCount++;
+        }
+
+        return { totalCost, validCount };
+    };
+
+    // Calculate costs for current multiplier
+    const getUpgradeInfo = (statType) => {
+        const currentLevel = state.statLevels?.[statType] || 0;
+        return calculateBulkUpgrade(statType, currentLevel, upgradeMultiplier);
+    };
+
+    const critChanceInfo = getUpgradeInfo('critChance');
+    const critDamageInfo = getUpgradeInfo('critDamage');
+    const hyperCritChanceInfo = getUpgradeInfo('hyperCritChance');
+    const hyperCritDamageInfo = getUpgradeInfo('hyperCritDamage');
+    const moveSpeedInfo = getUpgradeInfo('moveSpeed');
+    const attackRangeInfo = getUpgradeInfo('attackRange');
 
     // Move speed max level check
-    const moveSpeedMaxLevel = 300; // Changed from 3000 to 300
+    const moveSpeedMaxLevel = 300;
     const moveSpeedLevel = state.statLevels?.moveSpeed || 0;
     const isMaxMoveSpeed = moveSpeedLevel >= moveSpeedMaxLevel;
 
@@ -95,51 +152,22 @@ const BottomPanel = () => {
 
     const handleUpgradeStat = (statType) => {
         const currentState = stateRef.current;
+        const currentLevel = currentState.statLevels?.[statType] || 0;
 
-        // Calculate cost based on stat type
-        let cost;
-        if (statType === 'critChance') {
-            cost = calculateLinearCost(1000, currentState.statLevels?.critChance || 0);
-            // Check if already at max (100%)
-            if (currentState.criticalChance >= 100) {
-                stopHold();
-                return;
-            }
-        } else if (statType === 'critDamage') {
-            cost = calculateTieredCost(800, currentState.statLevels?.critDamage || 0);
-        } else if (statType === 'hyperCritChance') {
-            cost = calculateLinearCost(10000000, currentState.statLevels?.hyperCritChance || 0);
-            // Check if already at max (100%)
-            if (currentState.hyperCriticalChance >= 100) {
-                stopHold();
-                return;
-            }
-        } else if (statType === 'hyperCritDamage') {
-            cost = calculateTieredCost(5000000, currentState.statLevels?.hyperCritDamage || 0);
-        } else if (statType === 'moveSpeed') {
-            cost = calculateTieredCost(500, currentState.statLevels?.moveSpeed || 0);
-            // Check if already at max (300 levels)
-            if ((currentState.statLevels?.moveSpeed || 0) >= 300) {
-                stopHold();
-                return;
-            }
-        } else if (statType === 'attackRange') {
-            cost = calculateTieredCost(500, currentState.statLevels?.attackRange || 0);
-            // Check if already at max (300 levels)
-            if ((currentState.statLevels?.attackRange || 0) >= 300) {
-                stopHold();
-                return;
-            }
-        }
+        // Calculate cost for current multiplier
+        const { totalCost, validCount } = calculateBulkUpgrade(statType, currentLevel, upgradeMultiplier);
 
-        // Stop if not enough gold
-        if (currentState.gold < cost) {
+        if (validCount === 0) {
             stopHold();
             return;
         }
 
-        // Cost is now calculated in the reducer based on current state
-        dispatch({ type: 'UPGRADE_STAT', payload: { statType } });
+        if (currentState.gold >= totalCost) {
+            dispatch({ type: 'UPGRADE_STAT', payload: { statType, count: validCount } });
+        } else {
+            // Optional: Stop holding if not enough gold
+            // stopHold(); 
+        }
     };
 
 
@@ -234,41 +262,73 @@ const BottomPanel = () => {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <button
-                    onClick={() => setActiveTab('weapon')}
-                    style={{
-                        flex: 1,
-                        padding: '15px',
-                        background: activeTab === 'weapon' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                        border: 'none',
-                        color: activeTab === 'weapon' ? '#fff' : '#888',
-                        fontSize: '1rem',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                    }}
-                >
-                    ⚔️ 무기
-                </button>
-                <button
-                    onClick={() => setActiveTab('stats')}
-                    style={{
-                        flex: 1,
-                        padding: '15px',
-                        background: activeTab === 'stats' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                        border: 'none',
-                        color: activeTab === 'stats' ? '#fff' : '#888',
-                        fontSize: '1rem',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                    }}
-                >
-                    📊 스탯
-                </button>
-            </div>
+            {isOpen && (
+                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <button
+                        onClick={() => setActiveTab('weapon')}
+                        style={{
+                            flex: 1,
+                            padding: '15px',
+                            background: activeTab === 'weapon' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            border: 'none',
+                            color: activeTab === 'weapon' ? '#fff' : '#888',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        ⚔️ 무기
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('stats')}
+                        style={{
+                            flex: 1,
+                            padding: '15px',
+                            background: activeTab === 'stats' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            border: 'none',
+                            color: activeTab === 'stats' ? '#fff' : '#888',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📊 스탯
+                    </button>
+                </div>
+            )}
 
             {/* Content Area */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                {!isOpen && (
+                    <div style={{ textAlign: 'center', color: '#888', marginTop: '10px' }}>
+                        업그레이드 메뉴를 열어주세요
+                    </div>
+                )}
+
+                {/* Multiplier Toggles (Only visible in Stats tab) */}
+                {isOpen && activeTab === 'stats' && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px', marginBottom: '15px' }}>
+                        {[1, 10, 100, 1000].map(mul => (
+                            <button
+                                key={mul}
+                                onClick={() => setUpgradeMultiplier(mul)}
+                                style={{
+                                    padding: '5px 10px',
+                                    backgroundColor: upgradeMultiplier === mul ? '#2196f3' : '#444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                x{mul}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {activeTab === 'weapon' && (
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '4rem', marginBottom: '10px' }}>{currentWeapon.icon}</div>
@@ -359,22 +419,22 @@ const BottomPanel = () => {
                                     onMouseLeave={stopHold}
                                     onTouchStart={() => startHold(() => handleUpgradeStat('attackRange'))}
                                     onTouchEnd={stopHold}
-                                    disabled={state.gold < attackRangeCost}
+                                    disabled={state.gold < attackRangeInfo.totalCost || attackRangeInfo.validCount === 0}
                                     style={{
                                         width: '100%',
                                         padding: '10px',
-                                        backgroundColor: state.gold >= attackRangeCost ? '#2196f3' : '#555',
+                                        backgroundColor: state.gold >= attackRangeInfo.totalCost ? '#2196f3' : '#555',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: state.gold >= attackRangeCost ? 'pointer' : 'not-allowed',
+                                        cursor: state.gold >= attackRangeInfo.totalCost ? 'pointer' : 'not-allowed',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>강화 - 누르고 있으면 반복</span>
-                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(attackRangeCost)} G</span>
+                                    <span>강화 (+{attackRangeInfo.validCount})</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(attackRangeInfo.totalCost)} G</span>
                                 </button>
                             ) : (
                                 <div style={{ textAlign: 'center', color: '#2196f3', fontWeight: 'bold' }}>최대 레벨</div>
@@ -402,22 +462,22 @@ const BottomPanel = () => {
                                     onMouseLeave={stopHold}
                                     onTouchStart={() => startHold(() => handleUpgradeStat('moveSpeed'))}
                                     onTouchEnd={stopHold}
-                                    disabled={state.gold < moveSpeedCost}
+                                    disabled={state.gold < moveSpeedInfo.totalCost || moveSpeedInfo.validCount === 0}
                                     style={{
                                         width: '100%',
                                         padding: '10px',
-                                        backgroundColor: state.gold >= moveSpeedCost ? '#4caf50' : '#555',
+                                        backgroundColor: state.gold >= moveSpeedInfo.totalCost ? '#4caf50' : '#555',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: state.gold >= moveSpeedCost ? 'pointer' : 'not-allowed',
+                                        cursor: state.gold >= moveSpeedInfo.totalCost ? 'pointer' : 'not-allowed',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>강화 - 누르고 있으면 반복</span>
-                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(moveSpeedCost)} G</span>
+                                    <span>강화 (+{moveSpeedInfo.validCount})</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(moveSpeedInfo.totalCost)} G</span>
                                 </button>
                             ) : (
                                 <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>최대 레벨</div>
@@ -442,22 +502,22 @@ const BottomPanel = () => {
                                     onMouseLeave={stopHold}
                                     onTouchStart={() => startHold(() => handleUpgradeStat('critChance'))}
                                     onTouchEnd={stopHold}
-                                    disabled={state.gold < critChanceCost}
+                                    disabled={state.gold < critChanceInfo.totalCost || critChanceInfo.validCount === 0}
                                     style={{
                                         width: '100%',
                                         padding: '10px',
-                                        backgroundColor: state.gold >= critChanceCost ? '#4caf50' : '#555',
+                                        backgroundColor: state.gold >= critChanceInfo.totalCost ? '#4caf50' : '#555',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: state.gold >= critChanceCost ? 'pointer' : 'not-allowed',
+                                        cursor: state.gold >= critChanceInfo.totalCost ? 'pointer' : 'not-allowed',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>강화 (+0.1%) - 누르고 있으면 반복</span>
-                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(critChanceCost)} G</span>
+                                    <span>강화 (+{(critChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(critChanceInfo.totalCost)} G</span>
                                 </button>
                             ) : (
                                 <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>최대 레벨</div>
@@ -481,22 +541,22 @@ const BottomPanel = () => {
                                 onMouseLeave={stopHold}
                                 onTouchStart={() => startHold(() => handleUpgradeStat('critDamage'))}
                                 onTouchEnd={stopHold}
-                                disabled={state.gold < critDamageCost}
+                                disabled={state.gold < critDamageInfo.totalCost || critDamageInfo.validCount === 0}
                                 style={{
                                     width: '100%',
                                     padding: '10px',
-                                    backgroundColor: state.gold >= critDamageCost ? '#f44336' : '#555',
+                                    backgroundColor: state.gold >= critDamageInfo.totalCost ? '#f44336' : '#555',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
-                                    cursor: state.gold >= critDamageCost ? 'pointer' : 'not-allowed',
+                                    cursor: state.gold >= critDamageInfo.totalCost ? 'pointer' : 'not-allowed',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center'
                                 }}
                             >
-                                <span>강화 (+1%) - 누르고 있으면 반복</span>
-                                <span style={{ color: '#ffeb3b' }}>{formatNumber(critDamageCost)} G</span>
+                                <span>강화 (+{critDamageInfo.validCount}%)</span>
+                                <span style={{ color: '#ffeb3b' }}>{formatNumber(critDamageInfo.totalCost)} G</span>
                             </button>
                         </div>
 
@@ -554,22 +614,22 @@ const BottomPanel = () => {
                                     onMouseLeave={stopHold}
                                     onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritChance'))}
                                     onTouchEnd={stopHold}
-                                    disabled={state.gold < hyperCritChanceCost || (state.statLevels?.critChance || 0) < 1000}
+                                    disabled={state.gold < hyperCritChanceInfo.totalCost || hyperCritChanceInfo.validCount === 0 || (state.statLevels?.critChance || 0) < 1000}
                                     style={{
                                         width: '100%',
                                         padding: '10px',
-                                        backgroundColor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff6b6b' : '#555',
+                                        backgroundColor: (state.gold >= hyperCritChanceInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff6b6b' : '#555',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: (state.gold >= hyperCritChanceCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
+                                        cursor: (state.gold >= hyperCritChanceInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>강화 (+0.1%) - 누르고 있으면 반복</span>
-                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritChanceCost)} G</span>
+                                    <span>강화 (+{(hyperCritChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritChanceInfo.totalCost)} G</span>
                                 </button>
                             ) : (
                                 <div style={{ textAlign: 'center', color: '#ff6b6b', fontWeight: 'bold' }}>최대 레벨</div>
@@ -616,22 +676,22 @@ const BottomPanel = () => {
                                 onMouseLeave={stopHold}
                                 onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
                                 onTouchEnd={stopHold}
-                                disabled={state.gold < hyperCritDamageCost || (state.statLevels?.critChance || 0) < 1000}
+                                disabled={state.gold < hyperCritDamageInfo.totalCost || hyperCritDamageInfo.validCount === 0 || (state.statLevels?.critChance || 0) < 1000}
                                 style={{
                                     width: '100%',
                                     padding: '10px',
-                                    backgroundColor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff8e53' : '#555',
+                                    backgroundColor: (state.gold >= hyperCritDamageInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff8e53' : '#555',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
-                                    cursor: (state.gold >= hyperCritDamageCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
+                                    cursor: (state.gold >= hyperCritDamageInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center'
                                 }}
                             >
-                                <span>강화 (+1%) - 누르고 있으면 반복</span>
-                                <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageCost)} G</span>
+                                <span>강화 (+{hyperCritDamageInfo.validCount}%)</span>
+                                <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageInfo.totalCost)} G</span>
                             </button>
                         </div>
                     </div>
