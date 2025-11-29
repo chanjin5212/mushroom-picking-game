@@ -114,7 +114,7 @@ const GameCanvas = () => {
             };
 
             const dist = Math.hypot(playerCenter.x - mushroomCenter.x, playerCenter.y - mushroomCenter.y);
-            const range = mushroom.type === 'boss' ? 120 : 80;
+            const range = currentState.attackRange + (mushroom.type === 'boss' ? 40 : 0);
 
             if (dist < range) {
                 // Calculate damage

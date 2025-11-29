@@ -105,6 +105,7 @@ const initialState = {
     weaponLevel: 0,
     clickDamage: 1,
     moveSpeed: 5,
+    attackRange: 80, // Base attack range
     playerPos: { x: 400, y: 300 },
     currentScene: 'village',
     mushrooms: [],
@@ -123,7 +124,8 @@ const initialState = {
         critDamage: 0,
         hyperCritChance: 0,
         hyperCritDamage: 0,
-        moveSpeed: 0
+        moveSpeed: 0,
+        attackRange: 0
     },
     obtainedWeapons: [0] // Start with weapon 0 (맨손)
 };
@@ -155,7 +157,9 @@ const saveState = async (state) => {
             hyperCriticalChance: state.hyperCriticalChance,
             hyperCriticalDamage: state.hyperCriticalDamage,
             statLevels: state.statLevels,
-            obtainedWeapons: state.obtainedWeapons
+            statLevels: state.statLevels,
+            obtainedWeapons: state.obtainedWeapons,
+            attackRange: state.attackRange
         };
 
         // Save to Supabase
@@ -381,16 +385,16 @@ const gameReducer = (state, action) => {
                 };
             } else if (statType === 'moveSpeed') {
                 const currentLevel = state.statLevels?.moveSpeed || 0;
-                const maxLevel = 3000; // Max level for 3x speed
+                const maxLevel = 300; // Max level for 3x speed
 
                 if (currentLevel >= maxLevel) return state; // Already at max
 
-                cost = calculateLinearCost(500, currentLevel); // Base cost 500
+                cost = calculateTieredCost(500, currentLevel); // Steeper cost scaling
 
                 if (state.gold < cost) return state;
 
-                // Calculate new speed: base 5, increases to 15 at level 3000
-                // Formula: 5 + (10 * level / 3000) = 5 to 15
+                // Calculate new speed: base 5, increases to 15 at level 300
+                // Formula: 5 + (10 * level / 300) = 5 to 15
                 const newLevel = currentLevel + 1;
                 const newSpeed = 5 + (10 * newLevel / maxLevel);
 
@@ -401,6 +405,30 @@ const gameReducer = (state, action) => {
                     statLevels: {
                         ...state.statLevels,
                         moveSpeed: newLevel
+                    }
+                };
+            } else if (statType === 'attackRange') {
+                const currentLevel = state.statLevels?.attackRange || 0;
+                const maxLevel = 300; // Max level for 2x range (changed from 3x)
+
+                if (currentLevel >= maxLevel) return state; // Already at max
+
+                cost = calculateTieredCost(500, currentLevel); // Steeper cost scaling
+
+                if (state.gold < cost) return state;
+
+                // Calculate new range: base 80, increases to 160 at level 300
+                // Formula: 80 + (80 * level / 300) = 80 to 160
+                const newLevel = currentLevel + 1;
+                const newRange = 80 + (80 * newLevel / maxLevel);
+
+                return {
+                    ...state,
+                    gold: state.gold - cost,
+                    attackRange: newRange,
+                    statLevels: {
+                        ...state.statLevels,
+                        attackRange: newLevel
                     }
                 };
             }
@@ -567,7 +595,7 @@ export const GameProvider = ({ children }) => {
                             criticalDamage: 150,
                             hyperCriticalChance: 0,
                             hyperCriticalDamage: 200,
-                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0 },
+                            statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0, attackRange: 0 },
                             obtainedWeapons: [0]
                         }
                     }
@@ -653,7 +681,7 @@ export const GameProvider = ({ children }) => {
                         criticalDamage: 150,
                         hyperCriticalChance: 0,
                         hyperCriticalDamage: 200,
-                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0 },
+                        statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0, attackRange: 0 },
                         obtainedWeapons: [0]
                     }
                 })

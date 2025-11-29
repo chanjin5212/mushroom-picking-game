@@ -49,12 +49,18 @@ const BottomPanel = () => {
     const critDamageCost = calculateTieredCost(800, state.statLevels?.critDamage || 0);
     const hyperCritChanceCost = calculateLinearCost(10000000, state.statLevels?.hyperCritChance || 0);
     const hyperCritDamageCost = calculateTieredCost(5000000, state.statLevels?.hyperCritDamage || 0);
-    const moveSpeedCost = calculateLinearCost(500, state.statLevels?.moveSpeed || 0);
+    const moveSpeedCost = calculateTieredCost(500, state.statLevels?.moveSpeed || 0);
+    const attackRangeCost = calculateTieredCost(500, state.statLevels?.attackRange || 0);
 
     // Move speed max level check
-    const moveSpeedMaxLevel = 3000;
+    const moveSpeedMaxLevel = 300; // Changed from 3000 to 300
     const moveSpeedLevel = state.statLevels?.moveSpeed || 0;
     const isMaxMoveSpeed = moveSpeedLevel >= moveSpeedMaxLevel;
+
+    // Attack range max level check
+    const attackRangeMaxLevel = 300;
+    const attackRangeLevel = state.statLevels?.attackRange || 0;
+    const isMaxAttackRange = attackRangeLevel >= attackRangeMaxLevel;
 
 
     const handleEnhance = () => {
@@ -111,9 +117,16 @@ const BottomPanel = () => {
         } else if (statType === 'hyperCritDamage') {
             cost = calculateTieredCost(5000000, currentState.statLevels?.hyperCritDamage || 0);
         } else if (statType === 'moveSpeed') {
-            cost = calculateLinearCost(500, currentState.statLevels?.moveSpeed || 0);
-            // Check if already at max (3000 levels)
-            if ((currentState.statLevels?.moveSpeed || 0) >= 3000) {
+            cost = calculateTieredCost(500, currentState.statLevels?.moveSpeed || 0);
+            // Check if already at max (300 levels)
+            if ((currentState.statLevels?.moveSpeed || 0) >= 300) {
+                stopHold();
+                return;
+            }
+        } else if (statType === 'attackRange') {
+            cost = calculateTieredCost(500, currentState.statLevels?.attackRange || 0);
+            // Check if already at max (300 levels)
+            if ((currentState.statLevels?.attackRange || 0) >= 300) {
                 stopHold();
                 return;
             }
@@ -324,6 +337,93 @@ const BottomPanel = () => {
 
                 {activeTab === 'stats' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+
+                        {/* Attack Range */}
+                        <div style={{
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(33, 150, 243, 0.3)'
+                        }}>
+                            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 'bold', color: '#2196f3' }}>🏹 공격 범위</span>
+                                <span style={{ color: '#fff' }}>{state.attackRange.toFixed(0)}</span>
+                            </div>
+                            <div style={{ marginBottom: '10px', fontSize: '0.85rem', color: '#aaa' }}>
+                                레벨: {attackRangeLevel} / {attackRangeMaxLevel} (최대 2배)
+                            </div>
+                            {!isMaxAttackRange ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('attackRange'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('attackRange'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < attackRangeCost}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= attackRangeCost ? '#2196f3' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= attackRangeCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 - 누르고 있으면 반복</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(attackRangeCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#2196f3', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
+                        {/* Move Speed */}
+                        <div style={{
+                            backgroundColor: 'rgba(76,175,80,0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(76,175,80,0.3)'
+                        }}>
+                            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 'bold', color: '#4caf50' }}>🏃 이동속도</span>
+                                <span style={{ color: '#fff' }}>{state.moveSpeed.toFixed(2)}</span>
+                            </div>
+                            <div style={{ marginBottom: '10px', fontSize: '0.85rem', color: '#aaa' }}>
+                                레벨: {moveSpeedLevel} / {moveSpeedMaxLevel} (최대 3배)
+                            </div>
+                            {!isMaxMoveSpeed ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('moveSpeed'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('moveSpeed'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < moveSpeedCost}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= moveSpeedCost ? '#4caf50' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= moveSpeedCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 - 누르고 있으면 반복</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(moveSpeedCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
                         {/* Crit Chance */}
                         <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -533,49 +633,6 @@ const BottomPanel = () => {
                                 <span>강화 (+1%) - 누르고 있으면 반복</span>
                                 <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageCost)} G</span>
                             </button>
-                        </div>
-
-                        {/* Move Speed */}
-                        <div style={{
-                            backgroundColor: 'rgba(76,175,80,0.1)',
-                            padding: '15px',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(76,175,80,0.3)'
-                        }}>
-                            <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 'bold', color: '#4caf50' }}>🏃 이동속도</span>
-                                <span style={{ color: '#fff' }}>{state.moveSpeed.toFixed(2)}</span>
-                            </div>
-                            <div style={{ marginBottom: '10px', fontSize: '0.85rem', color: '#aaa' }}>
-                                레벨: {moveSpeedLevel} / {moveSpeedMaxLevel} (최대 3배)
-                            </div>
-                            {!isMaxMoveSpeed ? (
-                                <button
-                                    onMouseDown={() => startHold(() => handleUpgradeStat('moveSpeed'))}
-                                    onMouseUp={stopHold}
-                                    onMouseLeave={stopHold}
-                                    onTouchStart={() => startHold(() => handleUpgradeStat('moveSpeed'))}
-                                    onTouchEnd={stopHold}
-                                    disabled={state.gold < moveSpeedCost}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        backgroundColor: state.gold >= moveSpeedCost ? '#4caf50' : '#555',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: state.gold >= moveSpeedCost ? 'pointer' : 'not-allowed',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <span>강화 - 누르고 있으면 반복</span>
-                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(moveSpeedCost)} G</span>
-                                </button>
-                            ) : (
-                                <div style={{ textAlign: 'center', color: '#4caf50', fontWeight: 'bold' }}>최대 레벨</div>
-                            )}
                         </div>
                     </div>
                 )}
