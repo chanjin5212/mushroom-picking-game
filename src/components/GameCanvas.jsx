@@ -370,10 +370,10 @@ const GameCanvas = () => {
                 height: '100%',
                 backgroundImage: state.currentScene === 'village'
                     ? 'url("/assets/village_bg.png")'
-                    : 'linear-gradient(#444 1px, transparent 1px), linear-gradient(90deg, #444 1px, transparent 1px)',
-                backgroundSize: state.currentScene === 'village' ? 'cover' : '40px 40px',
+                    : 'url("/assets/forest_bg.png")',
+                backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: state.currentScene === 'village' ? 1 : 0.2
+                opacity: 1
             }} />
 
             {/* Village UI */}
