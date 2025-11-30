@@ -6,16 +6,17 @@ const RankingBoard = ({ onClose }) => {
     const { fetchRankings, WEAPONS, state } = useGame();
     const [rankings, setRankings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stage'
 
     useEffect(() => {
         const loadRankings = async () => {
             setIsLoading(true);
-            const data = await fetchRankings();
+            const data = await fetchRankings(activeTab);
             setRankings(data);
             setIsLoading(false);
         };
         loadRankings();
-    }, []);
+    }, [activeTab]);
 
     return (
         <div style={{
@@ -43,7 +44,7 @@ const RankingBoard = ({ onClose }) => {
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
                 border: '2px solid #34495e'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h2 style={{ margin: 0, color: '#f1c40f', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         🏆 랭킹
                     </h2>
@@ -61,6 +62,42 @@ const RankingBoard = ({ onClose }) => {
                     </button>
                 </div>
 
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                    <button
+                        onClick={() => setActiveTab('weapon')}
+                        style={{
+                            flex: 1,
+                            padding: '10px',
+                            backgroundColor: activeTab === 'weapon' ? '#3498db' : 'rgba(255,255,255,0.1)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        ⚔️ 무기 랭킹
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('stage')}
+                        style={{
+                            flex: 1,
+                            padding: '10px',
+                            backgroundColor: activeTab === 'stage' ? '#e67e22' : 'rgba(255,255,255,0.1)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🚩 스테이지 랭킹
+                    </button>
+                </div>
+
                 {isLoading ? (
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff' }}>
                         로딩 중...
@@ -71,6 +108,7 @@ const RankingBoard = ({ onClose }) => {
                             const weaponId = user.game_data?.currentWeaponId || 0;
                             const weaponLevel = user.game_data?.weaponLevel || 0;
                             const weapon = WEAPONS[weaponId];
+                            const maxStage = user.game_data?.maxStage || { chapter: 1, stage: 1 };
                             const isMe = user.username === state.user?.username;
 
                             let rankColor = '#fff';
@@ -102,11 +140,18 @@ const RankingBoard = ({ onClose }) => {
                                         <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: '5px' }}>
                                             {user.username}
                                         </div>
-                                        <div style={{ fontSize: '0.9rem', color: '#bdc3c7', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <span>{weapon?.icon}</span>
-                                            <span>{weapon?.name}</span>
-                                            <span style={{ color: '#2ecc71' }}>+{weaponLevel}</span>
-                                        </div>
+                                        {activeTab === 'weapon' ? (
+                                            <div style={{ fontSize: '0.9rem', color: '#bdc3c7', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <span>{weapon?.icon}</span>
+                                                <span>{weapon?.name}</span>
+                                                <span style={{ color: '#2ecc71' }}>+{weaponLevel}</span>
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: '0.9rem', color: '#bdc3c7', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <span>🚩</span>
+                                                <span>스테이지 {maxStage.chapter}-{maxStage.stage}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );

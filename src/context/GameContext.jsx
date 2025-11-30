@@ -550,45 +550,26 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
             let newMushrooms = [];
 
-            if (isBossStage) {
-                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-                const bossHp = baseHp * 10000;
-                const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100;
+            // Always generate normal mushrooms (100 mushrooms) - same as START_STAGE and SELECT_STAGE
+            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
 
-                newMushrooms = [{
-                    id: 'BOSS',
-                    x: 200,
-                    y: 200,
-                    hp: bossHp,
-                    maxHp: bossHp,
-                    type: 'boss',
-                    name: `Chapter ${nextStage.chapter} BOSS`,
-                    reward: bossReward,
+            for (let i = 0; i < 100; i++) {
+                const x = 40 + Math.random() * 320;
+                const y = 120 + Math.random() * 300;
+
+                newMushrooms.push({
+                    id: Date.now() + i + Math.random(),
+                    x, y,
+                    hp: baseHp,
+                    maxHp: baseHp,
+                    type: 'normal',
+                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
+                    reward: baseReward,
                     isDead: false,
-                    respawnTime: 0,
-                    scale: 3
-                }];
-            } else {
-                const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
-                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
-
-                for (let i = 0; i < 100; i++) {
-                    const x = 40 + Math.random() * 320;
-                    const y = 120 + Math.random() * 300;
-
-                    newMushrooms.push({
-                        id: Date.now() + i + Math.random(),
-                        x, y,
-                        hp: baseHp,
-                        maxHp: baseHp,
-                        type: 'normal',
-                        name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
-                        reward: baseReward,
-                        isDead: false,
-                        respawnTime: 0
-                    });
-                }
+                    respawnTime: 0
+                });
             }
 
             return {
@@ -596,7 +577,8 @@ const gameReducer = (state, action) => {
                 currentStage: nextStage,
                 maxStage: isNewRecord ? nextStage : state.maxStage,
                 mushroomsCollected: 0,
-                bossTimer: isBossStage ? 60 : null,
+                bossTimer: null, // No timer until boss spawns
+                bossPhase: false, // Start with normal mushrooms
                 mushrooms: newMushrooms
             };
         }
@@ -1210,7 +1192,7 @@ export const GameProvider = ({ children }) => {
         return false;
     };
 
-    const fetchRankings = async () => {
+    const fetchRankings = async (sortBy = 'weapon') => {
         try {
             // Fetch all users (limit to 100 for performance)
             const { data, error } = await supabase
@@ -1220,16 +1202,31 @@ export const GameProvider = ({ children }) => {
 
             if (error) throw error;
 
-            // Sort by Weapon ID (desc) then Weapon Level (desc)
-            const sorted = data.sort((a, b) => {
-                const weaponIdA = a.game_data?.currentWeaponId || 0;
-                const weaponIdB = b.game_data?.currentWeaponId || 0;
-                if (weaponIdA !== weaponIdB) return weaponIdB - weaponIdA;
+            let sorted = [];
 
-                const levelA = a.game_data?.weaponLevel || 0;
-                const levelB = b.game_data?.weaponLevel || 0;
-                return levelB - levelA;
-            });
+            if (sortBy === 'stage') {
+                // Sort by Max Stage (desc)
+                sorted = data.sort((a, b) => {
+                    const stageA = a.game_data?.maxStage || { chapter: 1, stage: 1 };
+                    const stageB = b.game_data?.maxStage || { chapter: 1, stage: 1 };
+
+                    if (stageA.chapter !== stageB.chapter) {
+                        return stageB.chapter - stageA.chapter;
+                    }
+                    return stageB.stage - stageA.stage;
+                });
+            } else {
+                // Default: Sort by Weapon ID (desc) then Weapon Level (desc)
+                sorted = data.sort((a, b) => {
+                    const weaponIdA = a.game_data?.currentWeaponId || 0;
+                    const weaponIdB = b.game_data?.currentWeaponId || 0;
+                    if (weaponIdA !== weaponIdB) return weaponIdB - weaponIdA;
+
+                    const levelA = a.game_data?.weaponLevel || 0;
+                    const levelB = b.game_data?.weaponLevel || 0;
+                    return levelB - levelA;
+                });
+            }
 
             return sorted;
         } catch (error) {

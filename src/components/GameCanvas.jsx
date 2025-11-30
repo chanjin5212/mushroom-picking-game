@@ -95,7 +95,7 @@ const GameCanvas = () => {
         const { chapter, stage } = state.currentStage;
         const difficultyLevel = (chapter - 1) * 10 + stage;
         const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-        const bossHp = baseHp * 10000;
+        const bossHp = baseHp * 1000;
         const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100;
 
         const bossMushroom = [{

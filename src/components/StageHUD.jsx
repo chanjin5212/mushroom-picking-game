@@ -8,6 +8,18 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
     const isCompleted = showBossUI ? false : mushroomsCollected >= 100;
     const canChallengeBoss = isBossStage && !bossPhase && mushroomsCollected >= 100;
 
+    // Calculate normal mushroom stats
+    const difficultyLevel = (chapter - 1) * 10 + stage;
+    const normalHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+    const normalReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+
+    // Format numbers for display (e.g. 1.2k)
+    const formatNumber = (num) => {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+        return num;
+    };
+
     return (
         <div style={{
             position: 'absolute',
@@ -17,36 +29,40 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '2px',
+            gap: '6px',
             zIndex: 500,
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            padding: '6px 10px',
+            padding: '8px 12px',
             borderRadius: '8px',
             border: '1px solid rgba(255, 255, 255, 0.3)',
             boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
         }}>
-            {/* Top Row: Stage Info + Auto Toggle + Action Button */}
+            {/* Row 1: Stage Info */}
+            <div style={{
+                color: 'white',
+                fontSize: '0.8rem',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap',
+                borderBottom: '1px solid rgba(255,255,255,0.2)',
+                paddingBottom: '4px',
+                width: '100%',
+                justifyContent: 'center'
+            }}>
+                <span>스테이지 {chapter}-{stage}</span>
+                {isBossStage && <span style={{ color: '#ff4444', fontSize: '0.7rem' }}>{bossPhase ? '🔥' : '⚔️'}</span>}
+            </div>
+
+            {/* Row 2: Controls (Auto + Buttons) */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                gap: '8px'
+                justifyContent: 'center',
+                gap: '12px',
+                width: '100%'
             }}>
-                {/* Stage Info */}
-                <div style={{
-                    color: 'white',
-                    fontSize: '0.85rem',
-                    fontWeight: 'bold',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap'
-                }}>
-                    <span>스테이지 {chapter}-{stage}</span>
-                    {isBossStage && <span style={{ color: '#ff4444', fontSize: '0.75rem' }}>{bossPhase ? '🔥' : '⚔️'}</span>}
-                </div>
-
                 {/* Auto-Progress Toggle */}
                 <div style={{
                     display: 'flex',
@@ -54,15 +70,18 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                     gap: '4px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    opacity: 0.8
+                    opacity: 0.9,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    padding: '2px 6px',
+                    borderRadius: '4px'
                 }} onClick={onToggleAutoProgress}>
                     <input
                         type="checkbox"
                         checked={autoProgress}
                         onChange={onToggleAutoProgress}
-                        style={{ cursor: 'pointer', width: '12px', height: '12px' }}
+                        style={{ cursor: 'pointer', width: '10px', height: '10px' }}
                     />
-                    <span style={{ color: 'white', fontSize: '0.7rem' }}>자동</span>
+                    <span style={{ color: 'white', fontSize: '0.65rem' }}>자동</span>
                 </div>
 
                 {/* Action Buttons */}
@@ -76,9 +95,10 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 border: '1px solid white',
-                                fontSize: '0.7rem',
+                                fontSize: '0.65rem',
                                 fontWeight: 'bold',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
                             }}
                         >
                             도전
@@ -93,9 +113,10 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 border: '1px solid white',
-                                fontSize: '0.7rem',
+                                fontSize: '0.65rem',
                                 fontWeight: 'bold',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
                             }}
                         >
                             다음
@@ -104,16 +125,16 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                 </div>
             </div>
 
-            {/* Bottom Row: Counters / Boss Stats */}
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '2px' }}>
+            {/* Row 3: Counters / Boss Stats */}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                 {showBossUI ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {/* Boss HP Bar */}
                         <div style={{
-                            width: '120px',
-                            height: '10px',
+                            width: '100px',
+                            height: '8px',
                             backgroundColor: '#333',
-                            borderRadius: '5px',
+                            borderRadius: '4px',
                             border: '1px solid white',
                             overflow: 'hidden',
                             position: 'relative'
@@ -128,26 +149,44 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                         {/* Timer */}
                         <div style={{
                             color: bossTimer <= 10 ? '#ff4444' : 'white',
-                            fontSize: '0.75rem',
+                            fontSize: '0.7rem',
                             fontWeight: 'bold',
-                            minWidth: '25px',
+                            minWidth: '20px',
                             textAlign: 'center'
                         }}>
                             {bossTimer}s
                         </div>
                     </div>
                 ) : (
-                    <div style={{
-                        color: isCompleted ? '#4caf50' : 'white',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                    }}>
-                        <span>🍄</span>
-                        <span>{mushroomsCollected} / 100</span>
-                    </div>
+                    <>
+                        {/* Mushroom Counter */}
+                        <div style={{
+                            color: isCompleted ? '#4caf50' : 'white',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}>
+                            <span>🍄</span>
+                            <span>{mushroomsCollected} / 100</span>
+                        </div>
+
+                        {/* Stats Info */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '8px',
+                            fontSize: '0.6rem',
+                            color: '#aaa'
+                        }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                ❤️ {formatNumber(normalHp)}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                💰 {formatNumber(normalReward)}
+                            </span>
+                        </div>
+                    </>
                 )}
             </div>
             {/* Styles for animations */}
