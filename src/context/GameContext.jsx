@@ -131,7 +131,14 @@ const initialState = {
     otherPlayers: {}, // { userId: { x, y, username, lastMessage, messageTimestamp, ... } }
     chatMessages: [], // [{ id, username, message, timestamp }]
     myLastMessage: null, // { message, timestamp }
-    unreadChatCount: 0 // Number of unread chat messages
+    unreadChatCount: 0, // Number of unread chat messages
+    // Stage System
+    currentStage: { chapter: 1, stage: 1 }, // Current stage player is on
+    maxStage: { chapter: 1, stage: 1 }, // Highest stage player has reached
+    mushroomsCollected: 0, // Mushrooms collected in current stage
+    bossTimer: null, // Boss stage timer (60 seconds)
+    bossPhase: false, // For X-10 stages: false = normal 100 mushrooms, true = boss fight
+    autoProgress: false // Auto-progress to next stage when completed
 };
 
 // LocalStorage key
@@ -163,7 +170,11 @@ const saveState = async (state) => {
             statLevels: state.statLevels,
             statLevels: state.statLevels,
             obtainedWeapons: state.obtainedWeapons,
-            attackRange: state.attackRange
+            attackRange: state.attackRange,
+            // Stage System - save currentStage and maxStage only
+            currentStage: state.currentStage,
+            maxStage: state.maxStage
+            // Do NOT save mushroomsCollected or bossPhase - always start fresh
         };
 
         // Save to Supabase
@@ -195,20 +206,37 @@ const gameReducer = (state, action) => {
         case 'SET_USER':
             return { ...state, user: action.payload };
 
+        case 'UPDATE_BOSS_TIMER':
+            return { ...state, bossTimer: action.payload };
+
+        case 'SET_BOSS_PHASE':
+            return {
+                ...state,
+                bossPhase: true,
+                bossTimer: 60,
+                mushrooms: action.payload.mushrooms
+            };
+
         case 'LOAD_GAME_DATA':
             return {
                 ...state,
                 ...action.payload,
                 // Ensure stage state exists if loading old data
-                stage: action.payload.stage || { chapter: 1, level: 1 },
-                stageProgress: action.payload.stageProgress || 0,
-                maxStage: action.payload.maxStage || { chapter: 1, level: 1 },
-                isBossActive: false,
-                // Force spawn at village on load? No, let's stay in current stage but reset pos
+                currentStage: action.payload.currentStage || { chapter: 1, stage: 1 },
+                maxStage: action.payload.maxStage || { chapter: 1, stage: 1 },
+                // Always reset progress on load
+                mushroomsCollected: 0,
+                bossPhase: false,
+                bossTimer: null,
+                // Always start in village
+                currentScene: 'village',
+                // Force spawn at village on load
                 playerPos: { x: 400, y: 300 },
                 isLoading: false,
                 isShopOpen: false,
-                isPortalMenuOpen: false
+                isPortalMenuOpen: false,
+                // Clear mushrooms on load to prevent sync issues
+                mushrooms: []
             };
 
         case 'LOGOUT':
@@ -225,6 +253,9 @@ const gameReducer = (state, action) => {
 
         case 'TOGGLE_PORTAL_MENU':
             return { ...state, isPortalMenuOpen: !state.isPortalMenuOpen };
+
+        case 'TOGGLE_AUTO_PROGRESS':
+            return { ...state, autoProgress: !state.autoProgress };
 
 
         case 'ADD_GOLD':
@@ -435,9 +466,11 @@ const gameReducer = (state, action) => {
         case 'ADD_CHAT_MESSAGE':
             return {
                 ...state,
-                chatMessages: [...state.chatMessages, action.payload],
-                // Increment unread count for all messages (user and system)
-                unreadChatCount: state.unreadChatCount + 1
+                chatMessages: [...state.chatMessages, action.payload.message],
+                // Don't increment unread count if chat is open or if it's my own message
+                unreadChatCount: (action.payload.isChatOpen || action.payload.message.username === state.user?.username)
+                    ? state.unreadChatCount
+                    : state.unreadChatCount + 1
             };
 
         case 'CLEAR_CHAT_MESSAGES':
@@ -449,7 +482,170 @@ const gameReducer = (state, action) => {
         case 'CLEAR_UNREAD_CHAT':
             return { ...state, unreadChatCount: 0 };
 
-        case 'SWITCH_SCENE':
+        // Stage System Actions
+        case 'START_STAGE': {
+            const { chapter, stage } = action.payload;
+            const isBossStage = stage === 10; // Keep this for bossTimer
+            const difficultyLevel = (chapter - 1) * 10 + stage;
+            let newMushrooms = [];
+
+            // Always generate normal mushrooms (100 mushrooms)
+            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+
+            for (let i = 0; i < 100; i++) {
+                const x = 40 + Math.random() * 320;
+                const y = 120 + Math.random() * 300;
+
+                newMushrooms.push({
+                    id: Date.now() + i + Math.random(),
+                    x, y,
+                    hp: baseHp,
+                    maxHp: baseHp,
+                    type: 'normal',
+                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
+                    reward: baseReward,
+                    isDead: false,
+                    respawnTime: 0
+                });
+            }
+
+            return {
+                ...state,
+                currentStage: action.payload,
+                mushroomsCollected: 0,
+                bossTimer: null, // No timer until boss spawns
+                bossPhase: false, // Start with normal mushrooms
+                mushrooms: newMushrooms,
+                currentScene: 'stage'
+            };
+        }
+
+        case 'COLLECT_MUSHROOM': {
+            const newCount = state.mushroomsCollected + 1;
+            // Just increment count, don't auto-spawn boss
+            return { ...state, mushroomsCollected: newCount };
+        }
+
+        case 'COMPLETE_STAGE': {
+            const { chapter, stage } = state.currentStage;
+            let nextStage;
+
+            if (stage === 10) {
+                // Boss cleared, go to next chapter
+                nextStage = { chapter: chapter + 1, stage: 1 };
+            } else {
+                // Normal stage cleared, go to next stage
+                nextStage = { chapter, stage: stage + 1 };
+            }
+
+            // Update maxStage if this is a new record
+            const isNewRecord =
+                nextStage.chapter > state.maxStage.chapter ||
+                (nextStage.chapter === state.maxStage.chapter && nextStage.stage > state.maxStage.stage);
+
+            // Generate mushrooms for next stage
+            const isBossStage = nextStage.stage === 10;
+            const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
+            let newMushrooms = [];
+
+            if (isBossStage) {
+                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+                const bossHp = baseHp * 10000;
+                const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100;
+
+                newMushrooms = [{
+                    id: 'BOSS',
+                    x: 200,
+                    y: 200,
+                    hp: bossHp,
+                    maxHp: bossHp,
+                    type: 'boss',
+                    name: `Chapter ${nextStage.chapter} BOSS`,
+                    reward: bossReward,
+                    isDead: false,
+                    respawnTime: 0,
+                    scale: 3
+                }];
+            } else {
+                const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
+                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+
+                for (let i = 0; i < 100; i++) {
+                    const x = 40 + Math.random() * 320;
+                    const y = 120 + Math.random() * 300;
+
+                    newMushrooms.push({
+                        id: Date.now() + i + Math.random(),
+                        x, y,
+                        hp: baseHp,
+                        maxHp: baseHp,
+                        type: 'normal',
+                        name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
+                        reward: baseReward,
+                        isDead: false,
+                        respawnTime: 0
+                    });
+                }
+            }
+
+            return {
+                ...state,
+                currentStage: nextStage,
+                maxStage: isNewRecord ? nextStage : state.maxStage,
+                mushroomsCollected: 0,
+                bossTimer: isBossStage ? 60 : null,
+                mushrooms: newMushrooms
+            };
+        }
+
+        case 'UPDATE_BOSS_TIMER':
+            return {
+                ...state,
+                bossTimer: action.payload
+            };
+
+        case 'SELECT_STAGE': {
+            const { chapter, stage } = action.payload;
+            const difficultyLevel = (chapter - 1) * 10 + stage;
+            let newMushrooms = [];
+
+            // Always generate normal mushrooms (100 mushrooms) - same as START_STAGE
+            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+
+            for (let i = 0; i < 100; i++) {
+                const x = 40 + Math.random() * 320;
+                const y = 120 + Math.random() * 300;
+
+                newMushrooms.push({
+                    id: Date.now() + i + Math.random(),
+                    x, y,
+                    hp: baseHp,
+                    maxHp: baseHp,
+                    type: 'normal',
+                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
+                    reward: baseReward,
+                    isDead: false,
+                    respawnTime: 0
+                });
+            }
+
+            return {
+                ...state,
+                currentStage: action.payload,
+                mushroomsCollected: 0,
+                bossTimer: null, // No timer until boss spawns
+                bossPhase: false, // Start with normal mushrooms
+                mushrooms: newMushrooms,
+                currentScene: 'stage'
+            };
+        }
+
+        case 'SWITCH_SCENE': {
             // Deprecated but kept for compatibility if needed, though we use NEXT_STAGE now
             const newScene = action.payload.scene;
             let newMushrooms = [];
@@ -459,11 +655,16 @@ const gameReducer = (state, action) => {
             return {
                 ...state,
                 currentScene: newScene,
-                playerPos: action.payload.pos,
+                playerPos: newScene === 'village' ? { x: 400, y: 300 } : state.playerPos,
+                // Clear boss state when returning to village
+                bossTimer: newScene === 'village' ? null : state.bossTimer,
+                bossPhase: newScene === 'village' ? false : state.bossPhase,
+                mushroomsCollected: newScene === 'village' ? 0 : state.mushroomsCollected,
                 mushrooms: newMushrooms,
                 isLoading: false,
                 isShopOpen: false
             };
+        }
 
         case 'NEXT_STAGE': {
             // Advance stage logic
@@ -623,6 +824,24 @@ export const GameProvider = ({ children }) => {
 
     // Removed auto-save - now manual save only
 
+    // Auto-save every 10 seconds
+    useEffect(() => {
+        if (!state.user) return;
+
+        const saveInterval = setInterval(() => {
+            saveState(state);
+        }, 10000);
+
+        return () => clearInterval(saveInterval);
+    }, [state.user, state]); // Depend on state to save latest data
+
+    // Save immediately when stage changes
+    useEffect(() => {
+        if (state.user) {
+            saveState(state);
+        }
+    }, [state.currentStage, state.maxStage]); // Save on stage progress
+
     // Restore session on mount
     useEffect(() => {
         const restoreSession = async () => {
@@ -718,7 +937,13 @@ export const GameProvider = ({ children }) => {
                                 payload: systemMessage
                             });
                             // Also add locally
-                            dispatch({ type: 'ADD_CHAT_MESSAGE', payload: systemMessage });
+                            dispatch({
+                                type: 'ADD_CHAT_MESSAGE',
+                                payload: {
+                                    message: systemMessage,
+                                    isChatOpen: isChatOpenRef.current
+                                }
+                            });
                         }
                     }
                 });
@@ -742,7 +967,13 @@ export const GameProvider = ({ children }) => {
                                 payload: systemMessage
                             });
                             // Also add locally
-                            dispatch({ type: 'ADD_CHAT_MESSAGE', payload: systemMessage });
+                            dispatch({
+                                type: 'ADD_CHAT_MESSAGE',
+                                payload: {
+                                    message: systemMessage,
+                                    isChatOpen: isChatOpenRef.current
+                                }
+                            });
                         }
                     }
                 });
@@ -801,11 +1032,16 @@ export const GameProvider = ({ children }) => {
         }
     }, [state.playerPos, state.currentScene, state.myLastMessage]);
 
-    // Chat Broadcast Logic
+    // Chat Broadcast Logic - Global (works in all scenes)
     const chatChannelRef = React.useRef(null);
+    const isChatOpenRef = React.useRef(false);
+
+    const setChatOpen = (isOpen) => {
+        isChatOpenRef.current = isOpen;
+    };
 
     useEffect(() => {
-        if (!state.user || state.currentScene !== 'village') {
+        if (!state.user) {
             if (chatChannelRef.current) {
                 supabase.removeChannel(chatChannelRef.current);
                 chatChannelRef.current = null;
@@ -813,12 +1049,18 @@ export const GameProvider = ({ children }) => {
             return;
         }
 
-        const chatChannel = supabase.channel('room:village:chat');
+        const chatChannel = supabase.channel('room:global:chat');
         chatChannelRef.current = chatChannel;
 
         chatChannel
             .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
-                dispatch({ type: 'ADD_CHAT_MESSAGE', payload });
+                dispatch({
+                    type: 'ADD_CHAT_MESSAGE',
+                    payload: {
+                        message: payload,
+                        isChatOpen: isChatOpenRef.current
+                    }
+                });
             })
             .subscribe();
 
@@ -828,7 +1070,7 @@ export const GameProvider = ({ children }) => {
                 chatChannelRef.current = null;
             }
         };
-    }, [state.user?.id, state.currentScene]);
+    }, [state.user?.id]);
 
     const sendChatMessage = (message) => {
         if (!chatChannelRef.current || !state.user || !message.trim()) return;
@@ -841,18 +1083,26 @@ export const GameProvider = ({ children }) => {
         };
 
         // Add to local state immediately
-        dispatch({ type: 'ADD_CHAT_MESSAGE', payload: chatMessage });
-
-        // Set my last message for bubble display
         dispatch({
-            type: 'SET_MY_LAST_MESSAGE',
-            payload: { message: message.trim(), timestamp: Date.now() }
+            type: 'ADD_CHAT_MESSAGE',
+            payload: {
+                message: chatMessage,
+                isChatOpen: isChatOpenRef.current
+            }
         });
 
-        // Auto-clear after 5 seconds
-        setTimeout(() => {
-            dispatch({ type: 'SET_MY_LAST_MESSAGE', payload: null });
-        }, 5000);
+        // Set my last message for bubble display (only in village)
+        if (state.currentScene === 'village') {
+            dispatch({
+                type: 'SET_MY_LAST_MESSAGE',
+                payload: { message: message.trim(), timestamp: Date.now() }
+            });
+
+            // Auto-clear after 5 seconds
+            setTimeout(() => {
+                dispatch({ type: 'SET_MY_LAST_MESSAGE', payload: null });
+            }, 5000);
+        }
 
         // Broadcast to others
         chatChannelRef.current.send({
@@ -1038,6 +1288,7 @@ export const GameProvider = ({ children }) => {
             fetchRankings,
             resetGame,
             sendChatMessage,
+            setChatOpen,
             isLoading: state.isLoading
         }}>
             {children}

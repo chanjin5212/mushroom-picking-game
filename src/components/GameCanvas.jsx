@@ -7,11 +7,15 @@ import Joystick from './Joystick';
 import LoadingScreen from './LoadingScreen';
 import RemotePlayer from './RemotePlayer';
 import ChatWindow from './ChatWindow';
+import StageHUD from './StageHUD';
+import StageSelectMenu from './StageSelectMenu';
+import Toast from './Toast';
 
 const GameCanvas = () => {
-    const { state, dispatch } = useGame();
+    const { state, dispatch, setChatOpen } = useGame();
     const containerRef = useRef(null);
     const [damageNumbers, setDamageNumbers] = useState([]);
+    const [toast, setToast] = useState(null);
 
     // Direct DOM Refs
     const playerDOMRef = useRef(null);
@@ -45,6 +49,115 @@ const GameCanvas = () => {
 
     // Chat State
     const [isChatOpen, setIsChatOpen] = useState(false);
+
+    // Clear unread count when chat is open
+    useEffect(() => {
+        setChatOpen(isChatOpen);
+        if (isChatOpen) {
+            dispatch({ type: 'CLEAR_UNREAD_CHAT' });
+        }
+    }, [isChatOpen, dispatch, setChatOpen]);
+
+    // Handle Next Stage
+    const handleNextStage = () => {
+        dispatch({ type: 'COMPLETE_STAGE' });
+    };
+
+    // Boss Timer Countdown
+    useEffect(() => {
+        // Only run timer if in stage scene
+        if (state.currentScene !== 'stage' && state.currentScene !== 'forest') {
+            return;
+        }
+
+        if (state.bossTimer !== null && state.bossTimer > 0) {
+            const timer = setInterval(() => {
+                dispatch({ type: 'UPDATE_BOSS_TIMER', payload: state.bossTimer - 1 });
+            }, 1000);
+
+            return () => clearInterval(timer);
+        } else if (state.bossTimer === 0) {
+            // Timer expired, restart the same boss stage
+            setToast('시간 초과! 보스 스테이지를 다시 시작합니다.');
+            setTimeout(() => {
+                dispatch({ type: 'SELECT_STAGE', payload: state.currentStage });
+            }, 1500);
+        }
+    }, [state.bossTimer, state.currentScene, dispatch]);
+
+    // Handle Stage Selection
+    const handleSelectStage = (stage) => {
+        dispatch({ type: 'SELECT_STAGE', payload: stage });
+    };
+
+    // Handle Boss Challenge
+    const handleBossChallenge = () => {
+        const { chapter, stage } = state.currentStage;
+        const difficultyLevel = (chapter - 1) * 10 + stage;
+        const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+        const bossHp = baseHp * 10000;
+        const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100;
+
+        const bossMushroom = [{
+            id: 'BOSS',
+            x: 200,
+            y: 200,
+            hp: bossHp,
+            maxHp: bossHp,
+            type: 'boss',
+            name: `Chapter ${chapter} BOSS`,
+            reward: bossReward,
+            isDead: false,
+            respawnTime: 0,
+            scale: 3
+        }];
+
+        dispatch({
+            type: 'SET_BOSS_PHASE',
+            payload: { mushrooms: bossMushroom }
+        });
+    };
+
+
+    // Track if auto-progress was triggered to prevent multiple calls
+    const autoProgressTriggeredRef = useRef(false);
+
+    // Reset auto-progress flag when mushrooms < 100
+    useEffect(() => {
+        if (state.mushroomsCollected < 100) {
+            autoProgressTriggeredRef.current = false;
+        }
+    }, [state.mushroomsCollected]);
+
+    // Auto-progress when enabled
+    useEffect(() => {
+        console.log('Auto-progress check:', {
+            autoProgress: state.autoProgress,
+            mushroomsCollected: state.mushroomsCollected,
+            bossPhase: state.bossPhase,
+            stage: state.currentStage.stage,
+            triggered: autoProgressTriggeredRef.current
+        });
+
+        if (!state.autoProgress) return;
+        if (state.mushroomsCollected < 100) return;
+        if (autoProgressTriggeredRef.current) return; // Already triggered
+
+        const isBossStage = state.currentStage.stage === 10;
+
+        if (isBossStage && !state.bossPhase) {
+            // Auto-challenge boss in X-10
+            console.log('Auto-challenging boss NOW!');
+            autoProgressTriggeredRef.current = true;
+            handleBossChallenge();
+        } else if (!isBossStage) {
+            // Auto-advance to next stage
+            console.log('Auto-advancing to next stage NOW!');
+            autoProgressTriggeredRef.current = true;
+            handleNextStage();
+        }
+    }, [state.autoProgress, state.mushroomsCollected, state.bossPhase, state.currentStage.stage]);
+
 
     // Update NPC and Portal positions based on container size
     useEffect(() => {
@@ -156,6 +269,17 @@ const GameCanvas = () => {
 
                 if (mushroom.hp - damage <= 0) {
                     dispatch({ type: 'ADD_GOLD', payload: mushroom.reward });
+                    // Collect mushroom for stage progress (only in non-village scenes)
+                    if (state.currentScene !== 'village') {
+                        dispatch({ type: 'COLLECT_MUSHROOM' });
+
+                        // If boss is killed, auto-complete stage
+                        if (mushroom.type === 'boss') {
+                            setTimeout(() => {
+                                dispatch({ type: 'COMPLETE_STAGE' });
+                            }, 500); // Small delay for visual feedback
+                        }
+                    }
                 }
             }
         });
@@ -210,18 +334,20 @@ const GameCanvas = () => {
                 const speed = currentState.moveSpeed;
                 const { clientWidth, clientHeight } = containerRef.current;
 
-                // Movement
+                // Movement - disabled when chat is open
                 let dx = 0;
                 let dy = 0;
 
-                if (keysRef.current['ArrowUp'] || keysRef.current['KeyW']) dy -= speed;
-                if (keysRef.current['ArrowDown'] || keysRef.current['KeyS']) dy += speed;
-                if (keysRef.current['ArrowLeft'] || keysRef.current['KeyA']) dx -= speed;
-                if (keysRef.current['ArrowRight'] || keysRef.current['KeyD']) dx += speed;
+                if (!isChatOpen) {
+                    if (keysRef.current['ArrowUp'] || keysRef.current['KeyW']) dy -= speed;
+                    if (keysRef.current['ArrowDown'] || keysRef.current['KeyS']) dy += speed;
+                    if (keysRef.current['ArrowLeft'] || keysRef.current['KeyA']) dx -= speed;
+                    if (keysRef.current['ArrowRight'] || keysRef.current['KeyD']) dx += speed;
 
-                if (joystickRef.current.x !== 0 || joystickRef.current.y !== 0) {
-                    dx += joystickRef.current.x * speed;
-                    dy += joystickRef.current.y * speed;
+                    if (joystickRef.current.x !== 0 || joystickRef.current.y !== 0) {
+                        dx += joystickRef.current.x * speed;
+                        dy += joystickRef.current.y * speed;
+                    }
                 }
 
                 let shouldAutoAttack = false;
@@ -395,61 +521,9 @@ const GameCanvas = () => {
             {/* Village UI */}
             {!state.isLoading && state.currentScene === 'village' && (
                 <>
-                    {/* Chat Button - Top Left */}
+                    {/* Stage Select Button - Always visible in village */}
                     <button
-                        onClick={() => {
-                            setIsChatOpen(!isChatOpen);
-                            if (!isChatOpen) {
-                                // Clear unread count when opening chat
-                                dispatch({ type: 'CLEAR_UNREAD_CHAT' });
-                            }
-                        }}
-                        style={{
-                            position: 'absolute',
-                            top: 70,
-                            left: 15,
-                            width: '50px',
-                            height: '50px',
-                            borderRadius: '50%',
-                            backgroundColor: isChatOpen ? '#4caf50' : 'rgba(33, 150, 243, 0.9)',
-                            border: '2px solid white',
-                            cursor: 'pointer',
-                            zIndex: 100,
-                            fontSize: '1.5rem',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        💬
-                        {/* Unread Badge */}
-                        {state.unreadChatCount > 0 && (
-                            <div style={{
-                                position: 'absolute',
-                                top: -5,
-                                right: -5,
-                                backgroundColor: '#f44336',
-                                color: 'white',
-                                borderRadius: '50%',
-                                width: '20px',
-                                height: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                border: '2px solid white'
-                            }}>
-                                {state.unreadChatCount > 9 ? '9+' : state.unreadChatCount}
-                            </div>
-                        )}
-                    </button>
-
-                    {/* Portal Button - Always visible in village */}
-                    <button
-                        onClick={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
+                        onClick={() => dispatch({ type: 'SELECT_STAGE', payload: state.currentStage })}
                         style={{
                             position: 'absolute',
                             top: 70,
@@ -460,7 +534,7 @@ const GameCanvas = () => {
                             border: '2px solid white',
                             borderRadius: '20px',
                             cursor: 'pointer',
-                            zIndex: 100,
+                            zIndex: 300,
                             fontWeight: 'bold',
                             fontSize: '0.85rem',
                             boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
@@ -469,9 +543,57 @@ const GameCanvas = () => {
                             gap: '5px'
                         }}
                     >
-                        🌀 포탈
+                        🎯 스테이지 {state.currentStage.chapter}-{state.currentStage.stage}
                     </button>
                 </>
+            )}
+
+            {/* Chat Button - Available in all scenes */}
+            {!state.isLoading && (
+                <button
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    style={{
+                        position: 'absolute',
+                        top: 70,
+                        left: 15,
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        backgroundColor: isChatOpen ? '#4caf50' : 'rgba(33, 150, 243, 0.9)',
+                        border: '2px solid white',
+                        cursor: 'pointer',
+                        zIndex: 300,
+                        fontSize: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    💬
+                    {/* Unread Badge */}
+                    {state.unreadChatCount > 0 && (
+                        <div style={{
+                            position: 'absolute',
+                            top: -5,
+                            right: -5,
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            borderRadius: '50%',
+                            width: '20px',
+                            height: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            border: '2px solid white'
+                        }}>
+                            {state.unreadChatCount > 9 ? '9+' : state.unreadChatCount}
+                        </div>
+                    )}
+                </button>
             )}
 
             {/* Other Scenes - Return to Village Button */}
@@ -526,7 +648,7 @@ const GameCanvas = () => {
                         pointerEvents: 'none',
                         whiteSpace: 'nowrap',
                         animation: 'floatUp 1s ease-out forwards',
-                        zIndex: 1000
+                        zIndex: 50 // Below UI elements
                     }}
                 >
                     -{formatDamage(dmg.damage)}
@@ -622,9 +744,43 @@ const GameCanvas = () => {
                 </button>
             )}
 
-            {/* Chat Window */}
-            {isChatOpen && state.currentScene === 'village' && (
+            {/* Stage HUD - Show in stage/forest scenes */}
+            {!state.isLoading && (state.currentScene === 'stage' || state.currentScene === 'forest') && (
+                <StageHUD
+                    currentStage={state.currentStage}
+                    mushroomsCollected={state.mushroomsCollected}
+                    bossTimer={state.bossTimer}
+                    bossPhase={state.bossPhase}
+                    onNextStage={handleNextStage}
+                    onBossChallenge={handleBossChallenge}
+                    onToggleAutoProgress={() => dispatch({ type: 'TOGGLE_AUTO_PROGRESS' })}
+                    autoProgress={state.autoProgress}
+                    bossHp={state.mushrooms.find(m => m.type === 'boss')?.hp}
+                    bossMaxHp={state.mushrooms.find(m => m.type === 'boss')?.maxHp}
+                />
+            )}
+
+            {/* Chat Window - Available in all scenes */}
+            {isChatOpen && (
                 <ChatWindow onClose={() => setIsChatOpen(false)} />
+            )}
+
+            {/* Stage Select Menu */}
+            {state.isPortalMenuOpen && (
+                <StageSelectMenu
+                    currentStage={state.currentStage}
+                    maxStage={state.maxStage}
+                    onSelectStage={handleSelectStage}
+                    onClose={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
+                />
+            )}
+
+            {/* Toast Notification */}
+            {toast && (
+                <Toast
+                    message={toast}
+                    onClose={() => setToast(null)}
+                />
             )}
         </div >
     );
