@@ -5,6 +5,8 @@ import Player from './Player';
 import Mushroom from './Mushroom';
 import Joystick from './Joystick';
 import LoadingScreen from './LoadingScreen';
+import RemotePlayer from './RemotePlayer';
+import ChatWindow from './ChatWindow';
 
 const GameCanvas = () => {
     const { state, dispatch } = useGame();
@@ -27,6 +29,7 @@ const GameCanvas = () => {
     // Game Loop Logic (Ref-based to avoid stale closures)
     const loopRef = useRef();
     const lastFrameTimeRef = useRef(Date.now());
+    const lastSyncTimeRef = useRef(0); // For throttling state updates
     const watchdogRef = useRef(null);
 
     // NPC Logic
@@ -39,6 +42,9 @@ const GameCanvas = () => {
     // Auto Hunt State
     const [isAutoHunting, setIsAutoHunting] = useState(false);
     const autoHuntTargetRef = useRef(null);
+
+    // Chat State
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     // Update NPC and Portal positions based on container size
     useEffect(() => {
@@ -285,6 +291,16 @@ const GameCanvas = () => {
                 // Direct DOM Update
                 updatePlayerDOM();
 
+                // Sync to Global State (Moderate Speed: ~50 updates/sec)
+                if (now - lastSyncTimeRef.current > 20) {
+                    // Only dispatch if moved significantly
+                    const lastSynced = stateRef.current.playerPos;
+                    if (Math.abs(x - lastSynced.x) > 1 || Math.abs(y - lastSynced.y) > 1) {
+                        dispatch({ type: 'SET_PLAYER_POS', payload: { x, y } });
+                        lastSyncTimeRef.current = now;
+                    }
+                }
+
                 // Portal Logic (Village only)
                 if (currentState.currentScene === 'village') {
                     const distToNpc = Math.hypot((x + 20) - npcPos.x, (y + 20) - npcPos.y);
@@ -379,7 +395,57 @@ const GameCanvas = () => {
             {/* Village UI */}
             {!state.isLoading && state.currentScene === 'village' && (
                 <>
-                    {/* NPC & Portal Emojis Removed as per request */}
+                    {/* Chat Button - Top Left */}
+                    <button
+                        onClick={() => {
+                            setIsChatOpen(!isChatOpen);
+                            if (!isChatOpen) {
+                                // Clear unread count when opening chat
+                                dispatch({ type: 'CLEAR_UNREAD_CHAT' });
+                            }
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: 70,
+                            left: 15,
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '50%',
+                            backgroundColor: isChatOpen ? '#4caf50' : 'rgba(33, 150, 243, 0.9)',
+                            border: '2px solid white',
+                            cursor: 'pointer',
+                            zIndex: 100,
+                            fontSize: '1.5rem',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        💬
+                        {/* Unread Badge */}
+                        {state.unreadChatCount > 0 && (
+                            <div style={{
+                                position: 'absolute',
+                                top: -5,
+                                right: -5,
+                                backgroundColor: '#f44336',
+                                color: 'white',
+                                borderRadius: '50%',
+                                width: '20px',
+                                height: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                border: '2px solid white'
+                            }}>
+                                {state.unreadChatCount > 9 ? '9+' : state.unreadChatCount}
+                            </div>
+                        )}
+                    </button>
 
                     {/* Portal Button - Always visible in village */}
                     <button
@@ -472,6 +538,22 @@ const GameCanvas = () => {
                 <Player ref={playerDOMRef} />
             </div>
 
+            {/* Remote Players (Village Only) */}
+            {!state.isLoading && state.currentScene === 'village' && Object.entries(state.otherPlayers || {}).map(([id, player]) => {
+                const p = Array.isArray(player) ? player[0] : player;
+                if (!p) return null;
+                return (
+                    <RemotePlayer
+                        key={id}
+                        username={p.username}
+                        x={p.x}
+                        y={p.y}
+                        lastMessage={p.lastMessage}
+                        messageTimestamp={p.messageTimestamp}
+                    />
+                );
+            })}
+
             <Joystick onMove={(vec) => joystickRef.current = vec} />
 
             {/* Attack Button */}
@@ -539,8 +621,14 @@ const GameCanvas = () => {
                     <span style={{ fontSize: '0.7rem' }}>{isAutoHunting ? 'ON' : 'OFF'}</span>
                 </button>
             )}
-        </div>
+
+            {/* Chat Window */}
+            {isChatOpen && state.currentScene === 'village' && (
+                <ChatWindow onClose={() => setIsChatOpen(false)} />
+            )}
+        </div >
     );
 };
+
 
 export default GameCanvas;

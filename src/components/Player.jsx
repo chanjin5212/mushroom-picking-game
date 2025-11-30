@@ -67,6 +67,42 @@ const Player = forwardRef((props, ref) => {
       }}>
         나
       </div>
+
+      {/* Chat Bubble */}
+      {state.myLastMessage && (
+        <div style={{
+          position: 'absolute',
+          bottom: 70,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'white',
+          color: 'black',
+          padding: '8px 12px',
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: 'bold',
+          maxWidth: '200px',
+          wordBreak: 'keep-all',
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          zIndex: 100,
+          whiteSpace: 'nowrap'
+        }}>
+          {state.myLastMessage.message}
+          {/* Speech bubble tail */}
+          <div style={{
+            position: 'absolute',
+            bottom: -8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '8px solid transparent',
+            borderRight: '8px solid transparent',
+            borderTop: '8px solid white'
+          }} />
+        </div>
+      )}
     </div>
   );
 });

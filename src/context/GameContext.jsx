@@ -127,7 +127,11 @@ const initialState = {
         moveSpeed: 0,
         attackRange: 0
     },
-    obtainedWeapons: [0] // Start with weapon 0 (맨손)
+    obtainedWeapons: [0], // Start with weapon 0 (맨손)
+    otherPlayers: {}, // { userId: { x, y, username, lastMessage, messageTimestamp, ... } }
+    chatMessages: [], // [{ id, username, message, timestamp }]
+    myLastMessage: null, // { message, timestamp }
+    unreadChatCount: 0 // Number of unread chat messages
 };
 
 // LocalStorage key
@@ -425,6 +429,26 @@ const gameReducer = (state, action) => {
         case 'SET_PLAYER_POS':
             return { ...state, playerPos: action.payload };
 
+        case 'UPDATE_OTHER_PLAYERS':
+            return { ...state, otherPlayers: action.payload };
+
+        case 'ADD_CHAT_MESSAGE':
+            return {
+                ...state,
+                chatMessages: [...state.chatMessages, action.payload],
+                // Increment unread count for all messages (user and system)
+                unreadChatCount: state.unreadChatCount + 1
+            };
+
+        case 'CLEAR_CHAT_MESSAGES':
+            return { ...state, chatMessages: [] };
+
+        case 'SET_MY_LAST_MESSAGE':
+            return { ...state, myLastMessage: action.payload };
+
+        case 'CLEAR_UNREAD_CHAT':
+            return { ...state, unreadChatCount: 0 };
+
         case 'SWITCH_SCENE':
             // Deprecated but kept for compatibility if needed, though we use NEXT_STAGE now
             const newScene = action.payload.scene;
@@ -632,7 +656,212 @@ export const GameProvider = ({ children }) => {
         };
 
         restoreSession();
+        restoreSession();
     }, []);
+
+    // Realtime Presence Logic
+    const channelRef = React.useRef(null);
+    const previousPresenceRef = React.useRef({}); // Track previous presence state
+
+    useEffect(() => {
+        if (!state.user) return;
+
+        // Only connect to village channel if in village
+        if (state.currentScene !== 'village') {
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
+            // Clear previous presence when leaving village
+            previousPresenceRef.current = {};
+            return;
+        }
+
+        // console.log('Attempting to connect to room:village...');
+
+        const channel = supabase.channel('room:village', {
+            config: {
+                presence: {
+                    key: state.user.id,
+                },
+            },
+        });
+
+        channelRef.current = channel;
+
+        channel
+            .on('presence', { event: 'sync' }, () => {
+                const newState = channel.presenceState();
+                // console.log('Presence Sync:', newState);
+                const players = {};
+
+                // Detect joins and leaves by comparing with previous state
+                const currentUserIds = new Set(Object.keys(newState));
+                const previousUserIds = new Set(Object.keys(previousPresenceRef.current));
+
+                // Detect new joins - broadcast to all users
+                currentUserIds.forEach(userId => {
+                    if (!previousUserIds.has(userId) && userId !== state.user.id) {
+                        const joinedUser = newState[userId][0];
+                        if (joinedUser && chatChannelRef.current) {
+                            const systemMessage = {
+                                id: Date.now() + Math.random(),
+                                username: 'SYSTEM',
+                                message: `${joinedUser.username}님이 입장하였습니다`,
+                                timestamp: Date.now(),
+                                isSystem: true
+                            };
+                            // Broadcast to all users
+                            chatChannelRef.current.send({
+                                type: 'broadcast',
+                                event: 'chat_message',
+                                payload: systemMessage
+                            });
+                            // Also add locally
+                            dispatch({ type: 'ADD_CHAT_MESSAGE', payload: systemMessage });
+                        }
+                    }
+                });
+
+                // Detect leaves - broadcast to all users
+                previousUserIds.forEach(userId => {
+                    if (!currentUserIds.has(userId) && userId !== state.user.id) {
+                        const leftUser = previousPresenceRef.current[userId][0];
+                        if (leftUser && chatChannelRef.current) {
+                            const systemMessage = {
+                                id: Date.now() + Math.random(),
+                                username: 'SYSTEM',
+                                message: `${leftUser.username}님이 퇴장하였습니다`,
+                                timestamp: Date.now(),
+                                isSystem: true
+                            };
+                            // Broadcast to all users
+                            chatChannelRef.current.send({
+                                type: 'broadcast',
+                                event: 'chat_message',
+                                payload: systemMessage
+                            });
+                            // Also add locally
+                            dispatch({ type: 'ADD_CHAT_MESSAGE', payload: systemMessage });
+                        }
+                    }
+                });
+
+                // Update previous state
+                previousPresenceRef.current = newState;
+
+                Object.keys(newState).forEach(key => {
+                    if (key === state.user.id) return; // Skip self
+
+                    const presence = newState[key][0]; // Take the first presence for this user
+                    if (presence) {
+                        players[key] = presence;
+                    }
+                });
+
+                dispatch({ type: 'UPDATE_OTHER_PLAYERS', payload: players });
+            })
+            .subscribe(async (status) => {
+                console.log('Subscription status:', status);
+                if (status === 'SUBSCRIBED') {
+                    // Initial track
+                    await channel.track({
+                        username: state.user.username,
+                        x: state.playerPos.x,
+                        y: state.playerPos.y,
+                        scene: state.currentScene,
+                        lastMessage: state.myLastMessage?.message || null,
+                        messageTimestamp: state.myLastMessage?.timestamp || null
+                    });
+                }
+            });
+
+        return () => {
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
+        };
+    }, [state.user?.id, state.currentScene]);
+
+    // Broadcast Position Updates
+    useEffect(() => {
+        if (!state.user || state.currentScene !== 'village') return;
+
+        if (channelRef.current) {
+            // console.log('Sending update:', state.playerPos); // Uncomment for verbose logs
+            channelRef.current.track({
+                username: state.user.username,
+                x: state.playerPos.x,
+                y: state.playerPos.y,
+                scene: state.currentScene,
+                lastMessage: state.myLastMessage?.message || null,
+                messageTimestamp: state.myLastMessage?.timestamp || null
+            });
+        }
+    }, [state.playerPos, state.currentScene, state.myLastMessage]);
+
+    // Chat Broadcast Logic
+    const chatChannelRef = React.useRef(null);
+
+    useEffect(() => {
+        if (!state.user || state.currentScene !== 'village') {
+            if (chatChannelRef.current) {
+                supabase.removeChannel(chatChannelRef.current);
+                chatChannelRef.current = null;
+            }
+            return;
+        }
+
+        const chatChannel = supabase.channel('room:village:chat');
+        chatChannelRef.current = chatChannel;
+
+        chatChannel
+            .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
+                dispatch({ type: 'ADD_CHAT_MESSAGE', payload });
+            })
+            .subscribe();
+
+        return () => {
+            if (chatChannelRef.current) {
+                supabase.removeChannel(chatChannelRef.current);
+                chatChannelRef.current = null;
+            }
+        };
+    }, [state.user?.id, state.currentScene]);
+
+    const sendChatMessage = (message) => {
+        if (!chatChannelRef.current || !state.user || !message.trim()) return;
+
+        const chatMessage = {
+            id: Date.now() + Math.random(),
+            username: state.user.username,
+            message: message.trim(),
+            timestamp: Date.now()
+        };
+
+        // Add to local state immediately
+        dispatch({ type: 'ADD_CHAT_MESSAGE', payload: chatMessage });
+
+        // Set my last message for bubble display
+        dispatch({
+            type: 'SET_MY_LAST_MESSAGE',
+            payload: { message: message.trim(), timestamp: Date.now() }
+        });
+
+        // Auto-clear after 5 seconds
+        setTimeout(() => {
+            dispatch({ type: 'SET_MY_LAST_MESSAGE', payload: null });
+        }, 5000);
+
+        // Broadcast to others
+        chatChannelRef.current.send({
+            type: 'broadcast',
+            event: 'chat_message',
+            payload: chatMessage
+        });
+    };
+
 
     const login = async (username, password) => {
         dispatch({ type: 'SET_LOADING', payload: true });
@@ -798,7 +1027,19 @@ export const GameProvider = ({ children }) => {
     };
 
     return (
-        <GameContext.Provider value={{ state, dispatch, WEAPONS, login, signup, logout, manualSave, resetGame, fetchRankings, isLoading: state.isLoading }}>
+        <GameContext.Provider value={{
+            state,
+            dispatch,
+            WEAPONS,
+            login,
+            signup,
+            logout,
+            manualSave,
+            fetchRankings,
+            resetGame,
+            sendChatMessage,
+            isLoading: state.isLoading
+        }}>
             {children}
         </GameContext.Provider>
     );
