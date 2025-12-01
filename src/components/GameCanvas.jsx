@@ -8,6 +8,8 @@ import LoadingScreen from './LoadingScreen';
 import RemotePlayer from './RemotePlayer';
 import ChatWindow from './ChatWindow';
 import StageHUD from './StageHUD';
+import WorldBossModal from './WorldBossModal';
+import WorldBossResultModal from './WorldBossResultModal';
 import StageSelectMenu from './StageSelectMenu';
 import Toast from './Toast';
 
@@ -16,6 +18,9 @@ const GameCanvas = () => {
     const containerRef = useRef(null);
     const [damageNumbers, setDamageNumbers] = useState([]);
     const [toast, setToast] = useState(null);
+    const [showBossResult, setShowBossResult] = useState(false);
+    const [lastBattleDamage, setLastBattleDamage] = useState(0);
+    const prevIsBattling = useRef(false);
 
     // Direct DOM Refs
     const playerDOMRef = useRef(null);
@@ -80,10 +85,38 @@ const GameCanvas = () => {
             // Timer expired, restart the same boss stage
             setToast('시간 초과! 보스 스테이지를 다시 시작합니다.');
             setTimeout(() => {
+                setToast(null);
                 dispatch({ type: 'SELECT_STAGE', payload: state.currentStage });
             }, 1500);
         }
     }, [state.bossTimer, state.currentScene, dispatch]);
+
+    // World Boss Timer
+    useEffect(() => {
+        if (state.worldBoss.isBattling && state.worldBoss.timeLeft > 0) {
+            const timer = setInterval(() => {
+                dispatch({ type: 'BOSS_TICK' });
+            }, 1000);
+            return () => clearInterval(timer);
+        } else if (state.worldBoss.isBattling && state.worldBoss.timeLeft === 0) {
+            dispatch({ type: 'END_BOSS_BATTLE' });
+            setToast(`월드보스 전투 종료! ${formatDamage(state.worldBoss.damage)} 데미지를 입혔습니다.`);
+            setTimeout(() => setToast(null), 3000);
+        }
+    }, [state.worldBoss.isBattling, state.worldBoss.timeLeft, dispatch]);
+
+    // World Boss Result Logic
+    useEffect(() => {
+        if (state.worldBoss.isBattling) {
+            setLastBattleDamage(state.worldBoss.damage);
+        }
+
+        if (prevIsBattling.current && !state.worldBoss.isBattling) {
+            // Battle just ended
+            setShowBossResult(true);
+        }
+        prevIsBattling.current = state.worldBoss.isBattling;
+    }, [state.worldBoss.isBattling, state.worldBoss.damage]);
 
     // Handle Stage Selection
     const handleSelectStage = (stage) => {
@@ -116,6 +149,31 @@ const GameCanvas = () => {
             type: 'SET_BOSS_PHASE',
             payload: { mushrooms: bossMushroom }
         });
+    };
+
+    // Helper to calculate damage
+    const calculateDamage = () => {
+        let damage = state.clickDamage * (1 + (state.artifacts.attackBonus.count * 0.005));
+        let isCritical = false;
+        let isHyperCritical = false;
+        let isMegaCritical = false;
+
+        // Critical Logic
+        if (Math.random() * 100 < state.criticalChance) {
+            isCritical = true;
+            damage *= (1 + state.criticalDamage / 100) * (1 + (state.artifacts.critDamageBonus.count * 0.1));
+
+            if (Math.random() * 100 < state.hyperCriticalChance) {
+                isHyperCritical = true;
+                damage *= (1 + state.hyperCriticalDamage / 100) * (1 + (state.artifacts.hyperCritDamageBonus.count * 0.1));
+
+                if (Math.random() * 100 < state.megaCriticalChance) {
+                    isMegaCritical = true;
+                    damage *= (1 + state.megaCriticalDamage / 100) * (1 + (state.artifacts.megaCritDamageBonus.count * 0.1));
+                }
+            }
+        }
+        return { damage: Math.floor(damage), isCritical, isHyperCritical, isMegaCritical };
     };
 
 
@@ -166,7 +224,28 @@ const GameCanvas = () => {
         // Reset UI elements on scene change
         setDamageNumbers([]);
         setToast(null);
-    }, [state.currentScene]);
+
+        // Cancel world boss battle if leaving world boss scene
+        if (state.currentScene !== 'worldBoss' && state.worldBoss.isBattling) {
+            dispatch({ type: 'END_BOSS_BATTLE' });
+        }
+
+        // Center world boss when entering world boss scene
+        if (state.currentScene === 'worldBoss' && containerRef.current) {
+            const { clientWidth, clientHeight } = containerRef.current;
+            const centerX = clientWidth / 2 - 50; // Offset for boss size
+            const centerY = clientHeight / 2 - 50;
+
+            // Update boss position if it exists
+            const boss = state.mushrooms.find(m => m.id === 'WORLD_BOSS');
+            if (boss && (boss.x !== centerX || boss.y !== centerY)) {
+                dispatch({
+                    type: 'UPDATE_MUSHROOM_POSITION',
+                    payload: { id: 'WORLD_BOSS', x: centerX, y: centerY }
+                });
+            }
+        }
+    }, [state.currentScene, state.mushrooms, state.worldBoss.isBattling, dispatch]);
 
     // Sync state to ref
     useEffect(() => {
@@ -217,6 +296,8 @@ const GameCanvas = () => {
             x: playerPosRef.current.x + 20,
             y: playerPosRef.current.y + 20
         };
+
+        const isWorldBoss = currentState.currentScene === 'worldBoss';
 
         currentState.mushrooms.forEach(mushroom => {
             if (mushroom.isDead) return;
@@ -277,19 +358,21 @@ const GameCanvas = () => {
                     setDamageNumbers(prev => prev.filter(d => d.id !== damageId));
                 }, 1000);
 
-                dispatch({ type: 'DAMAGE_MUSHROOM', payload: { id: mushroom.id, damage: damage } });
+                // For world boss, accumulate damage instead of damaging mushroom
+                if (isWorldBoss) {
+                    dispatch({ type: 'BOSS_DAMAGE', payload: damage });
+                } else {
+                    dispatch({ type: 'DAMAGE_MUSHROOM', payload: { id: mushroom.id, damage: damage } });
 
-                if (mushroom.hp - damage <= 0) {
-                    dispatch({ type: 'ADD_GOLD', payload: mushroom.reward });
-                    // Collect mushroom for stage progress (only in non-village scenes)
-                    if (state.currentScene !== 'village') {
+                    if (mushroom.hp - damage <= 0) {
+                        dispatch({ type: 'ADD_GOLD', payload: mushroom.reward });
                         dispatch({ type: 'COLLECT_MUSHROOM' });
 
                         // If boss is killed, auto-complete stage
                         if (mushroom.type === 'boss') {
                             setTimeout(() => {
                                 dispatch({ type: 'COMPLETE_STAGE' });
-                            }, 500); // Small delay for visual feedback
+                            }, 500);
                         }
                     }
                 }
@@ -530,6 +613,20 @@ const GameCanvas = () => {
                 opacity: 1
             }} />
 
+            {/* Dark overlay for World Boss */}
+            {state.currentScene === 'worldBoss' && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    pointerEvents: 'none',
+                    zIndex: 1
+                }} />
+            )}
+
             {/* Village UI */}
             {!state.isLoading && state.currentScene === 'village' && (
                 <>
@@ -548,15 +645,40 @@ const GameCanvas = () => {
                             cursor: 'pointer',
                             zIndex: 300,
                             fontWeight: 'bold',
-                            fontSize: '0.85rem',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px'
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
                         }}
                     >
-                        🎯 스테이지 {state.currentStage.chapter}-{state.currentStage.stage}
+                        ⚔️ 스테이지 {state.currentStage.chapter}-{state.currentStage.stage}
                     </button>
+
+                    {/* World Boss Button */}
+                    <button
+                        onClick={() => dispatch({ type: 'OPEN_WORLD_BOSS' })}
+                        style={{
+                            position: 'absolute',
+                            top: 120, // Below stage button
+                            right: 15,
+                            padding: '8px 16px',
+                            background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+                            color: 'black',
+                            border: '2px solid white',
+                            borderRadius: '20px',
+                            cursor: 'pointer',
+                            zIndex: 300,
+                            fontWeight: 'bold',
+                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.5)',
+                            animation: 'pulse 2s infinite'
+                        }}
+                    >
+                        🐲 월드보스
+                    </button>
+                    <style>{`
+                        @keyframes pulse {
+                            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+                            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+                            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+                        }
+                    `}</style>
                 </>
             )}
 
@@ -786,6 +908,56 @@ const GameCanvas = () => {
                     onClose={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
                 />
             )}
+
+            {/* World Boss HUD - Center Top */}
+            {state.currentScene === 'worldBoss' && (
+                <div style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -300%)',
+                    display: 'flex',
+                    gap: '20px',
+                    zIndex: 9999,
+                    pointerEvents: 'none'
+                }}>
+                    <div style={{
+                        color: 'white',
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        textShadow: '0 0 10px black, 2px 2px 4px black',
+                        background: 'rgba(0,0,0,0.8)',
+                        padding: '10px 20px',
+                        borderRadius: '15px',
+                        border: '2px solid white'
+                    }}>
+                        ⏳ {state.worldBoss.timeLeft}s
+                    </div>
+                    <div style={{
+                        color: '#FFD700',
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        textShadow: '0 0 10px black, 2px 2px 4px black',
+                        background: 'rgba(0,0,0,0.8)',
+                        padding: '10px 20px',
+                        borderRadius: '15px',
+                        border: '2px solid #FFD700'
+                    }}>
+                        ⚔️ {formatDamage(state.worldBoss.damage)}
+                    </div>
+                </div>
+            )}
+
+            {/* World Boss Result Modal */}
+            {showBossResult && (
+                <WorldBossResultModal
+                    damage={lastBattleDamage}
+                    onClose={() => setShowBossResult(false)}
+                />
+            )}
+
+            {/* World Boss Modal */}
+            <WorldBossModal />
 
             {/* Toast Notification */}
             {toast && (

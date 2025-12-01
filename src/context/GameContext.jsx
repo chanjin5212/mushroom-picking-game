@@ -3,13 +3,18 @@ import { supabase } from '../lib/supabase';
 
 const GameContext = createContext();
 
-// Generate 50 weapons procedurally with MASSIVE damage scaling
+// Generate 100 weapons procedurally with MASSIVE damage scaling
 const generateWeapons = () => {
     const weaponIcons = ['✊', '🌿', '🗡️', '⚔️', '⛏️', '🔨', '🪓', '🏹', '🔱', '⚡',
-        '🔥', '❄️', '', '🌟', '👑', '🗿', '⚒️', '🛡️', '🎯', '💫',
+        '🔥', '❄️', '🌟', '🌟', '👑', '🗿', '⚒️', '🛡️', '🎯', '💫',
         '🌙', '☄️', '🌊', '🌪️', '🌈', '🦅', '🐉', '🦁', '🐺', '🦈',
         '🦂', '🕷️', '🐍', '🦎', '🐊', '🦖', '🦕', '🐲', '🔮', '📿',
-        '⚗️', '🧪', '💉', '🗝️', '🔐', '⚙️', '🔧', '🔩', '⛓️', '👹'];
+        '⚗️', '🧪', '💉', '🗝️', '🔐', '⚙️', '🔧', '🔩', '⛓️', '👹',
+        '🌌', '💎', '🏆', '⭐', '🎭', '🎪', '🎨', '🎬', '🎮', '🎰',
+        '🎲', '🃏', '🎴', '🀄', '🎯', '🎱', '🔮', '🧿', '📿', '💍',
+        '👑', '🗡️', '⚔️', '🛡️', '🏹', '🔱', '⚡', '🔥', '❄️', '🌟',
+        '💫', '🌙', '☄️', '🌊', '🌪️', '🌈', '🦅', '🐉', '🦁', '🐺',
+        '🦈', '🦂', '🕷️', '🐍', '🦎', '🐊', '🦖', '🦕', '🐲', '👹'];
 
     const weaponNames = ['맨손', '나뭇가지', '녹슨 칼', '철검', '황금 곡괭이', '전투 망치', '전쟁 도끼',
         '장궁', '삼지창', '번개검', '화염검', '얼음검', '다이아몬드 검', '별의 검', '왕의 검',
@@ -17,10 +22,18 @@ const generateWeapons = () => {
         '파도의 창', '폭풍의 검', '무지개 활', '독수리 검', '용의 검', '사자의 도끼', '늑대의 발톱',
         '상어 이빨', '전갈 침', '거미 송곳니', '뱀의 독', '도마뱀 검', '악어 턱', '티라노 이빨',
         '브라키오 꼬리', '드래곤 클로', '마법 구슬', '성스러운 염주', '연금술 검', '독약 검',
-        '주사기 창', '황금 열쇠', '봉인의 검', '기계 검', '증기 망치', '볼트 창', '사슬 도끼', '악마 검'];
+        '주사기 창', '황금 열쇠', '봉인의 검', '기계 검', '증기 망치', '볼트 창', '사슬 도끼', '악마 검',
+        '은하수 검', '다이아몬드 창', '챔피언 검', '전설의 검', '환영의 검', '서커스 검', '예술의 검',
+        '영화의 검', '게임의 검', '행운의 검', '주사위 검', '조커 검', '카드 검', '마작 검',
+        '다트 검', '당구 검', '수정구 검', '악마의 눈', '신성한 염주', '마법 반지',
+        '황제의 왕관', '성검 엑스칼리버', '신성한 성검', '천사의 방패', '천상의 활', '신의 삼지창',
+        '천둥의 검', '지옥의 화염검', '절대영도 검', '초신성 검', '혜성 검', '달빛 검',
+        '유성 검', '해일 검', '태풍 검', '오로라 검', '천공의 독수리', '신룡의 검', '백수의 왕',
+        '달의 늑대', '심해의 상어', '사막의 전갈', '독거미 검', '독사의 송곳니', '카멜레온 검',
+        '나일의 악어', '공룡왕 검', '고대 공룡', '신화의 용', '마왕의 검'];
 
     const weapons = {};
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 100; i++) {
         // MASSIVE damage scaling: 1, 10, 100, 1000, 10000, 100000...
         const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.5) * 10);
         // Cost: First weapon is free to equip, but has a 'value' for enhancement calc
@@ -152,7 +165,15 @@ const initialState = {
         megaCritDamageBonus: { count: 0, level: 0 },
         goldBonus: { count: 0, level: 0 }
     },
-    lastPullResults: null // Array of pulled artifact IDs
+    lastPullResults: null, // Array of pulled artifact IDs
+    // World Boss System
+    worldBoss: {
+        isActive: false, // Is modal open?
+        isBattling: false, // Is battle in progress?
+        damage: 0, // Current session damage
+        totalDamage: 0, // Accumulated damage for ranking
+        timeLeft: 0 // Timer
+    }
 };
 
 // LocalStorage key
@@ -896,6 +917,108 @@ const gameReducer = (state, action) => {
                 lastPullResults: null
             };
 
+
+
+        case 'SET_SCENE':
+            return {
+                ...state,
+                currentScene: action.payload
+            };
+
+        case 'OPEN_WORLD_BOSS':
+            return {
+                ...state,
+                worldBoss: {
+                    ...state.worldBoss,
+                    isActive: true
+                }
+            };
+
+        case 'CLOSE_WORLD_BOSS':
+            return {
+                ...state,
+                worldBoss: {
+                    ...state.worldBoss,
+                    isActive: false,
+                    isBattling: false,
+                    damage: 0,
+                    timeLeft: 0
+                }
+            };
+
+        case 'START_BOSS_BATTLE':
+            return {
+                ...state,
+                currentScene: 'worldBoss',
+                mushrooms: [{
+                    id: 'WORLD_BOSS',
+                    x: 400,
+                    y: 300,
+                    hp: 999999999999,
+                    maxHp: 999999999999,
+                    type: 'boss',
+                    name: '거대 버섯 군주',
+                    reward: 0,
+                    isDead: false,
+                    respawnTime: 0,
+                    scale: 5
+                }],
+                worldBoss: {
+                    ...state.worldBoss,
+                    isBattling: true,
+                    damage: 0,
+                    timeLeft: 60
+                }
+            };
+
+        case 'BOSS_TICK':
+            return {
+                ...state,
+                worldBoss: {
+                    ...state.worldBoss,
+                    timeLeft: state.worldBoss.timeLeft - 1
+                }
+            };
+
+        case 'BOSS_DAMAGE':
+            return {
+                ...state,
+                worldBoss: {
+                    ...state.worldBoss,
+                    damage: state.worldBoss.damage + action.payload
+                }
+            };
+
+        case 'UPDATE_MUSHROOM_POSITION':
+            return {
+                ...state,
+                mushrooms: state.mushrooms.map(m =>
+                    m.id === action.payload.id
+                        ? { ...m, x: action.payload.x, y: action.payload.y }
+                        : m
+                )
+            };
+
+        case 'END_BOSS_BATTLE':
+            // Award gold equal to damage dealt
+            const goldReward = state.worldBoss.damage;
+            const newTotalDamage = state.worldBoss.totalDamage + state.worldBoss.damage;
+            const newMaxDamage = Math.max(state.worldBoss.maxDamage || 0, state.worldBoss.damage);
+
+            return {
+                ...state,
+                currentScene: 'village',
+                gold: state.gold + goldReward,
+                worldBoss: {
+                    ...state.worldBoss,
+                    isBattling: false,
+                    totalDamage: newTotalDamage,
+                    maxDamage: newMaxDamage,
+                    damage: 0,
+                    timeLeft: 0
+                }
+            };
+
         case 'RESET_GAME':
             return {
                 ...initialState,
@@ -1514,6 +1637,31 @@ export const GameProvider = ({ children }) => {
         };
     }, [state.user]);
 
+    // Fetch World Boss Rankings
+    const fetchWorldBossRankings = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('username, game_data');
+
+            if (error) throw error;
+
+            const rankings = data
+                .map(user => ({
+                    username: user.username,
+                    damage: user.game_data?.worldBoss?.maxDamage || 0
+                }))
+                .filter(user => user.damage > 0)
+                .sort((a, b) => b.damage - a.damage)
+                .slice(0, 10);
+
+            return rankings;
+        } catch (error) {
+            console.error('Failed to fetch world boss rankings:', error);
+            return [];
+        }
+    };
+
     return (
         <GameContext.Provider value={{
             state,
@@ -1524,7 +1672,9 @@ export const GameProvider = ({ children }) => {
             logout,
             manualSave,
             fetchRankings,
+            fetchWorldBossRankings,
             resetGame,
+            sendChatMessage,
             sendChatMessage,
             setChatOpen,
             isLoading: state.isLoading
