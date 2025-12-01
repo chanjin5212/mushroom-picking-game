@@ -143,7 +143,16 @@ const initialState = {
     mushroomsCollected: 0, // Mushrooms collected in current stage
     bossTimer: null, // Boss stage timer (60 seconds)
     bossPhase: false, // For X-10 stages: false = normal 100 mushrooms, true = boss fight
-    autoProgress: false // Auto-progress to next stage when completed
+    autoProgress: false, // Auto-progress to next stage when completed
+    // Artifacts System
+    artifacts: {
+        attackBonus: { count: 0, level: 0 },
+        critDamageBonus: { count: 0, level: 0 },
+        hyperCritDamageBonus: { count: 0, level: 0 },
+        megaCritDamageBonus: { count: 0, level: 0 },
+        goldBonus: { count: 0, level: 0 }
+    },
+    lastPullResults: null // Array of pulled artifact IDs
 };
 
 // LocalStorage key
@@ -602,8 +611,16 @@ const gameReducer = (state, action) => {
                 });
             }
 
-            // Award diamond for stage clear
-            const diamondReward = stage === 10 ? 100 : 10; // Boss stages give 100 diamonds, normal stages give 10
+
+            // Calculate diamond reward based on current stage
+            // Formula: (chapter × stage × 10) + (boss bonus: 100 × chapter if stage 10)
+            const calculateDiamondReward = (chapter, stage) => {
+                const baseReward = chapter * stage * 10;
+                const bossBonus = stage === 10 ? 100 * chapter : 0;
+                return baseReward + bossBonus;
+            };
+
+            const diamondReward = calculateDiamondReward(chapter, stage);
 
             return {
                 ...state,
@@ -823,6 +840,59 @@ const gameReducer = (state, action) => {
 
         case 'CLEAR_RESULT_MSG':
             return { ...state, lastEnhanceResult: null, lastEvolveResult: null };
+
+        case 'PULL_ARTIFACT': {
+            const { count, cost } = action.payload;
+            if (state.diamond < cost) return state;
+
+            const newArtifacts = { ...state.artifacts };
+            const pullResults = [];
+            const availableTypes = ['attackBonus', 'critDamageBonus', 'goldBonus'];
+
+            if (state.hyperCriticalChance > 0) availableTypes.push('hyperCritDamageBonus');
+            if (state.megaCriticalChance > 0) availableTypes.push('megaCritDamageBonus');
+
+            for (let i = 0; i < count; i++) {
+                const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+                newArtifacts[type].count += 1;
+                pullResults.push(type);
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond - cost,
+                artifacts: newArtifacts,
+                lastPullResults: pullResults
+            };
+        }
+
+        case 'UPGRADE_ARTIFACT': {
+            const { type } = action.payload;
+            const artifact = state.artifacts[type];
+
+            if (artifact.count < 1) return state;
+
+            const successChance = Math.max(0, 100 - (artifact.level * 0.05));
+            const isSuccess = Math.random() * 100 < successChance;
+
+            return {
+                ...state,
+                artifacts: {
+                    ...state.artifacts,
+                    [type]: {
+                        ...artifact,
+                        count: artifact.count - 1,
+                        level: isSuccess ? artifact.level + 1 : artifact.level
+                    }
+                }
+            };
+        }
+
+        case 'CLEAR_PULL_RESULTS':
+            return {
+                ...state,
+                lastPullResults: null
+            };
 
         case 'RESET_GAME':
             return {
@@ -1350,6 +1420,85 @@ export const GameProvider = ({ children }) => {
                     return true;
                 } catch (error) {
                     console.error('Cheat function error:', error);
+                    return false;
+                }
+            };
+
+            // Function to calculate total diamonds earned up to a given stage
+            window.fnCalculateTotalDiamonds = (chapter, stage) => {
+                let total = 0;
+                for (let c = 1; c <= chapter; c++) {
+                    const maxStageInChapter = (c === chapter) ? stage : 10;
+                    for (let s = 1; s <= maxStageInChapter; s++) {
+                        const baseReward = c * s * 10;
+                        const bossBonus = s === 10 ? 100 * c : 0;
+                        total += baseReward + bossBonus;
+                    }
+                }
+                return total;
+            };
+
+            // Function to give all users diamonds based on their current stage
+            window.fnGiveDiamonds = async () => {
+                try {
+                    console.log('🎁 Starting diamond distribution to all users...');
+
+                    // Fetch all users
+                    const { data: users, error: fetchError } = await supabase
+                        .from('users')
+                        .select('id, username, game_data');
+
+                    if (fetchError) {
+                        console.error('Failed to fetch users:', fetchError);
+                        return false;
+                    }
+
+                    let successCount = 0;
+                    let failCount = 0;
+
+                    for (const user of users) {
+                        try {
+                            const currentStage = user.game_data?.currentStage || { chapter: 1, stage: 1 };
+                            const { chapter, stage } = currentStage;
+
+                            // Calculate total diamonds for this user's progress
+                            const totalDiamonds = window.fnCalculateTotalDiamonds(chapter, stage);
+
+                            const updatedGameData = {
+                                ...user.game_data,
+                                diamond: (user.game_data?.diamond || 0) + totalDiamonds
+                            };
+
+                            const { error: updateError } = await supabase
+                                .from('users')
+                                .update({ game_data: updatedGameData })
+                                .eq('id', user.id);
+
+                            if (updateError) {
+                                console.error(`Failed to update ${user.username}:`, updateError);
+                                failCount++;
+                            } else {
+                                console.log(`✅ ${user.username} (${chapter}-${stage}): +${totalDiamonds} 💎`);
+                                successCount++;
+
+                                // Update local state if it's the current user
+                                if (state.user?.username === user.username) {
+                                    dispatch({ type: 'LOAD_GAME_DATA', payload: updatedGameData });
+                                }
+                            }
+                        } catch (err) {
+                            console.error(`Error processing ${user.username}:`, err);
+                            failCount++;
+                        }
+                    }
+
+                    console.log(`\n🎉 Diamond distribution complete!`);
+                    console.log(`✅ Success: ${successCount} users`);
+                    console.log(`❌ Failed: ${failCount} users`);
+
+                    return true;
+                } catch (error) {
+                    console.error('Diamond distribution error:', error);
                     return false;
                 }
             };

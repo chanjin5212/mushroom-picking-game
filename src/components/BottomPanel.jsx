@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatNumber } from '../utils/formatNumber';
+import ArtifactPanel from './ArtifactPanel';
 
 const BottomPanel = () => {
     const { state, dispatch, WEAPONS } = useGame();
     const [isOpen, setIsOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stats'
+    const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stats' or 'artifacts'
     const [upgradeMultiplier, setUpgradeMultiplier] = useState(1);
 
     // For hold-to-repeat functionality
@@ -302,13 +303,28 @@ const BottomPanel = () => {
                             cursor: 'pointer'
                         }}
                     >
-                        📊 스탯
+                        💪 스탯
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('artifacts')}
+                        style={{
+                            flex: 1,
+                            padding: '15px',
+                            background: activeTab === 'artifacts' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            border: 'none',
+                            color: activeTab === 'artifacts' ? '#fff' : '#888',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        🏺 유물
                     </button>
                 </div>
             )}
 
             {/* Content Area */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
                 {!isOpen && (
                     <div style={{ textAlign: 'center', color: '#888', marginTop: '10px' }}>
                         업그레이드 메뉴를 열어주세요
@@ -317,7 +333,7 @@ const BottomPanel = () => {
 
                 {/* Multiplier Toggles (Only visible in Stats tab) */}
                 {isOpen && activeTab === 'stats' && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px', marginBottom: '15px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px', marginBottom: '15px', padding: '0 20px' }}>
                         {[1, 10, 100, 1000].map(mul => (
                             <button
                                 key={mul}
@@ -340,7 +356,7 @@ const BottomPanel = () => {
                 )}
 
                 {activeTab === 'weapon' && (
-                    <div style={{ textAlign: 'center' }}>
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
                         <div style={{ fontSize: '4rem', marginBottom: '10px' }}>{currentWeapon.icon}</div>
                         <h2 style={{ margin: '0 0 5px 0' }}>{currentWeapon.name} <span style={{ color: '#4caf50' }}>+{state.weaponLevel}</span></h2>
                         <p style={{ color: '#aaa', margin: '0 0 20px 0' }}>공격력: {formatNumber(state.clickDamage)}</p>
@@ -406,7 +422,7 @@ const BottomPanel = () => {
                 )}
 
                 {activeTab === 'stats' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '0 20px' }}>
 
                         {/* Attack Range */}
                         <div style={{
@@ -843,6 +859,8 @@ const BottomPanel = () => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'artifacts' && <ArtifactPanel />}
             </div>
         </div>
     );

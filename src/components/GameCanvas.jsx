@@ -230,22 +230,33 @@ const GameCanvas = () => {
             const range = currentState.attackRange + (mushroom.type === 'boss' ? 40 : 0);
 
             if (dist < range) {
+                // Artifact Bonuses
+                const attackBonus = (currentState.artifacts?.attackBonus?.level || 0) * 0.5;
+                const critDamageBonus = (currentState.artifacts?.critDamageBonus?.level || 0) * 10;
+                const hyperCritDamageBonus = (currentState.artifacts?.hyperCritDamageBonus?.level || 0) * 10;
+                const megaCritDamageBonus = (currentState.artifacts?.megaCritDamageBonus?.level || 0) * 10;
+
                 // Calculate damage
-                const baseDamage = currentState.clickDamage;
+                const baseDamage = Math.floor(currentState.clickDamage * (1 + attackBonus / 100));
                 const isCritical = Math.random() * 100 < currentState.criticalChance;
                 let damage = baseDamage;
                 let isHyperCritical = false;
                 let isMegaCritical = false;
 
                 if (isCritical) {
-                    damage = Math.floor(baseDamage * (currentState.criticalDamage / 100));
+                    const totalCritDamage = currentState.criticalDamage + critDamageBonus;
+                    damage = Math.floor(baseDamage * (totalCritDamage / 100));
+
                     isHyperCritical = Math.random() * 100 < currentState.hyperCriticalChance;
                     if (isHyperCritical) {
-                        damage = Math.floor(damage * (currentState.hyperCriticalDamage / 100));
+                        const totalHyperCritDamage = currentState.hyperCriticalDamage + hyperCritDamageBonus;
+                        damage = Math.floor(damage * (totalHyperCritDamage / 100));
+
                         // Mega Critical Check
                         isMegaCritical = Math.random() * 100 < currentState.megaCriticalChance;
                         if (isMegaCritical) {
-                            damage = Math.floor(damage * (currentState.megaCriticalDamage / 100));
+                            const totalMegaCritDamage = currentState.megaCriticalDamage + megaCritDamageBonus;
+                            damage = Math.floor(damage * (totalMegaCritDamage / 100));
                         }
                     }
                 }

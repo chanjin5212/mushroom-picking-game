@@ -30,11 +30,19 @@ const HUD = () => {
     }, [state.user, state.currentStage, state.maxStage]);
 
     // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100)
+    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100)
     const calculateCombatPower = () => {
-        const baseDmg = state.clickDamage;
-        const critMultiplier = 1 + (state.criticalChance / 100) * (state.criticalDamage / 100);
-        const hyperCritMultiplier = 1 + (state.hyperCriticalChance / 100) * (state.hyperCriticalDamage / 100);
-        const megaCritMultiplier = 1 + (state.megaCriticalChance / 100) * (state.megaCriticalDamage / 100);
+        // Artifact Bonuses
+        const attackBonus = (state.artifacts?.attackBonus?.level || 0) * 0.5;
+        const critDamageBonus = (state.artifacts?.critDamageBonus?.level || 0) * 10;
+        const hyperCritDamageBonus = (state.artifacts?.hyperCritDamageBonus?.level || 0) * 10;
+        const megaCritDamageBonus = (state.artifacts?.megaCritDamageBonus?.level || 0) * 10;
+
+        const baseDmg = state.clickDamage * (1 + attackBonus / 100);
+        const critMultiplier = 1 + (state.criticalChance / 100) * ((state.criticalDamage + critDamageBonus) / 100);
+        const hyperCritMultiplier = 1 + (state.hyperCriticalChance / 100) * ((state.hyperCriticalDamage + hyperCritDamageBonus) / 100);
+        const megaCritMultiplier = 1 + (state.megaCriticalChance / 100) * ((state.megaCriticalDamage + megaCritDamageBonus) / 100);
+
         return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier);
     };
 
