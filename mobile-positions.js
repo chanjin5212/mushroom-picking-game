@@ -103,4 +103,3 @@ const updatedMaps = `
     ]
 `;
 
-console.log(updatedMaps);

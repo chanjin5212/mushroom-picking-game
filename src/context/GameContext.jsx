@@ -109,6 +109,7 @@ const initialState = {
     playerPos: { x: 400, y: 300 },
     currentScene: 'village',
     mushrooms: [],
+    diamond: 0, // New currency
     isLoading: false,
     isShopOpen: false,
     isPortalMenuOpen: false,
@@ -526,7 +527,7 @@ const gameReducer = (state, action) => {
                 const y = 120 + Math.random() * 300;
 
                 newMushrooms.push({
-                    id: Date.now() + i + Math.random(),
+                    id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
                     hp: baseHp,
                     maxHp: baseHp,
@@ -587,7 +588,7 @@ const gameReducer = (state, action) => {
                 const y = 120 + Math.random() * 300;
 
                 newMushrooms.push({
-                    id: Date.now() + i + Math.random(),
+                    id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
                     hp: baseHp,
                     maxHp: baseHp,
@@ -631,7 +632,7 @@ const gameReducer = (state, action) => {
                 const y = 120 + Math.random() * 300;
 
                 newMushrooms.push({
-                    id: Date.now() + i + Math.random(),
+                    id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
                     hp: baseHp,
                     maxHp: baseHp,
@@ -710,7 +711,7 @@ const gameReducer = (state, action) => {
                 const y = 120 + Math.random() * 300;
 
                 stageMushrooms.push({
-                    id: Date.now() + i,
+                    id: `boss-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
                     hp: baseHp,
                     maxHp: baseHp,
@@ -905,7 +906,6 @@ export const GameProvider = ({ children }) => {
             return;
         }
 
-        // console.log('Attempting to connect to room:village...');
 
         const channel = supabase.channel('room:village', {
             config: {
@@ -920,7 +920,7 @@ export const GameProvider = ({ children }) => {
         channel
             .on('presence', { event: 'sync' }, () => {
                 const newState = channel.presenceState();
-                // console.log('Presence Sync:', newState);
+
                 const players = {};
 
                 // Detect joins and leaves by comparing with previous state
@@ -933,7 +933,7 @@ export const GameProvider = ({ children }) => {
                         const joinedUser = newState[userId][0];
                         if (joinedUser && chatChannelRef.current) {
                             const systemMessage = {
-                                id: Date.now() + Math.random(),
+                                id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                                 username: 'SYSTEM',
                                 message: `${joinedUser.username}님이 입장하였습니다`,
                                 timestamp: Date.now(),
@@ -963,7 +963,7 @@ export const GameProvider = ({ children }) => {
                         const leftUser = previousPresenceRef.current[userId][0];
                         if (leftUser && chatChannelRef.current) {
                             const systemMessage = {
-                                id: Date.now() + Math.random(),
+                                id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                                 username: 'SYSTEM',
                                 message: `${leftUser.username}님이 퇴장하였습니다`,
                                 timestamp: Date.now(),
@@ -1002,7 +1002,6 @@ export const GameProvider = ({ children }) => {
                 dispatch({ type: 'UPDATE_OTHER_PLAYERS', payload: players });
             })
             .subscribe(async (status) => {
-                console.log('Subscription status:', status);
                 if (status === 'SUBSCRIBED') {
                     // Initial track
                     await channel.track({
@@ -1029,7 +1028,6 @@ export const GameProvider = ({ children }) => {
         if (!state.user || state.currentScene !== 'village') return;
 
         if (channelRef.current) {
-            // console.log('Sending update:', state.playerPos); // Uncomment for verbose logs
             channelRef.current.track({
                 username: state.user.username,
                 x: state.playerPos.x,
@@ -1085,7 +1083,7 @@ export const GameProvider = ({ children }) => {
         if (!chatChannelRef.current || !state.user || !message.trim()) return;
 
         const chatMessage = {
-            id: Date.now() + Math.random(),
+            id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             username: state.user.username,
             message: message.trim(),
             timestamp: Date.now()
@@ -1299,6 +1297,64 @@ export const GameProvider = ({ children }) => {
             return false;
         }
     };
+
+    // Developer cheat function - expose to console
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.fnMoney = async (username, gold) => {
+                try {
+                    if (!username || typeof gold !== 'number') {
+                        console.error('Usage: fnMoney("username", goldAmount)');
+                        return false;
+                    }
+
+                    // Find user by username
+                    const { data: userData, error: fetchError } = await supabase
+                        .from('users')
+                        .select('id, game_data')
+                        .eq('username', username)
+                        .single();
+
+                    if (fetchError || !userData) {
+                        console.error('User not found:', username);
+                        return false;
+                    }
+
+                    const updatedGameData = {
+                        ...userData.game_data,
+                        gold: gold
+                    };
+
+                    const { error: updateError } = await supabase
+                        .from('users')
+                        .update({ game_data: updatedGameData })
+                        .eq('id', userData.id);
+
+                    if (updateError) {
+                        console.error('Failed to update gold:', updateError);
+                        return false;
+                    }
+
+                    // Update local state if it's the current user
+                    if (state.user?.username === username) {
+                        dispatch({ type: 'LOAD_GAME_DATA', payload: updatedGameData });
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Cheat function error:', error);
+                    return false;
+                }
+            };
+
+        }
+
+        return () => {
+            if (typeof window !== 'undefined') {
+                delete window.fnMoney;
+            }
+        };
+    }, [state.user]);
 
     return (
         <GameContext.Provider value={{

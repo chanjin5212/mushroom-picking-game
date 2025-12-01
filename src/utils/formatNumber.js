@@ -3,6 +3,8 @@ export const formatNumber = (num) => {
     if (typeof num !== 'number') num = Number(num);
     if (isNaN(num)) return '0';
 
+    if (num < 10000) return num.toLocaleString();
+
     // Korean number units (10^4 base system)
     const units = [
         { value: 1e68, name: '무량대수' },
@@ -21,24 +23,27 @@ export const formatNumber = (num) => {
         { value: 1e16, name: '경' },
         { value: 1e12, name: '조' },
         { value: 1e8, name: '억' },
-        { value: 1e4, name: '만' },
-        { value: 1e3, name: '천' }
+        { value: 1e4, name: '만' }
     ];
 
-    // Find the appropriate unit
-    for (let unit of units) {
+    // Show top 2 units (like formatDamage)
+    for (let i = 0; i < units.length; i++) {
+        const unit = units[i];
         if (num >= unit.value) {
-            const value = num / unit.value;
-            // Show one decimal place if less than 10, otherwise show integer
-            if (value < 10) {
-                return value.toFixed(1).replace(/\.0$/, '') + unit.name;
-            } else {
-                return Math.floor(value) + unit.name;
+            const mainValue = Math.floor(num / unit.value);
+            const remainder = num % unit.value;
+
+            // Find the next unit for the remainder
+            const nextUnit = units[i + 1];
+            if (nextUnit && remainder >= nextUnit.value) {
+                const subValue = Math.floor(remainder / nextUnit.value);
+                return `${mainValue}${unit.name}${subValue}${nextUnit.name}`;
             }
+
+            return `${mainValue}${unit.name}`;
         }
     }
 
-    // For numbers less than 1000, use locale string
     return num.toLocaleString();
 };
 

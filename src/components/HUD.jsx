@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatNumber } from '../utils/formatNumber';
 import RankingBoard from './RankingBoard';
@@ -6,21 +6,42 @@ import UserInfoModal from './UserInfoModal';
 import WeaponCollection from './WeaponCollection';
 
 const HUD = () => {
-    const { state } = useGame();
+    const { state, fetchRankings } = useGame();
     const [menuOpen, setMenuOpen] = useState(false);
     const [showRanking, setShowRanking] = useState(false);
     const [showUserInfo, setShowUserInfo] = useState(false);
     const [showCollection, setShowCollection] = useState(false);
+    const [stageRank, setStageRank] = useState(null);
 
-    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100)
+    // Fetch stage ranking
+    useEffect(() => {
+        const fetchStageRank = async () => {
+            if (!state.user) return;
+
+            const rankings = await fetchRankings('stage');
+            const myRank = rankings.findIndex(r => r.username === state.user.username);
+            setStageRank(myRank >= 0 ? myRank + 1 : null);
+        };
+
+        fetchStageRank();
+        // Refresh ranking every 30 seconds
+        const interval = setInterval(fetchStageRank, 30000);
+        return () => clearInterval(interval);
+    }, [state.user, state.currentStage, state.maxStage]);
+
+    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100)
     const calculateCombatPower = () => {
         const baseDmg = state.clickDamage;
         const critMultiplier = 1 + (state.criticalChance / 100) * (state.criticalDamage / 100);
         const hyperCritMultiplier = 1 + (state.hyperCriticalChance / 100) * (state.hyperCriticalDamage / 100);
-        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier);
+        const megaCritMultiplier = 1 + (state.megaCriticalChance / 100) * (state.megaCriticalDamage / 100);
+        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier);
     };
 
     const combatPower = calculateCombatPower();
+
+    // Mock ranking - will be replaced with real data later
+    const mockRanking = 42;
 
     return (
         <>
@@ -30,84 +51,136 @@ const HUD = () => {
                 left: 0,
                 right: 0,
                 height: '60px',
-                background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 100%)',
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%)',
                 backdropFilter: 'blur(10px)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0 15px',
+                padding: '0 10px',
                 zIndex: 1100,
-                borderBottom: '1px solid rgba(255,255,255,0.1)'
+                borderBottom: '2px solid rgba(255,215,0,0.3)'
             }}>
-                {/* Left: User Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* Left: Character Image + Player Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                    {/* Character Avatar */}
                     <div style={{
-                        width: '36px',
-                        height: '36px',
+                        width: '45px',
+                        height: '45px',
                         borderRadius: '50%',
-                        backgroundColor: '#4caf50',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '18px',
+                        fontSize: '20px',
                         fontWeight: 'bold',
-                        color: 'white'
+                        color: 'white',
+                        border: '2px solid rgba(255,215,0,0.5)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                        flexShrink: 0
                     }}>
                         {state.user?.username?.charAt(0).toUpperCase() || 'U'}
                     </div>
-                    <div style={{ color: 'white', fontSize: '0.9rem', fontWeight: '500' }}>
-                        {state.user?.username || 'Guest'}
+
+                    {/* Player Info Column */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                        {/* Username */}
+                        <div style={{
+                            color: 'white',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {state.user?.username || 'Guest'}
+                        </div>
+
+                        {/* Stats Row - All in one line */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            flexWrap: 'nowrap'
+                        }}>
+                            {/* Stage Ranking */}
+                            {stageRank !== null && (
+                                <div style={{
+                                    backgroundColor: 'rgba(255,215,0,0.2)',
+                                    padding: '2px 6px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(255,215,0,0.4)',
+                                    fontSize: '0.7rem',
+                                    color: '#ffd700',
+                                    fontWeight: 'bold',
+                                    whiteSpace: 'nowrap'
+                                }}>
+                                    {stageRank}위
+                                </div>
+                            )}
+
+                            {/* Combat Power */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                fontSize: '0.7rem',
+                                color: '#ff6b6b',
+                                fontWeight: 'bold',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                <span>⚔️</span>
+                                <span>{formatNumber(combatPower)}</span>
+                            </div>
+
+                            {/* Gold */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                fontSize: '0.7rem',
+                                color: '#ffc107',
+                                fontWeight: 'bold',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                <span>💰</span>
+                                <span>{formatNumber(state.gold)}</span>
+                            </div>
+
+                            {/* Diamond */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                fontSize: '0.7rem',
+                                color: '#00bcd4',
+                                fontWeight: 'bold',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                <span>💎</span>
+                                <span>{formatNumber(state.diamond)}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Center: Stats */}
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        backgroundColor: 'rgba(156,39,176,0.2)',
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        border: '1px solid rgba(156,39,176,0.4)'
-                    }}>
-                        <span style={{ fontSize: '1.1rem' }}>⚔️</span>
-                        <span style={{ color: '#ab47bc', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                            {formatNumber(combatPower)}
-                        </span>
-                    </div>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        backgroundColor: 'rgba(255,193,7,0.2)',
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        border: '1px solid rgba(255,193,7,0.4)'
-                    }}>
-                        <span style={{ fontSize: '1.1rem' }}>💰</span>
-                        <span style={{ color: '#ffc107', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                            {formatNumber(state.gold)}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Right: Menu Dropdown */}
-                <div style={{ position: 'relative' }}>
+                {/* Right: Menu Button */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
                     <button
                         onClick={() => setMenuOpen(!menuOpen)}
                         style={{
-                            padding: '8px 12px',
+                            padding: '8px 10px',
                             backgroundColor: 'rgba(255,255,255,0.1)',
                             color: 'white',
-                            border: '1px solid rgba(255,255,255,0.2)',
+                            border: '1px solid rgba(255,255,255,0.3)',
                             borderRadius: '6px',
                             cursor: 'pointer',
-                            fontSize: '1.2rem',
+                            fontSize: '1.1rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '5px',
-                            transition: 'all 0.2s'
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            minWidth: '38px',
+                            minHeight: '38px'
                         }}
                         onMouseEnter={(e) => {
                             e.target.style.backgroundColor = 'rgba(255,255,255,0.2)';
@@ -138,7 +211,7 @@ const HUD = () => {
                             {/* Menu Items */}
                             <div style={{
                                 position: 'absolute',
-                                top: '45px',
+                                top: '50px',
                                 right: 0,
                                 backgroundColor: 'rgba(30,30,30,0.95)',
                                 backdropFilter: 'blur(10px)',

@@ -131,14 +131,6 @@ const GameCanvas = () => {
 
     // Auto-progress when enabled
     useEffect(() => {
-        console.log('Auto-progress check:', {
-            autoProgress: state.autoProgress,
-            mushroomsCollected: state.mushroomsCollected,
-            bossPhase: state.bossPhase,
-            stage: state.currentStage.stage,
-            triggered: autoProgressTriggeredRef.current
-        });
-
         if (!state.autoProgress) return;
         if (state.mushroomsCollected < 100) return;
         if (autoProgressTriggeredRef.current) return; // Already triggered
@@ -147,12 +139,10 @@ const GameCanvas = () => {
 
         if (isBossStage && !state.bossPhase) {
             // Auto-challenge boss in X-10
-            console.log('Auto-challenging boss NOW!');
             autoProgressTriggeredRef.current = true;
             handleBossChallenge();
         } else if (!isBossStage) {
             // Auto-advance to next stage
-            console.log('Auto-advancing to next stage NOW!');
             autoProgressTriggeredRef.current = true;
             handleNextStage();
         }
@@ -261,7 +251,7 @@ const GameCanvas = () => {
                 }
 
                 // Create floating damage number
-                const damageId = Date.now() + Math.random();
+                const damageId = `damage-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 setDamageNumbers(prev => [...prev, {
                     id: damageId,
                     damage: damage,
