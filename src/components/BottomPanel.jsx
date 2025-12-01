@@ -33,9 +33,9 @@ const BottomPanel = () => {
 
     // Tiered Cost Calculation Helper (for Damage stats)
     const calculateTieredCost = (baseCost, level) => {
-        let exponent = 1.2;
-        if (level >= 100) exponent = 2.0; // Steep for high levels
-        else if (level >= 10) exponent = 1.5; // Moderate for mid levels
+        let exponent = 1.1; // Reduced from 1.2/1.5/2.0 to 1.1 for better scaling
+        if (level >= 10000) exponent = 1.2;
+        else if (level >= 1000) exponent = 1.15;
 
         return Math.floor(baseCost * Math.pow(level + 1, exponent));
     };
@@ -65,11 +65,11 @@ const BottomPanel = () => {
             isTiered = true;
         } else if (statType === 'hyperCritChance') {
             maxLevel = 1000;
-            baseCost = 10000000;
+            baseCost = 10000000; // 10M
             isTiered = false;
         } else if (statType === 'hyperCritDamage') {
             maxLevel = Infinity;
-            baseCost = 5000000;
+            baseCost = 100000000; // 100M
             isTiered = true;
         } else if (statType === 'moveSpeed') {
             maxLevel = 300;
@@ -78,6 +78,14 @@ const BottomPanel = () => {
         } else if (statType === 'attackRange') {
             maxLevel = 300;
             baseCost = 500;
+            isTiered = true;
+        } else if (statType === 'megaCritChance') {
+            maxLevel = 1000;
+            baseCost = 20000000000; // 20B
+            isTiered = false;
+        } else if (statType === 'megaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 10000000000; // 10B
             isTiered = true;
         }
 
@@ -106,6 +114,8 @@ const BottomPanel = () => {
     const critDamageInfo = getUpgradeInfo('critDamage');
     const hyperCritChanceInfo = getUpgradeInfo('hyperCritChance');
     const hyperCritDamageInfo = getUpgradeInfo('hyperCritDamage');
+    const megaCritChanceInfo = getUpgradeInfo('megaCritChance');
+    const megaCritDamageInfo = getUpgradeInfo('megaCritDamage');
     const moveSpeedInfo = getUpgradeInfo('moveSpeed');
     const attackRangeInfo = getUpgradeInfo('attackRange');
 
@@ -692,6 +702,143 @@ const BottomPanel = () => {
                             >
                                 <span>강화 (+{hyperCritDamageInfo.validCount}%)</span>
                                 <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageInfo.totalCost)} G</span>
+                            </button>
+                        </div>
+
+                        {/* Mega Critical Section - Always visible, locked until level 1000 hyper crit */}
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '10px',
+                            background: (state.statLevels?.hyperCritChance || 0) >= 1000 ? 'linear-gradient(90deg, #8A2BE2, #4B0082)' : 'rgba(100,100,100,0.3)',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            marginBottom: '10px',
+                            opacity: (state.statLevels?.hyperCritChance || 0) >= 1000 ? 1 : 0.5,
+                            color: 'white',
+                            boxShadow: (state.statLevels?.hyperCritChance || 0) >= 1000 ? '0 0 10px #8A2BE2' : 'none'
+                        }}>
+                            {(state.statLevels?.hyperCritChance || 0) >= 1000 ? '🌌 메가 크리티컬 해제됨 🌌' : '🔒 메가 크리티컬 (하이퍼 치명타 Lv.1000 해제)'}
+                        </div>
+
+                        {/* Mega Crit Chance */}
+                        <div style={{
+                            backgroundColor: 'rgba(138, 43, 226, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(138, 43, 226, 0.3)',
+                            opacity: (state.statLevels?.hyperCritChance || 0) >= 1000 ? 1 : 0.5,
+                            position: 'relative'
+                        }}>
+                            {(state.statLevels?.hyperCritChance || 0) < 1000 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '3rem',
+                                    zIndex: 10
+                                }}>
+                                    🔒
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#E0B0FF' }}>🌌 메가 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.megaCriticalChance.toFixed(1)}% (최대 100%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#8A2BE2' }}>
+                                    Lv.{state.statLevels?.megaCritChance || 0}
+                                </div>
+                            </div>
+                            {state.megaCriticalChance < 100 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('megaCritChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('megaCritChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < megaCritChanceInfo.totalCost || megaCritChanceInfo.validCount === 0 || (state.statLevels?.hyperCritChance || 0) < 1000}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: (state.gold >= megaCritChanceInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? '#8A2BE2' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: (state.gold >= megaCritChanceInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{(megaCritChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(megaCritChanceInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#8A2BE2', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
+                        {/* Mega Crit Damage */}
+                        <div style={{
+                            backgroundColor: 'rgba(75, 0, 130, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(75, 0, 130, 0.3)',
+                            opacity: (state.statLevels?.hyperCritChance || 0) >= 1000 ? 1 : 0.5,
+                            position: 'relative'
+                        }}>
+                            {(state.statLevels?.hyperCritChance || 0) < 1000 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '3rem',
+                                    zIndex: 10
+                                }}>
+                                    🔒
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#E0B0FF' }}>🌌 메가 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.megaCriticalDamage}%</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4B0082' }}>
+                                    Lv.{state.statLevels?.megaCritDamage || 0}
+                                </div>
+                            </div>
+                            <button
+                                onMouseDown={() => startHold(() => handleUpgradeStat('megaCritDamage'))}
+                                onMouseUp={stopHold}
+                                onMouseLeave={stopHold}
+                                onTouchStart={() => startHold(() => handleUpgradeStat('megaCritDamage'))}
+                                onTouchEnd={stopHold}
+                                disabled={state.gold < megaCritDamageInfo.totalCost || megaCritDamageInfo.validCount === 0 || (state.statLevels?.hyperCritChance || 0) < 1000}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    backgroundColor: (state.gold >= megaCritDamageInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? '#4B0082' : '#555',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: (state.gold >= megaCritDamageInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <span>강화 (+{megaCritDamageInfo.validCount}%)</span>
+                                <span style={{ color: '#ffeb3b' }}>{formatNumber(megaCritDamageInfo.totalCost)} G</span>
                             </button>
                         </div>
                     </div>

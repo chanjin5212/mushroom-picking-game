@@ -172,6 +172,10 @@ const GameCanvas = () => {
                 y: clientHeight * 0.5
             });
         }
+
+        // Reset UI elements on scene change
+        setDamageNumbers([]);
+        setToast(null);
     }, [state.currentScene]);
 
     // Sync state to ref
@@ -241,12 +245,18 @@ const GameCanvas = () => {
                 const isCritical = Math.random() * 100 < currentState.criticalChance;
                 let damage = baseDamage;
                 let isHyperCritical = false;
+                let isMegaCritical = false;
 
                 if (isCritical) {
                     damage = Math.floor(baseDamage * (currentState.criticalDamage / 100));
                     isHyperCritical = Math.random() * 100 < currentState.hyperCriticalChance;
                     if (isHyperCritical) {
                         damage = Math.floor(damage * (currentState.hyperCriticalDamage / 100));
+                        // Mega Critical Check
+                        isMegaCritical = Math.random() * 100 < currentState.megaCriticalChance;
+                        if (isMegaCritical) {
+                            damage = Math.floor(damage * (currentState.megaCriticalDamage / 100));
+                        }
                     }
                 }
 
@@ -257,6 +267,7 @@ const GameCanvas = () => {
                     damage: damage,
                     isCritical: isCritical,
                     isHyperCritical: isHyperCritical,
+                    isMegaCritical: isMegaCritical,
                     x: mushroom.x,
                     y: mushroom.y
                 }]);
@@ -641,10 +652,10 @@ const GameCanvas = () => {
                         left: dmg.x,
                         top: dmg.y,
                         transform: 'translate(-50%, -50%)',
-                        fontSize: dmg.isHyperCritical ? '28px' : (dmg.isCritical ? '22px' : '16px'),
+                        fontSize: dmg.isMegaCritical ? '36px' : (dmg.isHyperCritical ? '28px' : (dmg.isCritical ? '22px' : '16px')),
                         fontWeight: 'bold',
-                        color: dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700'),
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)',
+                        color: dmg.isMegaCritical ? '#8A2BE2' : (dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700')), // BlueViolet for Mega
+                        textShadow: dmg.isMegaCritical ? '0 0 10px #4B0082, 2px 2px 4px rgba(0,0,0,0.8)' : '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)',
                         pointerEvents: 'none',
                         whiteSpace: 'nowrap',
                         animation: 'floatUp 1s ease-out forwards',

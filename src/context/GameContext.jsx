@@ -119,11 +119,15 @@ const initialState = {
     criticalDamage: 150, // 150%
     hyperCriticalChance: 0, // 0% (unlocked at 50% crit)
     hyperCriticalDamage: 200, // 200% (multiplies on top of crit)
+    megaCriticalChance: 0, // 0% (unlocked at 100% hyper crit)
+    megaCriticalDamage: 3000, // 3000% (multiplies on top of hyper crit)
     statLevels: {
         critChance: 0,
         critDamage: 0,
         hyperCritChance: 0,
         hyperCritDamage: 0,
+        megaCritChance: 0,
+        megaCritDamage: 0,
         moveSpeed: 0,
         attackRange: 0
     },
@@ -167,6 +171,8 @@ const saveState = async (state) => {
             criticalDamage: state.criticalDamage,
             hyperCriticalChance: state.hyperCriticalChance,
             hyperCriticalDamage: state.hyperCriticalDamage,
+            megaCriticalChance: state.megaCriticalChance,
+            megaCriticalDamage: state.megaCriticalDamage,
             statLevels: state.statLevels,
             statLevels: state.statLevels,
             obtainedWeapons: state.obtainedWeapons,
@@ -348,9 +354,9 @@ const gameReducer = (state, action) => {
 
             // Helper functions to calculate costs
             const calculateTieredCost = (baseCost, level) => {
-                let exponent = 1.2;
-                if (level >= 100) exponent = 2.0;
-                else if (level >= 10) exponent = 1.5;
+                let exponent = 1.1; // Reduced from 1.2/1.5/2.0 to 1.1 for better scaling
+                if (level >= 10000) exponent = 1.2;
+                else if (level >= 1000) exponent = 1.15;
                 return Math.floor(baseCost * Math.pow(level + 1, exponent));
             };
 
@@ -375,20 +381,35 @@ const gameReducer = (state, action) => {
             } else if (statType === 'critDamage') {
                 currentLevel = state.statLevels?.critDamage || 0;
                 currentVal = state.criticalDamage;
-                maxLevel = Infinity;
+                maxLevel = 100000;
                 baseCost = 800;
                 isTiered = true;
             } else if (statType === 'hyperCritChance') {
                 currentLevel = state.statLevels?.hyperCritChance || 0;
                 currentVal = state.hyperCriticalChance;
                 maxLevel = 1000;
-                baseCost = 10000000;
+                baseCost = 10000000; // 10M
                 isTiered = false;
             } else if (statType === 'hyperCritDamage') {
                 currentLevel = state.statLevels?.hyperCritDamage || 0;
                 currentVal = state.hyperCriticalDamage;
-                maxLevel = Infinity;
-                baseCost = 5000000;
+                maxLevel = 100000;
+                baseCost = 100000000; // 100M
+                isTiered = true;
+            } else if (statType === 'megaCritChance') {
+                // Unlock condition: Hyper Crit Chance >= 1000 (100%)
+                if ((state.statLevels?.hyperCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.megaCritChance || 0;
+                currentVal = state.megaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 20000000000; // 20B
+                isTiered = false;
+            } else if (statType === 'megaCritDamage') {
+                currentLevel = state.statLevels?.megaCritDamage || 0;
+                currentVal = state.megaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 10000000000; // 10B
                 isTiered = true;
             } else if (statType === 'moveSpeed') {
                 currentLevel = state.statLevels?.moveSpeed || 0;
@@ -442,6 +463,12 @@ const gameReducer = (state, action) => {
             } else if (statType === 'hyperCritDamage') {
                 newState.hyperCriticalDamage = state.hyperCriticalDamage + (1 * validCount);
                 newState.statLevels.hyperCritDamage = currentLevel + validCount;
+            } else if (statType === 'megaCritChance') {
+                newState.megaCriticalChance = parseFloat((state.megaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.megaCritChance = currentLevel + validCount;
+            } else if (statType === 'megaCritDamage') {
+                newState.megaCriticalDamage = state.megaCriticalDamage + (1 * validCount);
+                newState.statLevels.megaCritDamage = currentLevel + validCount;
             } else if (statType === 'moveSpeed') {
                 // Formula: 5 + (10 * level / 300)
                 const newLevel = currentLevel + validCount;
