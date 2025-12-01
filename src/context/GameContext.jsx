@@ -169,6 +169,7 @@ const saveState = async (state) => {
     try {
         const toSave = {
             gold: state.gold,
+            diamond: state.diamond, // Save diamond
             currentWeaponId: state.currentWeaponId,
             weaponLevel: state.weaponLevel,
             clickDamage: state.clickDamage,
@@ -184,9 +185,10 @@ const saveState = async (state) => {
             megaCriticalChance: state.megaCriticalChance,
             megaCriticalDamage: state.megaCriticalDamage,
             statLevels: state.statLevels,
-            statLevels: state.statLevels,
             obtainedWeapons: state.obtainedWeapons,
             attackRange: state.attackRange,
+            // Artifact System
+            artifacts: state.artifacts,
             // Stage System - save currentStage and maxStage only
             currentStage: state.currentStage,
             maxStage: state.maxStage
