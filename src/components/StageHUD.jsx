@@ -13,10 +13,11 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
     const normalHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
     const normalReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
 
-    // Format numbers for display (e.g. 1.2k)
+    // Format numbers for display with Korean units (single digit only)
     const formatNumber = (num) => {
-        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-        if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+        if (num >= 100000000) return Math.floor(num / 100000000) + '억'; // 억
+        if (num >= 10000) return Math.floor(num / 10000) + '만'; // 만
+        if (num >= 1000) return Math.floor(num / 1000) + '천'; // 천
         return num;
     };
 

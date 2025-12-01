@@ -517,14 +517,15 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            // Always generate normal mushrooms (100 mushrooms)
+            // Generate 20 mushrooms randomly across the map
             const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
             const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
 
-            for (let i = 0; i < 100; i++) {
-                const x = 40 + Math.random() * 320;
-                const y = 120 + Math.random() * 300;
+            for (let i = 0; i < 20; i++) {
+                // Random position across entire map (with margins)
+                const x = 30 + Math.random() * 340;
+                const y = 80 + Math.random() * 380;
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -578,14 +579,15 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
             let newMushrooms = [];
 
-            // Always generate normal mushrooms (100 mushrooms) - same as START_STAGE and SELECT_STAGE
+            // Generate 20 mushrooms randomly across the map - same as START_STAGE
             const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
             const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
 
-            for (let i = 0; i < 100; i++) {
-                const x = 40 + Math.random() * 320;
-                const y = 120 + Math.random() * 300;
+            for (let i = 0; i < 20; i++) {
+                // Random position across entire map (with margins)
+                const x = 30 + Math.random() * 340;
+                const y = 80 + Math.random() * 380;
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -600,6 +602,9 @@ const gameReducer = (state, action) => {
                 });
             }
 
+            // Award diamond for stage clear
+            const diamondReward = stage === 10 ? 100 : 10; // Boss stages give 100 diamonds, normal stages give 10
+
             return {
                 ...state,
                 currentStage: nextStage,
@@ -607,7 +612,8 @@ const gameReducer = (state, action) => {
                 mushroomsCollected: 0,
                 bossTimer: null, // No timer until boss spawns
                 bossPhase: false, // Start with normal mushrooms
-                mushrooms: newMushrooms
+                mushrooms: newMushrooms,
+                diamond: state.diamond + diamondReward // Add diamond reward
             };
         }
 
@@ -622,14 +628,15 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            // Always generate normal mushrooms (100 mushrooms) - same as START_STAGE
+            // Generate 20 mushrooms randomly across the map - same as START_STAGE
             const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
             const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
 
-            for (let i = 0; i < 100; i++) {
-                const x = 40 + Math.random() * 320;
-                const y = 120 + Math.random() * 300;
+            for (let i = 0; i < 20; i++) {
+                // Random position across entire map (with margins)
+                const x = 30 + Math.random() * 340;
+                const y = 80 + Math.random() * 380;
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -706,9 +713,9 @@ const gameReducer = (state, action) => {
                 const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
                 const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
 
-                // Random position
-                const x = 40 + Math.random() * 320;
-                const y = 120 + Math.random() * 300;
+                // Random position across entire map (with margins)
+                const x = 30 + Math.random() * 340;
+                const y = 80 + Math.random() * 380;
 
                 stageMushrooms.push({
                     id: `boss-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -742,9 +749,9 @@ const gameReducer = (state, action) => {
             const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100; // 100x Reward
 
             const bossMushroom = {
-                id: 'BOSS',
-                x: 200,
-                y: 200,
+                id: 'boss-' + Date.now(),
+                x: 200, // Fixed center position
+                y: 240, // Fixed center position
                 hp: bossHp,
                 maxHp: bossHp,
                 type: 'boss',
