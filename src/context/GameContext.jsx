@@ -973,18 +973,51 @@ const gameReducer = (state, action) => {
             };
         }
 
-        case 'RESPAWN_MUSHROOM':
+        case 'RESPAWN_MUSHROOM': {
+            // Calculate current difficulty to get base stats
+            // Use currentStage instead of stage, and stage property instead of level
+            const difficultyLevel = (state.currentStage.chapter - 1) * 10 + state.currentStage.stage;
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+
             return {
                 ...state,
                 mushrooms: state.mushrooms.map(m => {
                     if (m.id === action.payload.id) {
                         // Don't respawn boss
                         if (m.type === 'boss') return m;
-                        return { ...m, hp: m.maxHp, isDead: false, respawnTime: 0 };
+
+                        // Randomize position
+                        const x = 30 + Math.random() * 340;
+                        const y = 80 + Math.random() * 380;
+
+                        // Apply new rarity
+                        const rarityData = applyMushroomRarity(baseHp, baseReward);
+
+                        // Generate new ID to force re-mount and avoid "moving" visual artifact
+                        // This ensures the mushroom appears instantly at the new location
+                        const newId = `mushroom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+                        return {
+                            ...m,
+                            id: newId,
+                            x,
+                            y,
+                            hp: rarityData.hp,
+                            maxHp: rarityData.hp,
+                            reward: rarityData.reward,
+                            diamondReward: rarityData.diamondReward,
+                            rarity: rarityData.rarity,
+                            color: rarityData.color,
+                            scale: rarityData.scale,
+                            isDead: false,
+                            respawnTime: 0
+                        };
                     }
                     return m;
                 })
             };
+        }
 
         case 'CLEAR_RESULT_MSG':
             return { ...state, lastEnhanceResult: null, lastEvolveResult: null };
