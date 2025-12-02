@@ -54,49 +54,115 @@ const generateWeapons = () => {
 
 const WEAPONS = generateWeapons();
 
-// Generate 1000 maps procedurally with MASSIVE HP and reward scaling
+// 100 different mushroom types - changes every 25 chapters (max chapter: 2500)
+const MUSHROOM_NAMES = [
+    '팽이버섯', '느타리버섯', '표고버섯', '송이버섯', '양송이버섯',
+    '목이버섯', '석이버섯', '영지버섯', '상황버섯', '동충하초',
+    '싸리버섯', '꽃송이버섯', '노루궁뎅이버섯', '차가버섯', '아가리쿠스버섯',
+    '새송이버섯', '만가닥버섯', '잎새버섯', '능이버섯', '복령버섯',
+    '독버섯', '광대버섯', '붉은버섯', '파란버섯', '보라버섯',
+    '황금버섯', '은빛버섯', '청동버섯', '철버섯', '강철버섯',
+    '동굴버섯', '심해버섯', '화산버섯', '용암버섯', '얼음버섯',
+    '눈꽃버섯', '수정버섯', '다이아버섯', '루비버섯', '사파이어버섯',
+    '에메랄드버섯', '자수정버섯', '호박버섯', '진주버섯', '산호버섯',
+    '산악버섯', '고산버섯', '평원버섯', '사막버섯', '정글버섯',
+    '늪지버섯', '숲속버섯', '초원버섯', '설원버섯', '화염버섯',
+    '번개버섯', '천둥버섯', '폭풍버섯', '태풍버섯', '지진버섯',
+    '해일버섯', '토네이도버섯', '블리자드버섯', '유성버섯', '혜성버섯',
+    '별빛버섯', '달빛버섯', '햇빛버섯', '무지개버섯', '오로라버섯',
+    '심연버섯', '어둠버섯', '그림자버섯', '공허버섯', '혼돈버섯',
+    '타락버섯', '저주버섯', '악마버섯', '천사버섯', '신성버섯',
+    '고대버섯', '태초버섯', '원시버섯', '전설버섯', '신화버섯',
+    '영웅버섯', '왕의버섯', '황제버섯', '제왕버섯', '패왕버섯',
+    '용의버섯', '불사조버섯', '기린버섯', '현무버섯', '백호버섯',
+    '청룡버섯', '주작버섯', '천마버섯', '신수버섯', '성수버섯',
+    '거대버섯', '초거대버섯', '극대버섯', '무한버섯', '영원버섯'
+];
+
+// Get mushroom name based on chapter (changes every 25 chapters)
+const getMushroomName = (chapter) => {
+    const index = Math.floor((chapter - 1) / 25) % MUSHROOM_NAMES.length;
+    return MUSHROOM_NAMES[index];
+};
+
+// Determine mushroom rarity and apply modifiers
+// Rare: 1% chance, 3x rewards/HP, cyan color, 1.5x scale
+// Epic: 0.1% chance, 10x rewards/HP, purple color, 2x scale
+// Unique: 0.01% chance, 10 diamonds, 100x HP, yellow color, 3x scale
+const applyMushroomRarity = (baseHp, baseReward) => {
+    const roll = Math.random() * 100;
+
+    if (roll < 0.01) {
+        // Unique (0.01%)
+        return {
+            rarity: 'unique',
+            hp: baseHp * 100,
+            reward: baseReward, // Not used, gives diamonds instead
+            diamondReward: 10,
+            color: '#FFD700', // Gold/Yellow
+            scale: 3
+        };
+    } else if (roll < 0.11) {
+        // Epic (0.1%)
+        return {
+            rarity: 'epic',
+            hp: baseHp * 10,
+            reward: baseReward * 10,
+            diamondReward: 0,
+            color: '#9C27B0', // Purple
+            scale: 2
+        };
+    } else if (roll < 1.11) {
+        // Rare (1%)
+        return {
+            rarity: 'rare',
+            hp: baseHp * 3,
+            reward: baseReward * 3,
+            diamondReward: 0,
+            color: '#00BCD4', // Cyan
+            scale: 1.5
+        };
+    } else {
+        // Normal
+        return {
+            rarity: 'normal',
+            hp: baseHp,
+            reward: baseReward,
+            diamondReward: 0,
+            color: null,
+            scale: 1
+        };
+    }
+};
+
+// Generate maps procedurally with MASSIVE HP and reward scaling
+// Note: This old function is kept for compatibility but not used in stage system
 const generateMaps = () => {
     const maps = {};
-    // 20 different positions for mushrooms in a 5x4 grid with better spacing
-    const positions = [
-        { x: 40, y: 120 }, { x: 120, y: 120 }, { x: 200, y: 120 }, { x: 280, y: 120 }, { x: 360, y: 120 },
-        { x: 40, y: 220 }, { x: 120, y: 220 }, { x: 200, y: 220 }, { x: 280, y: 220 }, { x: 360, y: 220 },
-        { x: 40, y: 320 }, { x: 120, y: 320 }, { x: 200, y: 320 }, { x: 280, y: 320 }, { x: 360, y: 320 },
-        { x: 40, y: 420 }, { x: 120, y: 420 }, { x: 200, y: 420 }, { x: 280, y: 420 }, { x: 360, y: 420 }
-    ];
-
-    const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팽이버섯', '독버섯', '붉은버섯',
-        '동굴버섯', '수정버섯', '얼음버섯', '용암버섯', '산악버섯', '고산버섯',
-        '천둥버섯', '번개버섯', '폭풍버섯', '심연버섯', '어둠버섯', '공허버섯',
-        '타락버섯', '저주버섯', '악마버섯', '거대버섯', '고대버섯', '전설버섯'];
 
     for (let level = 1; level <= 1000; level++) {
         const mapKey = `map_${level}`;
         const mushrooms = [];
-        const mushroomCount = 20; // Fixed 20 mushrooms per map
+        const mushroomCount = 100;
 
         for (let i = 0; i < mushroomCount; i++) {
-            // MASSIVE HP scaling: exponential growth
-            // Special case: Level 1 starts very easy (20 HP)
             const baseHp = level === 1 ? 10 : Math.floor(Math.pow(10, level * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, level * 0.04) * 50);
-            const pos = positions[i % positions.length];
+            const x = 30 + Math.random() * 340;
+            const y = 80 + Math.random() * 380;
 
             let type = 'normal';
             if (level > 10 && i >= mushroomCount - 1) type = 'boss';
             else if (level > 5 && i >= mushroomCount - 2) type = 'red';
 
-            const nameIndex = Math.floor((level - 1) / 50) % mushroomNames.length;
-            const name = mushroomNames[nameIndex];
-
             mushrooms.push({
                 id: level * 100 + i + 1,
-                x: pos.x,
-                y: pos.y,
+                x: x,
+                y: y,
                 hp: baseHp,
                 maxHp: baseHp,
                 type: type,
-                name: name,
+                name: getMushroomName(level),
                 reward: baseReward,
                 isDead: false,
                 respawnTime: 0
@@ -166,6 +232,8 @@ const initialState = {
         goldBonus: { count: 0, level: 0 }
     },
     lastPullResults: null, // Array of pulled artifact IDs
+    // Mushroom Collection System (400 total: 100 types × 4 rarities)
+    mushroomCollection: {}, // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
     // World Boss System
     worldBoss: {
         isActive: false, // Is modal open?
@@ -200,7 +268,7 @@ const saveState = async (state) => {
             moveSpeed: state.moveSpeed,
             playerPos: state.playerPos,
             currentScene: state.currentScene,
-            mushrooms: state.mushrooms,
+            // mushrooms: state.mushrooms, // Don't save mushrooms to force respawn with correct count
             // Save new stats
             criticalChance: state.criticalChance,
             criticalDamage: state.criticalDamage,
@@ -216,10 +284,14 @@ const saveState = async (state) => {
             // Stage System - save currentStage and maxStage only
             currentStage: state.currentStage,
             maxStage: state.maxStage,
-            // World Boss System - save maxDamage for ranking
+            // Mushroom Collection System
+            mushroomCollection: state.mushroomCollection,
+            // World Boss System - save maxDamage for ranking and daily attempts
             worldBoss: {
                 maxDamage: state.worldBoss.maxDamage || 0,
-                totalDamage: state.worldBoss.totalDamage || 0
+                totalDamage: state.worldBoss.totalDamage || 0,
+                dailyAttempts: state.worldBoss.dailyAttempts,
+                lastResetDate: state.worldBoss.lastResetDate
             }
             // Do NOT save mushroomsCollected or bossPhase - always start fresh
         };
@@ -283,7 +355,16 @@ const gameReducer = (state, action) => {
                 isShopOpen: false,
                 isPortalMenuOpen: false,
                 // Clear mushrooms on load to prevent sync issues
-                mushrooms: []
+                mushrooms: [],
+                // Properly merge worldBoss data with defaults
+                worldBoss: {
+                    ...initialState.worldBoss,
+                    ...(action.payload.worldBoss || {}),
+                    isActive: false, // Always start with modal closed
+                    isBattling: false, // Always start not battling
+                    damage: 0, // Reset current session damage
+                    timeLeft: 0 // Reset timer
+                }
             };
 
         case 'LOGOUT':
@@ -307,6 +388,9 @@ const gameReducer = (state, action) => {
 
         case 'ADD_GOLD':
             return { ...state, gold: state.gold + action.payload };
+
+        case 'ADD_DIAMOND':
+            return { ...state, diamond: state.diamond + action.payload };
 
         case 'ENHANCE_WEAPON': {
             const currentWeapon = WEAPONS[state.currentWeaponId];
@@ -557,24 +641,29 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            // Generate 20 mushrooms randomly across the map
-            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
             const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const mushroomName = getMushroomName(chapter);
 
-            for (let i = 0; i < 20; i++) {
-                // Random position across entire map (with margins)
+            for (let i = 0; i < 100; i++) {
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
+
+                // Apply rarity system
+                const rarityData = applyMushroomRarity(baseHp, baseReward);
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
-                    hp: baseHp,
-                    maxHp: baseHp,
+                    hp: rarityData.hp,
+                    maxHp: rarityData.hp,
                     type: 'normal',
-                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
-                    reward: baseReward,
+                    name: mushroomName,
+                    reward: rarityData.reward,
+                    diamondReward: rarityData.diamondReward,
+                    rarity: rarityData.rarity,
+                    color: rarityData.color,
+                    scale: rarityData.scale,
                     isDead: false,
                     respawnTime: 0
                 });
@@ -599,6 +688,21 @@ const gameReducer = (state, action) => {
 
         case 'COMPLETE_STAGE': {
             const { chapter, stage } = state.currentStage;
+
+            // Check if this is the final stage (2500-10)
+            if (chapter === 2500 && stage === 10) {
+                // Final stage completed! Return to village
+                return {
+                    ...state,
+                    currentScene: 'village',
+                    mushroomsCollected: 0,
+                    bossTimer: null,
+                    bossPhase: false,
+                    mushrooms: [],
+                    diamond: state.diamond + 100 // Boss stage reward
+                };
+            }
+
             let nextStage;
 
             if (stage === 10) {
@@ -619,24 +723,29 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
             let newMushrooms = [];
 
-            // Generate 20 mushrooms randomly across the map - same as START_STAGE
-            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
             const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const mushroomName = getMushroomName(nextStage.chapter);
 
-            for (let i = 0; i < 20; i++) {
-                // Random position across entire map (with margins)
+            for (let i = 0; i < 100; i++) {
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
+
+                // Apply rarity system
+                const rarityData = applyMushroomRarity(baseHp, baseReward);
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
-                    hp: baseHp,
-                    maxHp: baseHp,
+                    hp: rarityData.hp,
+                    maxHp: rarityData.hp,
                     type: 'normal',
-                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
-                    reward: baseReward,
+                    name: mushroomName,
+                    reward: rarityData.reward,
+                    diamondReward: rarityData.diamondReward,
+                    rarity: rarityData.rarity,
+                    color: rarityData.color,
+                    scale: rarityData.scale,
                     isDead: false,
                     respawnTime: 0
                 });
@@ -644,11 +753,9 @@ const gameReducer = (state, action) => {
 
 
             // Calculate diamond reward based on current stage
-            // Formula: (chapter × stage × 10) + (boss bonus: 100 × chapter if stage 10)
+            // Formula: 10 for normal stages, 100 for boss stages (stage 10)
             const calculateDiamondReward = (chapter, stage) => {
-                const baseReward = chapter * stage * 10;
-                const bossBonus = stage === 10 ? 100 * chapter : 0;
-                return baseReward + bossBonus;
+                return stage === 10 ? 100 : 10;
             };
 
             const diamondReward = calculateDiamondReward(chapter, stage);
@@ -676,24 +783,29 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            // Generate 20 mushrooms randomly across the map - same as START_STAGE
-            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팝이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
             const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
             const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const mushroomName = getMushroomName(chapter);
 
-            for (let i = 0; i < 20; i++) {
-                // Random position across entire map (with margins)
+            for (let i = 0; i < 100; i++) {
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
+
+                // Apply rarity system
+                const rarityData = applyMushroomRarity(baseHp, baseReward);
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
-                    hp: baseHp,
-                    maxHp: baseHp,
+                    hp: rarityData.hp,
+                    maxHp: rarityData.hp,
                     type: 'normal',
-                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
-                    reward: baseReward,
+                    name: mushroomName,
+                    reward: rarityData.reward,
+                    diamondReward: rarityData.diamondReward,
+                    rarity: rarityData.rarity,
+                    color: rarityData.color,
+                    scale: rarityData.scale,
                     isDead: false,
                     respawnTime: 0
                 });
@@ -755,24 +867,29 @@ const gameReducer = (state, action) => {
 
             // Generate 20 mobs
             const stageMushrooms = [];
-            const mushroomNames = ['송이버섯', '표고버섯', '느타리버섯', '팽이버섯', '독버섯', '붉은버섯', '동굴버섯', '수정버섯', '얼음버섯', '용암버섯'];
+            const mushroomName = getMushroomName(nextChapter);
 
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 100; i++) {
                 const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
                 const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
-
-                // Random position across entire map (with margins)
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
+
+                // Apply rarity system
+                const rarityData = applyMushroomRarity(baseHp, baseReward);
 
                 stageMushrooms.push({
                     id: `boss-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
                     x, y,
-                    hp: baseHp,
-                    maxHp: baseHp,
+                    hp: rarityData.hp,
+                    maxHp: rarityData.hp,
                     type: 'normal',
-                    name: mushroomNames[Math.floor(Math.random() * mushroomNames.length)],
-                    reward: baseReward,
+                    name: mushroomName,
+                    reward: rarityData.reward,
+                    diamondReward: rarityData.diamondReward,
+                    rarity: rarityData.rarity,
+                    color: rarityData.color,
+                    scale: rarityData.scale,
                     isDead: false,
                     respawnTime: 0
                 });
@@ -924,6 +1041,27 @@ const gameReducer = (state, action) => {
                 ...state,
                 lastPullResults: null
             };
+
+        case 'COLLECT_MUSHROOM_TYPE': {
+            const { name, rarity } = action.payload;
+            const currentCollection = state.mushroomCollection[name] || {
+                normal: false,
+                rare: false,
+                epic: false,
+                unique: false
+            };
+
+            return {
+                ...state,
+                mushroomCollection: {
+                    ...state.mushroomCollection,
+                    [name]: {
+                        ...currentCollection,
+                        [rarity]: true
+                    }
+                }
+            };
+        }
 
 
 
@@ -1083,6 +1221,16 @@ export const GameProvider = ({ children }) => {
             saveState(state);
         }
     }, [state.worldBoss.maxDamage]);
+
+    // Save immediately when world boss battle ends
+    const prevIsBattlingRef = React.useRef(state.worldBoss.isBattling);
+    useEffect(() => {
+        // Detect when battle transitions from true to false (battle ended)
+        if (state.user && prevIsBattlingRef.current && !state.worldBoss.isBattling) {
+            saveState(state);
+        }
+        prevIsBattlingRef.current = state.worldBoss.isBattling;
+    }, [state.worldBoss.isBattling, state.user]);
 
     // Restore session on mount
     useEffect(() => {

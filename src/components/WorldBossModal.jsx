@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import WorldBossRankingModal from './WorldBossRankingModal';
+import { formatNumber } from '../utils/formatNumber';
 
 const WorldBossModal = () => {
     const { state, dispatch } = useGame();
@@ -138,7 +139,7 @@ const WorldBossModal = () => {
                         </div>
                         <div style={{ color: '#888', fontSize: '0.85rem' }}>
                             60초 동안 데미지를 입히고 골드를 획득하세요!<br />
-                            <span style={{ color: '#FFD700' }}>내 최고 기록: {(worldBoss.maxDamage || 0).toLocaleString()}</span><br />
+                            <span style={{ color: '#FFD700' }}>내 최고 기록: {formatNumber(worldBoss.maxDamage || 0)}</span><br />
                             <span style={{
                                 color: hasAttempts ? '#4CAF50' : '#ff4444',
                                 fontWeight: 'bold',

@@ -1,8 +1,64 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+
+// 100 different mushroom types
+const MUSHROOM_NAMES = [
+    '팽이버섯', '느타리버섯', '표고버섯', '송이버섯', '양송이버섯',
+    '목이버섯', '석이버섯', '영지버섯', '상황버섯', '동충하초',
+    '싸리버섯', '꽃송이버섯', '노루궁뎅이버섯', '차가버섯', '아가리쿠스버섯',
+    '새송이버섯', '만가닥버섯', '잎새버섯', '능이버섯', '복령버섯',
+    '독버섯', '광대버섯', '붉은버섯', '파란버섯', '보라버섯',
+    '황금버섯', '은빛버섯', '청동버섯', '철버섯', '강철버섯',
+    '동굴버섯', '심해버섯', '화산버섯', '용암버섯', '얼음버섯',
+    '눈꽃버섯', '수정버섯', '다이아버섯', '루비버섯', '사파이어버섯',
+    '에메랄드버섯', '자수정버섯', '호박버섯', '진주버섯', '산호버섯',
+    '산악버섯', '고산버섯', '평원버섯', '사막버섯', '정글버섯',
+    '늪지버섯', '숲속버섯', '초원버섯', '설원버섯', '화염버섯',
+    '번개버섯', '천둥버섯', '폭풍버섯', '태풍버섯', '지진버섯',
+    '해일버섯', '토네이도버섯', '블리자드버섯', '유성버섯', '혜성버섯',
+    '별빛버섯', '달빛버섯', '햇빛버섯', '무지개버섯', '오로라버섯',
+    '심연버섯', '어둠버섯', '그림자버섯', '공허버섯', '혼돈버섯',
+    '타락버섯', '저주버섯', '악마버섯', '천사버섯', '신성버섯',
+    '고대버섯', '태초버섯', '원시버섯', '전설버섯', '신화버섯',
+    '영웅버섯', '왕의버섯', '황제버섯', '제왕버섯', '패왕버섯',
+    '용의버섯', '불사조버섯', '기린버섯', '현무버섯', '백호버섯',
+    '청룡버섯', '주작버섯', '천마버섯', '신수버섯', '성수버섯',
+    '거대버섯', '초거대버섯', '극대버섯', '무한버섯', '영원버섯'
+];
 
 const WeaponCollection = ({ onClose }) => {
     const { state, WEAPONS } = useGame();
+    const [activeTab, setActiveTab] = useState('weapons'); // 'weapons' or 'mushrooms'
+
+    // Calculate mushroom collection stats
+    const calculateMushroomStats = () => {
+        let collected = 0;
+        const total = 400; // 100 types × 4 rarities
+
+        MUSHROOM_NAMES.forEach(name => {
+            const collection = state.mushroomCollection[name];
+            if (collection) {
+                if (collection.normal) collected++;
+                if (collection.rare) collected++;
+                if (collection.epic) collected++;
+                if (collection.unique) collected++;
+            }
+        });
+
+        return { collected, total };
+    };
+
+    const mushroomStats = calculateMushroomStats();
+
+    // Get rarity color
+    const getRarityColor = (rarity) => {
+        switch (rarity) {
+            case 'rare': return '#00BCD4'; // Cyan
+            case 'epic': return '#9C27B0'; // Purple
+            case 'unique': return '#FFD700'; // Gold
+            default: return '#4CAF50'; // Green
+        }
+    };
 
     return (
         <div style={{
@@ -32,7 +88,7 @@ const WeaponCollection = ({ onClose }) => {
             }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ color: 'white', margin: 0 }}>📖 무기 도감</h2>
+                    <h2 style={{ color: 'white', margin: 0 }}>📖 도감</h2>
                     <button
                         onClick={onClose}
                         style={{
@@ -47,72 +103,227 @@ const WeaponCollection = ({ onClose }) => {
                     </button>
                 </div>
 
-                {/* Weapons Grid */}
+                {/* Tabs */}
                 <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                    gap: '15px',
-                    padding: '10px'
+                    display: 'flex',
+                    gap: '10px',
+                    marginBottom: '20px',
+                    borderBottom: '2px solid rgba(255,255,255,0.1)'
                 }}>
-                    {Object.keys(WEAPONS).map(weaponId => {
-                        const id = parseInt(weaponId);
-                        const weapon = WEAPONS[id];
-                        const isObtained = state.obtainedWeapons?.includes(id) || false;
-                        const isCurrent = state.currentWeaponId === id;
-
-                        return (
-                            <div
-                                key={id}
-                                style={{
-                                    backgroundColor: isCurrent ? 'rgba(76,175,80,0.3)' : 'rgba(0,0,0,0.3)',
-                                    borderRadius: '10px',
-                                    padding: '15px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    border: isCurrent ? '2px solid #4caf50' : '1px solid rgba(255,255,255,0.1)',
-                                    filter: isObtained ? 'none' : 'grayscale(100%) brightness(0.5)',
-                                    opacity: isObtained ? 1 : 0.4,
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <div style={{ fontSize: '2.5rem' }}>
-                                    {isObtained ? weapon.icon : '❓'}
-                                </div>
-                                <div style={{
-                                    color: isObtained ? 'white' : '#888',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                    textAlign: 'center',
-                                    wordBreak: 'keep-all'
-                                }}>
-                                    {isObtained ? weapon.name : '???'}
-                                </div>
-                                <div style={{
-                                    color: isObtained ? '#ffd700' : '#555',
-                                    fontSize: '0.65rem'
-                                }}>
-                                    Tier {id}
-                                </div>
-                            </div>
-                        );
-                    })}
+                    <button
+                        onClick={() => setActiveTab('weapons')}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: activeTab === 'weapons' ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+                            border: 'none',
+                            borderBottom: activeTab === 'weapons' ? '3px solid #FFD700' : '3px solid transparent',
+                            color: activeTab === 'weapons' ? '#FFD700' : '#888',
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        ⚔️ 무기 ({state.obtainedWeapons?.length || 0}/{Object.keys(WEAPONS).length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('mushrooms')}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: activeTab === 'mushrooms' ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+                            border: 'none',
+                            borderBottom: activeTab === 'mushrooms' ? '3px solid #FFD700' : '3px solid transparent',
+                            color: activeTab === 'mushrooms' ? '#FFD700' : '#888',
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🍄 버섯 ({mushroomStats.collected}/{mushroomStats.total})
+                    </button>
                 </div>
 
-                {/* Footer Stats */}
-                <div style={{
-                    marginTop: '20px',
-                    padding: '15px',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    borderRadius: '10px',
-                    color: 'white',
-                    textAlign: 'center'
-                }}>
-                    획득한 무기: {state.obtainedWeapons?.length || 0} / {Object.keys(WEAPONS).length}
-                </div>
+                {/* Content */}
+                {activeTab === 'weapons' ? (
+                    // Weapons Tab
+                    <>
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                            gap: '15px',
+                            padding: '10px'
+                        }}>
+                            {Object.keys(WEAPONS).map(weaponId => {
+                                const id = parseInt(weaponId);
+                                const weapon = WEAPONS[id];
+                                const isObtained = state.obtainedWeapons?.includes(id) || false;
+                                const isCurrent = state.currentWeaponId === id;
+
+                                return (
+                                    <div
+                                        key={id}
+                                        style={{
+                                            backgroundColor: isCurrent ? 'rgba(76,175,80,0.3)' : 'rgba(0,0,0,0.3)',
+                                            borderRadius: '10px',
+                                            padding: '15px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            border: isCurrent ? '2px solid #4caf50' : '1px solid rgba(255,255,255,0.1)',
+                                            filter: isObtained ? 'none' : 'grayscale(100%) brightness(0.5)',
+                                            opacity: isObtained ? 1 : 0.4,
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '2.5rem' }}>
+                                            {isObtained ? weapon.icon : '❓'}
+                                        </div>
+                                        <div style={{
+                                            color: isObtained ? 'white' : '#888',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 'bold',
+                                            textAlign: 'center',
+                                            wordBreak: 'keep-all'
+                                        }}>
+                                            {isObtained ? weapon.name : '???'}
+                                        </div>
+                                        <div style={{
+                                            color: isObtained ? '#ffd700' : '#555',
+                                            fontSize: '0.65rem'
+                                        }}>
+                                            Tier {id}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div style={{
+                            marginTop: '20px',
+                            padding: '15px',
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            borderRadius: '10px',
+                            color: 'white',
+                            textAlign: 'center'
+                        }}>
+                            획득한 무기: {state.obtainedWeapons?.length || 0} / {Object.keys(WEAPONS).length}
+                        </div>
+                    </>
+                ) : (
+                    // Mushrooms Tab
+                    <>
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            padding: '10px'
+                        }}>
+                            {MUSHROOM_NAMES.map((name, index) => {
+                                const collection = state.mushroomCollection[name] || {
+                                    normal: false,
+                                    rare: false,
+                                    epic: false,
+                                    unique: false
+                                };
+
+                                const hasAny = collection.normal || collection.rare || collection.epic || collection.unique;
+
+                                return (
+                                    <div
+                                        key={name}
+                                        style={{
+                                            background: 'rgba(0,0,0,0.3)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '10px',
+                                            padding: '12px',
+                                            marginBottom: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px'
+                                        }}
+                                    >
+                                        {/* Mushroom Info */}
+                                        <div style={{ flex: '0 0 100px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '5px' }}>
+                                                {hasAny ? '🍄' : '❓'}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                color: hasAny ? 'white' : '#666'
+                                            }}>
+                                                {hasAny ? name : '???'}
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: '#888' }}>
+                                                #{index + 1}
+                                            </div>
+                                        </div>
+
+                                        {/* Rarity Badges */}
+                                        <div style={{
+                                            flex: 1,
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(4, 1fr)',
+                                            gap: '8px'
+                                        }}>
+                                            {['normal', 'rare', 'epic', 'unique'].map(rarity => {
+                                                const isCollected = collection[rarity];
+                                                const color = getRarityColor(rarity);
+                                                const labels = {
+                                                    normal: '일반',
+                                                    rare: '레어',
+                                                    epic: '에픽',
+                                                    unique: '유니크'
+                                                };
+
+                                                return (
+                                                    <div
+                                                        key={rarity}
+                                                        style={{
+                                                            background: isCollected ? `${color}22` : 'rgba(0,0,0,0.3)',
+                                                            border: `2px solid ${isCollected ? color : '#444'}`,
+                                                            borderRadius: '6px',
+                                                            padding: '8px',
+                                                            textAlign: 'center',
+                                                            opacity: isCollected ? 1 : 0.3,
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            fontSize: '0.65rem',
+                                                            fontWeight: 'bold',
+                                                            color: isCollected ? color : '#666',
+                                                            marginBottom: '3px'
+                                                        }}>
+                                                            {labels[rarity]}
+                                                        </div>
+                                                        <div style={{ fontSize: '1rem' }}>
+                                                            {isCollected ? '✓' : '○'}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div style={{
+                            marginTop: '20px',
+                            padding: '15px',
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            borderRadius: '10px',
+                            color: 'white',
+                            textAlign: 'center'
+                        }}>
+                            수집한 버섯: {mushroomStats.collected} / {mushroomStats.total}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

@@ -61,7 +61,7 @@ const BottomPanel = () => {
             baseCost = 1000;
             isTiered = false;
         } else if (statType === 'critDamage') {
-            maxLevel = Infinity;
+            maxLevel = 100000;
             baseCost = 800;
             isTiered = true;
         } else if (statType === 'hyperCritChance') {
@@ -69,7 +69,7 @@ const BottomPanel = () => {
             baseCost = 10000000; // 10M
             isTiered = false;
         } else if (statType === 'hyperCritDamage') {
-            maxLevel = Infinity;
+            maxLevel = 100000;
             baseCost = 100000000; // 100M
             isTiered = true;
         } else if (statType === 'moveSpeed') {

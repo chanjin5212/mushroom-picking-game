@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatNumber } from '../utils/formatNumber';
 
 const WorldBossResultModal = ({ damage, onClose }) => {
     return (
@@ -49,7 +50,7 @@ const WorldBossResultModal = ({ damage, onClose }) => {
                         color: '#ff4444',
                         textShadow: '0 0 10px rgba(255, 68, 68, 0.5)'
                     }}>
-                        {damage.toLocaleString()}
+                        {formatNumber(damage)}
                     </div>
                 </div>
 

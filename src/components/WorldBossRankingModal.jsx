@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { formatNumber } from '../utils/formatNumber';
 
 const WorldBossRankingModal = ({ onClose }) => {
     const { fetchWorldBossRankings } = useGame();
@@ -100,7 +101,7 @@ const WorldBossRankingModal = ({ onClose }) => {
                                         </td>
                                         <td style={{ padding: '10px' }}>{rank.username}</td>
                                         <td style={{ padding: '10px', textAlign: 'right', color: '#FFD700', fontWeight: 'bold' }}>
-                                            {rank.damage.toLocaleString()}
+                                            {formatNumber(rank.damage)}
                                         </td>
                                     </tr>
                                 ))}

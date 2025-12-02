@@ -369,6 +369,20 @@ const GameCanvas = () => {
 
                     if (mushroom.hp - damage <= 0) {
                         dispatch({ type: 'ADD_GOLD', payload: mushroom.reward });
+
+                        // Give diamond reward if mushroom has diamondReward (Unique mushrooms)
+                        if (mushroom.diamondReward && mushroom.diamondReward > 0) {
+                            dispatch({ type: 'ADD_DIAMOND', payload: mushroom.diamondReward });
+                        }
+
+                        // Track mushroom collection
+                        if (mushroom.name && mushroom.rarity) {
+                            dispatch({
+                                type: 'COLLECT_MUSHROOM_TYPE',
+                                payload: { name: mushroom.name, rarity: mushroom.rarity }
+                            });
+                        }
+
                         dispatch({ type: 'COLLECT_MUSHROOM' });
 
                         // If boss is killed, auto-complete stage
