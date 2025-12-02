@@ -311,14 +311,13 @@ const GameCanvas = () => {
             };
 
             const dist = Math.hypot(playerCenter.x - mushroomCenter.x, playerCenter.y - mushroomCenter.y);
-            const range = currentState.attackRange + (mushroom.type === 'boss' ? 40 : 0);
+            const artifactRangeBonus = (currentState.artifacts?.attackRange?.level || 0) * 0.04;
+            const range = currentState.attackRange + artifactRangeBonus + (mushroom.type === 'boss' ? 40 : 0);
 
             if (dist < range) {
                 // Artifact Bonuses
                 const attackBonus = (currentState.artifacts?.attackBonus?.level || 0) * 0.5;
                 const critDamageBonus = (currentState.artifacts?.critDamageBonus?.level || 0) * 10;
-                const hyperCritDamageBonus = (currentState.artifacts?.hyperCritDamageBonus?.level || 0) * 10;
-                const megaCritDamageBonus = (currentState.artifacts?.megaCritDamageBonus?.level || 0) * 10;
 
                 // Calculate damage
                 const baseDamage = Math.floor(currentState.clickDamage * (1 + attackBonus / 100));
@@ -333,13 +332,13 @@ const GameCanvas = () => {
 
                     isHyperCritical = Math.random() * 100 < currentState.hyperCriticalChance;
                     if (isHyperCritical) {
-                        const totalHyperCritDamage = currentState.hyperCriticalDamage + hyperCritDamageBonus;
+                        const totalHyperCritDamage = currentState.hyperCriticalDamage;
                         damage = Math.floor(damage * (totalHyperCritDamage / 100));
 
                         // Mega Critical Check
                         isMegaCritical = Math.random() * 100 < currentState.megaCriticalChance;
                         if (isMegaCritical) {
-                            const totalMegaCritDamage = currentState.megaCriticalDamage + megaCritDamageBonus;
+                            const totalMegaCritDamage = currentState.megaCriticalDamage;
                             damage = Math.floor(damage * (totalMegaCritDamage / 100));
                         }
                     }
@@ -443,7 +442,7 @@ const GameCanvas = () => {
             if (containerRef.current && !stateRef.current.isLoading) {
                 const currentState = stateRef.current;
                 let { x, y } = playerPosRef.current;
-                const speed = currentState.moveSpeed;
+                const speed = currentState.moveSpeed + (currentState.artifacts?.moveSpeed?.level || 0) * 0.005;
                 const { clientWidth, clientHeight } = containerRef.current;
 
                 // Movement - disabled when chat is open
@@ -509,7 +508,10 @@ const GameCanvas = () => {
 
                 // Unified Attack Logic (Manual + Auto)
                 const now = Date.now();
-                if (now - lastAttackTimeRef.current >= 100) { // 100ms cooldown
+                const attackSpeedLevel = currentState.artifacts?.attackSpeed?.level || 0;
+                const attackInterval = 333 * (1 - (attackSpeedLevel * 0.0005)); // Max 50% reduction (2x speed)
+
+                if (now - lastAttackTimeRef.current >= attackInterval) {
                     if (isManualAttackingRef.current || shouldAutoAttack) {
                         performAttack();
                         lastAttackTimeRef.current = now;

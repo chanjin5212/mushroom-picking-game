@@ -241,13 +241,19 @@ const initialState = {
     artifacts: {
         attackBonus: { count: 0, level: 0 },
         critDamageBonus: { count: 0, level: 0 },
-        hyperCritDamageBonus: { count: 0, level: 0 },
-        megaCritDamageBonus: { count: 0, level: 0 },
+        attackSpeed: { count: 0, level: 0 }, // New: Max 2x speed (1000Lv)
+        moveSpeed: { count: 0, level: 0 },   // New: Max +5 speed (1000Lv)
+        attackRange: { count: 0, level: 0 }, // New: Max +40 range (1000Lv)
         goldBonus: { count: 0, level: 0 }
     },
     lastPullResults: null, // Array of pulled artifact IDs
     // Mushroom Collection System (400 total: 100 types × 4 rarities)
     mushroomCollection: {}, // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
+    // Collection Rewards System
+    claimedRewards: {
+        weapons: [],        // Array of weapon IDs that have been claimed
+        mushrooms: {}       // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
+    },
     // World Boss System
     worldBoss: {
         isActive: false, // Is modal open?
@@ -300,6 +306,8 @@ const saveState = async (state) => {
             maxStage: state.maxStage,
             // Mushroom Collection System
             mushroomCollection: state.mushroomCollection,
+            // Collection Rewards System
+            claimedRewards: state.claimedRewards,
             // World Boss System - save maxDamage for ranking and daily attempts
             worldBoss: {
                 maxDamage: state.worldBoss.maxDamage || 0,
@@ -350,8 +358,8 @@ const gameReducer = (state, action) => {
                 mushrooms: action.payload.mushrooms
             };
 
-        case 'LOAD_GAME_DATA':
-            return {
+        case 'LOAD_GAME_DATA': {
+            const loadedState = {
                 ...state,
                 ...action.payload,
                 // Ensure stage state exists if loading old data
@@ -380,6 +388,33 @@ const gameReducer = (state, action) => {
                     timeLeft: 0 // Reset timer
                 }
             };
+
+            // Recalculate stats based on levels (to apply new formulas to old saves)
+            if (loadedState.statLevels) {
+                const moveSpeedLevel = loadedState.statLevels.moveSpeed || 0;
+                const attackRangeLevel = loadedState.statLevels.attackRange || 0;
+
+                // New Formula: 5 + (5 * level / 300) -> Max 10 (was 15)
+                loadedState.moveSpeed = 5 + (5 * moveSpeedLevel / 300);
+
+                // New Formula: 80 + (40 * level / 300) -> Max 120 (was 160)
+                loadedState.attackRange = 80 + (40 * attackRangeLevel / 300);
+            }
+
+            // Artifact Migration
+            if (loadedState.artifacts) {
+                // Remove deprecated artifacts
+                delete loadedState.artifacts.hyperCritDamageBonus;
+                delete loadedState.artifacts.megaCritDamageBonus;
+
+                // Initialize new artifacts if missing
+                if (!loadedState.artifacts.attackSpeed) loadedState.artifacts.attackSpeed = { count: 0, level: 0 };
+                if (!loadedState.artifacts.moveSpeed) loadedState.artifacts.moveSpeed = { count: 0, level: 0 };
+                if (!loadedState.artifacts.attackRange) loadedState.artifacts.attackRange = { count: 0, level: 0 };
+            }
+
+            return loadedState;
+        }
 
         case 'LOGOUT':
             return {
@@ -609,14 +644,14 @@ const gameReducer = (state, action) => {
                 newState.megaCriticalDamage = state.megaCriticalDamage + (1 * validCount);
                 newState.statLevels.megaCritDamage = currentLevel + validCount;
             } else if (statType === 'moveSpeed') {
-                // Formula: 5 + (10 * level / 300)
+                // Formula: 5 + (5 * level / 300) - Reduced effect by half
                 const newLevel = currentLevel + validCount;
-                newState.moveSpeed = 5 + (10 * newLevel / 300);
+                newState.moveSpeed = 5 + (5 * newLevel / 300);
                 newState.statLevels.moveSpeed = newLevel;
             } else if (statType === 'attackRange') {
-                // Formula: 80 + (80 * level / 300)
+                // Formula: 80 + (40 * level / 300) - Reduced effect by half
                 const newLevel = currentLevel + validCount;
-                newState.attackRange = 80 + (80 * newLevel / 300);
+                newState.attackRange = 80 + (40 * newLevel / 300);
                 newState.statLevels.attackRange = newLevel;
             }
 
@@ -1042,10 +1077,14 @@ const gameReducer = (state, action) => {
 
             const newArtifacts = { ...state.artifacts };
             const pullResults = [];
-            const availableTypes = ['attackBonus', 'critDamageBonus', 'goldBonus'];
-
-            if (state.hyperCriticalChance > 0) availableTypes.push('hyperCritDamageBonus');
-            if (state.megaCriticalChance > 0) availableTypes.push('megaCritDamageBonus');
+            const availableTypes = [
+                'attackBonus',
+                'critDamageBonus',
+                'goldBonus',
+                'attackSpeed',
+                'moveSpeed',
+                'attackRange'
+            ];
 
             for (let i = 0; i < count; i++) {
                 const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -1110,7 +1149,125 @@ const gameReducer = (state, action) => {
             };
         }
 
+        case 'CLAIM_WEAPON_REWARD': {
+            const { weaponId } = action.payload;
 
+            // Check if already claimed
+            if (state.claimedRewards.weapons.includes(weaponId)) {
+                return state;
+            }
+
+            // Check if weapon is obtained
+            if (!state.obtainedWeapons.includes(weaponId)) {
+                return state;
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond + 200,
+                claimedRewards: {
+                    ...state.claimedRewards,
+                    weapons: [...state.claimedRewards.weapons, weaponId]
+                }
+            };
+        }
+
+        case 'CLAIM_MUSHROOM_REWARD': {
+            const { name, rarity } = action.payload;
+
+            // Check if mushroom rarity is collected
+            if (!state.mushroomCollection[name] || !state.mushroomCollection[name][rarity]) {
+                return state;
+            }
+
+            // Check if already claimed
+            const currentClaimed = state.claimedRewards.mushrooms[name] || {
+                normal: false,
+                rare: false,
+                epic: false,
+                unique: false
+            };
+
+            if (currentClaimed[rarity]) {
+                return state;
+            }
+
+            // Determine diamond reward based on rarity
+            const rewardAmounts = {
+                normal: 20,
+                rare: 50,
+                epic: 100,
+                unique: 200
+            };
+
+            return {
+                ...state,
+                diamond: state.diamond + rewardAmounts[rarity],
+                claimedRewards: {
+                    ...state.claimedRewards,
+                    mushrooms: {
+                        ...state.claimedRewards.mushrooms,
+                        [name]: {
+                            ...currentClaimed,
+                            [rarity]: true
+                        }
+                    }
+                }
+            };
+        }
+
+        case 'CLAIM_ALL_REWARDS': {
+            let totalDiamonds = 0;
+            const newClaimedWeapons = [...state.claimedRewards.weapons];
+            const newClaimedMushrooms = { ...state.claimedRewards.mushrooms };
+
+            // Claim all weapon rewards
+            state.obtainedWeapons.forEach(weaponId => {
+                if (!newClaimedWeapons.includes(weaponId)) {
+                    totalDiamonds += 200;
+                    newClaimedWeapons.push(weaponId);
+                }
+            });
+
+            // Claim all mushroom rewards
+            const rewardAmounts = {
+                normal: 20,
+                rare: 50,
+                epic: 100,
+                unique: 200
+            };
+
+            Object.entries(state.mushroomCollection).forEach(([name, rarities]) => {
+                const currentClaimed = newClaimedMushrooms[name] || {
+                    normal: false,
+                    rare: false,
+                    epic: false,
+                    unique: false
+                };
+
+                ['normal', 'rare', 'epic', 'unique'].forEach(rarity => {
+                    if (rarities[rarity] && !currentClaimed[rarity]) {
+                        totalDiamonds += rewardAmounts[rarity];
+                        currentClaimed[rarity] = true;
+                    }
+                });
+
+                newClaimedMushrooms[name] = currentClaimed;
+            });
+
+            if (totalDiamonds === 0) {
+                return state;
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond + totalDiamonds,
+                claimedRewards: {
+                    weapons: newClaimedWeapons,
+                    mushrooms: newClaimedMushrooms
+                }
+            };
+        }
 
         case 'SET_SCENE':
             return {

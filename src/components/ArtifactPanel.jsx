@@ -20,8 +20,9 @@ const ArtifactPanel = () => {
     const artifactTypes = [
         { id: 'attackBonus', name: '고대의 검', icon: '⚔️', desc: '공격력 증가', bonusPerLevel: 0.5, unit: '%' },
         { id: 'critDamageBonus', name: '암살자의 단검', icon: '🗡️', desc: '치명타 데미지 증가', bonusPerLevel: 10, unit: '%' },
-        { id: 'hyperCritDamageBonus', name: '광전사의 도끼', icon: '🪓', desc: '하이퍼 치명타 데미지 증가', bonusPerLevel: 10, unit: '%', condition: 'hyperCritChance' },
-        { id: 'megaCritDamageBonus', name: '신살자의 창', icon: '🔱', desc: '메가 치명타 데미지 증가', bonusPerLevel: 10, unit: '%', condition: 'megaCritChance' },
+        { id: 'attackSpeed', name: '바람의 깃털', icon: '🪶', desc: '공격 속도 증가', bonusPerLevel: 0.1, unit: '%' },
+        { id: 'moveSpeed', name: '헤르메스의 신발', icon: '👞', desc: '이동 속도 증가', bonusPerLevel: 0.005, unit: '' },
+        { id: 'attackRange', name: '매의 눈', icon: '👁️', desc: '공격 범위 증가', bonusPerLevel: 0.04, unit: '' },
         { id: 'goldBonus', name: '황금 성배', icon: '🏆', desc: '골드 획득량 증가', bonusPerLevel: 1, unit: '%' }
     ];
 
@@ -112,10 +113,7 @@ const ArtifactPanel = () => {
     };
 
     const isLocked = (condition) => {
-        if (!condition) return false;
-        if (condition === 'hyperCritChance') return state.hyperCriticalChance <= 0;
-        if (condition === 'megaCritChance') return state.megaCriticalChance <= 0;
-        return false;
+        return false; // No locked artifacts for now
     };
 
     // Helper to get artifact info by ID
@@ -365,7 +363,7 @@ const ArtifactPanel = () => {
                                     {type.desc}
                                 </div>
                                 <div style={{ fontSize: '0.8rem', color: '#4CAF50' }}>
-                                    현재 효과: +{(artifact.level * type.bonusPerLevel).toFixed(1)}{type.unit}
+                                    현재 효과: +{(artifact.level * type.bonusPerLevel).toFixed(type.unit === '%' ? 1 : 2)}{type.unit}
                                 </div>
                             </div>
 

@@ -452,7 +452,7 @@ const BottomPanel = () => {
                                 <span style={{ color: '#fff' }}>{state.attackRange.toFixed(0)}</span>
                             </div>
                             <div style={{ marginBottom: '10px', fontSize: '0.85rem', color: '#aaa' }}>
-                                레벨: {attackRangeLevel} / {attackRangeMaxLevel} (최대 2배)
+                                레벨: {attackRangeLevel} / {attackRangeMaxLevel} (최대 1.5배)
                             </div>
                             {!isMaxAttackRange ? (
                                 <button
@@ -495,7 +495,7 @@ const BottomPanel = () => {
                                 <span style={{ color: '#fff' }}>{state.moveSpeed.toFixed(2)}</span>
                             </div>
                             <div style={{ marginBottom: '10px', fontSize: '0.85rem', color: '#aaa' }}>
-                                레벨: {moveSpeedLevel} / {moveSpeedMaxLevel} (최대 3배)
+                                레벨: {moveSpeedLevel} / {moveSpeedMaxLevel} (최대 2배)
                             </div>
                             {!isMaxMoveSpeed ? (
                                 <button

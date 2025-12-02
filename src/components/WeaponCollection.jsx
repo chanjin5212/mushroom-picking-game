@@ -27,7 +27,7 @@ const MUSHROOM_NAMES = [
 ];
 
 const WeaponCollection = ({ onClose }) => {
-    const { state, WEAPONS } = useGame();
+    const { state, WEAPONS, dispatch } = useGame();
     const [activeTab, setActiveTab] = useState('weapons'); // 'weapons' or 'mushrooms'
 
     // Calculate mushroom collection stats
@@ -59,6 +59,44 @@ const WeaponCollection = ({ onClose }) => {
             default: return '#4CAF50'; // Green
         }
     };
+
+    // Calculate total unclaimed rewards
+    const calculateUnclaimedRewards = () => {
+        let total = 0;
+
+        // Unclaimed weapon rewards
+        state.obtainedWeapons.forEach(weaponId => {
+            if (!state.claimedRewards.weapons.includes(weaponId)) {
+                total += 200;
+            }
+        });
+
+        // Unclaimed mushroom rewards
+        const rewardAmounts = { normal: 20, rare: 50, epic: 100, unique: 200 };
+        Object.entries(state.mushroomCollection).forEach(([name, rarities]) => {
+            const claimed = state.claimedRewards.mushrooms[name] || {};
+            ['normal', 'rare', 'epic', 'unique'].forEach(rarity => {
+                if (rarities[rarity] && !claimed[rarity]) {
+                    total += rewardAmounts[rarity];
+                }
+            });
+        });
+
+        return total;
+    };
+
+    const handleClaimWeapon = (weaponId) => {
+        dispatch({ type: 'CLAIM_WEAPON_REWARD', payload: { weaponId } });
+    };
+
+    const handleClaimMushroom = (name, rarity) => {
+        dispatch({ type: 'CLAIM_MUSHROOM_REWARD', payload: { name, rarity } });
+    };
+
+    const handleClaimAll = () => {
+        dispatch({ type: 'CLAIM_ALL_REWARDS' });
+    };
+
 
     return (
         <div style={{
@@ -168,6 +206,7 @@ const WeaponCollection = ({ onClose }) => {
                                     <div
                                         key={id}
                                         style={{
+                                            position: 'relative',
                                             backgroundColor: isCurrent ? 'rgba(76,175,80,0.3)' : 'rgba(0,0,0,0.3)',
                                             borderRadius: '10px',
                                             padding: '15px',
@@ -181,6 +220,38 @@ const WeaponCollection = ({ onClose }) => {
                                             transition: 'all 0.2s'
                                         }}
                                     >
+                                        {/* Diamond Badge - show if obtained but not claimed */}
+                                        {isObtained && !state.claimedRewards.weapons.includes(id) && (
+                                            <div
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleClaimWeapon(id);
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 5,
+                                                    right: 5,
+                                                    backgroundColor: '#FFD700',
+                                                    color: '#000',
+                                                    borderRadius: '50%',
+                                                    width: '30px',
+                                                    height: '30px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '1rem',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)',
+                                                    animation: 'pulse 1.5s infinite',
+                                                    zIndex: 10
+                                                }}
+                                                title="200 다이아 받기"
+                                            >
+                                                💎
+                                            </div>
+                                        )}
+
                                         <div style={{ fontSize: '2.5rem' }}>
                                             {isObtained ? weapon.icon : '❓'}
                                         </div>
@@ -209,9 +280,31 @@ const WeaponCollection = ({ onClose }) => {
                             backgroundColor: 'rgba(0,0,0,0.3)',
                             borderRadius: '10px',
                             color: 'white',
-                            textAlign: 'center'
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '10px'
                         }}>
-                            획득한 무기: {state.obtainedWeapons?.length || 0} / {Object.keys(WEAPONS).length}
+                            <div>획득한 무기: {state.obtainedWeapons?.length || 0} / {Object.keys(WEAPONS).length}</div>
+                            {calculateUnclaimedRewards() > 0 && (
+                                <button
+                                    onClick={handleClaimAll}
+                                    style={{
+                                        padding: '10px 20px',
+                                        backgroundColor: '#FFD700',
+                                        color: '#000',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 0 15px rgba(255, 215, 0, 0.6)',
+                                        animation: 'pulse 1.5s infinite',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    💎 모두 받기 ({calculateUnclaimedRewards()})
+                                </button>
+                            )}
                         </div>
                     </>
                 ) : (
@@ -272,6 +365,7 @@ const WeaponCollection = ({ onClose }) => {
                                         }}>
                                             {['normal', 'rare', 'epic', 'unique'].map(rarity => {
                                                 const isCollected = collection[rarity];
+                                                const isClaimed = (state.claimedRewards.mushrooms[name] || {})[rarity];
                                                 const color = getRarityColor(rarity);
                                                 const labels = {
                                                     normal: '일반',
@@ -279,11 +373,18 @@ const WeaponCollection = ({ onClose }) => {
                                                     epic: '에픽',
                                                     unique: '유니크'
                                                 };
+                                                const rewardAmounts = {
+                                                    normal: 20,
+                                                    rare: 50,
+                                                    epic: 100,
+                                                    unique: 200
+                                                };
 
                                                 return (
                                                     <div
                                                         key={rarity}
                                                         style={{
+                                                            position: 'relative',
                                                             background: isCollected ? `${color}22` : 'rgba(0,0,0,0.3)',
                                                             border: `2px solid ${isCollected ? color : '#444'}`,
                                                             borderRadius: '6px',
@@ -293,6 +394,38 @@ const WeaponCollection = ({ onClose }) => {
                                                             transition: 'all 0.2s'
                                                         }}
                                                     >
+                                                        {/* Diamond Badge - show if collected but not claimed */}
+                                                        {isCollected && !isClaimed && (
+                                                            <div
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleClaimMushroom(name, rarity);
+                                                                }}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: -5,
+                                                                    right: -5,
+                                                                    backgroundColor: '#FFD700',
+                                                                    color: '#000',
+                                                                    borderRadius: '50%',
+                                                                    width: '20px',
+                                                                    height: '20px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    fontSize: '0.7rem',
+                                                                    fontWeight: 'bold',
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: '0 0 8px rgba(255, 215, 0, 0.8)',
+                                                                    animation: 'pulse 1.5s infinite',
+                                                                    zIndex: 10
+                                                                }}
+                                                                title={`${rewardAmounts[rarity]} 다이아 받기`}
+                                                            >
+                                                                💎
+                                                            </div>
+                                                        )}
+
                                                         <div style={{
                                                             fontSize: '0.65rem',
                                                             fontWeight: 'bold',
@@ -318,9 +451,31 @@ const WeaponCollection = ({ onClose }) => {
                             backgroundColor: 'rgba(0,0,0,0.3)',
                             borderRadius: '10px',
                             color: 'white',
-                            textAlign: 'center'
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '10px'
                         }}>
-                            수집한 버섯: {mushroomStats.collected} / {mushroomStats.total}
+                            <div>수집한 버섯: {mushroomStats.collected} / {mushroomStats.total}</div>
+                            {calculateUnclaimedRewards() > 0 && (
+                                <button
+                                    onClick={handleClaimAll}
+                                    style={{
+                                        padding: '10px 20px',
+                                        backgroundColor: '#FFD700',
+                                        color: '#000',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 0 15px rgba(255, 215, 0, 0.6)',
+                                        animation: 'pulse 1.5s infinite',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    💎 모두 받기 ({calculateUnclaimedRewards()})
+                                </button>
+                            )}
                         </div>
                     </>
                 )}
