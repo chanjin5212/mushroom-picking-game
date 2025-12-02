@@ -3,7 +3,10 @@ import { useGame } from '../context/GameContext';
 
 const ArtifactPanel = () => {
     const { state, dispatch } = useGame();
-    const { artifacts, diamond, lastPullResults } = state;
+    const { artifacts, diamond, lastPullResults, currentStage } = state;
+
+    // Check if artifacts are unlocked (stage 10-1+)
+    const isUnlocked = currentStage.chapter > 10 || (currentStage.chapter === 10 && currentStage.stage >= 1);
 
     // Hold-to-repeat functionality
     const holdIntervalRef = useRef(null);
@@ -21,6 +24,28 @@ const ArtifactPanel = () => {
         { id: 'megaCritDamageBonus', name: '신살자의 창', icon: '🔱', desc: '메가 치명타 데미지 증가', bonusPerLevel: 10, unit: '%', condition: 'megaCritChance' },
         { id: 'goldBonus', name: '황금 성배', icon: '🏆', desc: '골드 획득량 증가', bonusPerLevel: 1, unit: '%' }
     ];
+
+    // Show lock screen if not unlocked
+    if (!isUnlocked) {
+        return (
+            <div style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: '#888'
+            }}>
+                <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🔒</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff9800', marginBottom: '10px' }}>
+                    유물 시스템 잠금
+                </div>
+                <div style={{ fontSize: '1rem', marginBottom: '5px' }}>
+                    스테이지 <span style={{ color: '#FFD700', fontWeight: 'bold' }}>10-1</span>에 도달하면 해금됩니다
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                    현재 스테이지: {currentStage.chapter}-{currentStage.stage}
+                </div>
+            </div>
+        );
+    }
 
     const handlePull = (count) => {
         const cost = count * 100; // 100 diamonds per pull

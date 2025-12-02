@@ -9,7 +9,14 @@ const WorldBossModal = () => {
 
     if (!worldBoss.isActive) return null;
 
+    // Check if daily reset is needed
+    const today = new Date().toDateString();
+    const needsReset = worldBoss.lastResetDate !== today;
+    const remainingAttempts = needsReset ? 3 : worldBoss.dailyAttempts;
+    const hasAttempts = remainingAttempts > 0;
+
     const handleEnter = () => {
+        if (!hasAttempts) return; // Prevent entry if no attempts
         dispatch({ type: 'CLOSE_WORLD_BOSS' });
         dispatch({ type: 'START_BOSS_BATTLE' });
     };
@@ -63,7 +70,7 @@ const WorldBossModal = () => {
                             color: '#FFD700',
                             textShadow: '0 0 10px rgba(255, 215, 0, 0.5)'
                         }}>
-                            월드보스
+                            월드버섯
                         </div>
                         <button
                             onClick={() => setShowRanking(true)}
@@ -131,7 +138,14 @@ const WorldBossModal = () => {
                         </div>
                         <div style={{ color: '#888', fontSize: '0.85rem' }}>
                             60초 동안 데미지를 입히고 골드를 획득하세요!<br />
-                            <span style={{ color: '#FFD700' }}>내 최고 기록: {(worldBoss.maxDamage || 0).toLocaleString()}</span>
+                            <span style={{ color: '#FFD700' }}>내 최고 기록: {(worldBoss.maxDamage || 0).toLocaleString()}</span><br />
+                            <span style={{
+                                color: hasAttempts ? '#4CAF50' : '#ff4444',
+                                fontWeight: 'bold',
+                                fontSize: '0.95rem'
+                            }}>
+                                오늘 남은 입장 횟수: {remainingAttempts}/3
+                            </span>
                         </div>
                     </div>
 
@@ -155,6 +169,7 @@ const WorldBossModal = () => {
                         </button>
                         <button
                             onClick={handleEnter}
+                            disabled={!hasAttempts}
                             style={{
                                 flex: 1,
                                 padding: '15px',
@@ -162,13 +177,16 @@ const WorldBossModal = () => {
                                 borderRadius: '10px',
                                 fontSize: '1.1rem',
                                 fontWeight: 'bold',
-                                cursor: 'pointer',
-                                background: 'linear-gradient(45deg, #FFD700, #FFA500)',
-                                color: '#000',
-                                boxShadow: '0 0 15px rgba(255, 215, 0, 0.4)'
+                                cursor: hasAttempts ? 'pointer' : 'not-allowed',
+                                background: hasAttempts
+                                    ? 'linear-gradient(45deg, #FFD700, #FFA500)'
+                                    : '#555',
+                                color: hasAttempts ? '#000' : '#888',
+                                boxShadow: hasAttempts ? '0 0 15px rgba(255, 215, 0, 0.4)' : 'none',
+                                opacity: hasAttempts ? 1 : 0.6
                             }}
                         >
-                            입장하기
+                            {hasAttempts ? '입장하기' : '입장 불가 (횟수 소진)'}
                         </button>
                     </div>
                 </div>

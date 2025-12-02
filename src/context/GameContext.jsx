@@ -172,7 +172,10 @@ const initialState = {
         isBattling: false, // Is battle in progress?
         damage: 0, // Current session damage
         totalDamage: 0, // Accumulated damage for ranking
-        timeLeft: 0 // Timer
+        maxDamage: 0, // Best damage for ranking
+        timeLeft: 0, // Timer
+        dailyAttempts: 3, // Daily entry limit (3 per day)
+        lastResetDate: new Date().toDateString() // Last reset date for daily limit
     }
 };
 
@@ -212,7 +215,12 @@ const saveState = async (state) => {
             artifacts: state.artifacts,
             // Stage System - save currentStage and maxStage only
             currentStage: state.currentStage,
-            maxStage: state.maxStage
+            maxStage: state.maxStage,
+            // World Boss System - save maxDamage for ranking
+            worldBoss: {
+                maxDamage: state.worldBoss.maxDamage || 0,
+                totalDamage: state.worldBoss.totalDamage || 0
+            }
             // Do NOT save mushroomsCollected or bossPhase - always start fresh
         };
 
@@ -946,7 +954,18 @@ const gameReducer = (state, action) => {
                 }
             };
 
-        case 'START_BOSS_BATTLE':
+        case 'START_BOSS_BATTLE': {
+            const today = new Date().toDateString();
+            const needsReset = state.worldBoss.lastResetDate !== today;
+
+            // Reset daily attempts if it's a new day
+            const currentAttempts = needsReset ? 3 : state.worldBoss.dailyAttempts;
+
+            // Check if player has attempts left
+            if (currentAttempts <= 0) {
+                return state; // No attempts left, don't start battle
+            }
+
             return {
                 ...state,
                 currentScene: 'worldBoss',
@@ -967,9 +986,12 @@ const gameReducer = (state, action) => {
                     ...state.worldBoss,
                     isBattling: true,
                     damage: 0,
-                    timeLeft: 60
+                    timeLeft: 60,
+                    dailyAttempts: currentAttempts - 1, // Deduct one attempt
+                    lastResetDate: today // Update last reset date
                 }
             };
+        }
 
         case 'BOSS_TICK':
             return {
@@ -1000,10 +1022,11 @@ const gameReducer = (state, action) => {
             };
 
         case 'END_BOSS_BATTLE':
-            // Award gold equal to damage dealt
-            const goldReward = state.worldBoss.damage;
-            const newTotalDamage = state.worldBoss.totalDamage + state.worldBoss.damage;
-            const newMaxDamage = Math.max(state.worldBoss.maxDamage || 0, state.worldBoss.damage);
+            // Award gold equal to 1/10 of damage dealt
+            const goldReward = Math.floor(state.worldBoss.damage / 10);
+
+            // Update max damage if current damage is higher
+            const newMaxDamage = Math.max(state.worldBoss.maxDamage, state.worldBoss.damage);
 
             return {
                 ...state,
@@ -1012,7 +1035,7 @@ const gameReducer = (state, action) => {
                 worldBoss: {
                     ...state.worldBoss,
                     isBattling: false,
-                    totalDamage: newTotalDamage,
+                    totalDamage: state.worldBoss.totalDamage + state.worldBoss.damage,
                     maxDamage: newMaxDamage,
                     damage: 0,
                     timeLeft: 0
@@ -1053,6 +1076,13 @@ export const GameProvider = ({ children }) => {
             saveState(state);
         }
     }, [state.currentStage, state.maxStage]); // Save on stage progress
+
+    // Save immediately when world boss maxDamage changes (for ranking)
+    useEffect(() => {
+        if (state.user && state.worldBoss.maxDamage > 0) {
+            saveState(state);
+        }
+    }, [state.worldBoss.maxDamage]);
 
     // Restore session on mount
     useEffect(() => {

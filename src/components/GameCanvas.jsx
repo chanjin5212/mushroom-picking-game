@@ -81,15 +81,18 @@ const GameCanvas = () => {
             }, 1000);
 
             return () => clearInterval(timer);
-        } else if (state.bossTimer === 0) {
+        } else if (state.bossTimer === 0 && state.bossPhase) {
             // Timer expired, restart the same boss stage
+            // Only show toast if still in boss phase
             setToast('시간 초과! 보스 스테이지를 다시 시작합니다.');
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 setToast(null);
                 dispatch({ type: 'SELECT_STAGE', payload: state.currentStage });
             }, 1500);
+
+            return () => clearTimeout(timeoutId);
         }
-    }, [state.bossTimer, state.currentScene, dispatch]);
+    }, [state.bossTimer, state.currentScene, state.bossPhase, state.currentStage, dispatch]);
 
     // World Boss Timer
     useEffect(() => {
@@ -100,7 +103,7 @@ const GameCanvas = () => {
             return () => clearInterval(timer);
         } else if (state.worldBoss.isBattling && state.worldBoss.timeLeft === 0) {
             dispatch({ type: 'END_BOSS_BATTLE' });
-            setToast(`월드보스 전투 종료! ${formatDamage(state.worldBoss.damage)} 데미지를 입혔습니다.`);
+            setToast(`월드버섯 전투 종료! ${formatDamage(state.worldBoss.damage)} 데미지를 입혔습니다.`);
             setTimeout(() => setToast(null), 3000);
         }
     }, [state.worldBoss.isBattling, state.worldBoss.timeLeft, dispatch]);
@@ -651,27 +654,29 @@ const GameCanvas = () => {
                         ⚔️ 스테이지 {state.currentStage.chapter}-{state.currentStage.stage}
                     </button>
 
-                    {/* World Boss Button */}
-                    <button
-                        onClick={() => dispatch({ type: 'OPEN_WORLD_BOSS' })}
-                        style={{
-                            position: 'absolute',
-                            top: 120, // Below stage button
-                            right: 15,
-                            padding: '8px 16px',
-                            background: 'linear-gradient(45deg, #FFD700, #FFA500)',
-                            color: 'black',
-                            border: '2px solid white',
-                            borderRadius: '20px',
-                            cursor: 'pointer',
-                            zIndex: 300,
-                            fontWeight: 'bold',
-                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.5)',
-                            animation: 'pulse 2s infinite'
-                        }}
-                    >
-                        🐲 월드보스
-                    </button>
+                    {/* World Mushroom Button - Only available from stage 20-1 */}
+                    {(state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) && (
+                        <button
+                            onClick={() => dispatch({ type: 'OPEN_WORLD_BOSS' })}
+                            style={{
+                                position: 'absolute',
+                                top: 120, // Below stage button
+                                right: 15,
+                                padding: '8px 16px',
+                                background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+                                color: 'black',
+                                border: '2px solid white',
+                                borderRadius: '20px',
+                                cursor: 'pointer',
+                                zIndex: 300,
+                                fontWeight: 'bold',
+                                boxShadow: '0 0 10px rgba(255, 215, 0, 0.5)',
+                                animation: 'pulse 2s infinite'
+                            }}
+                        >
+                            🍄 월드버섯
+                        </button>
+                    )}
                     <style>{`
                         @keyframes pulse {
                             0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
@@ -909,7 +914,7 @@ const GameCanvas = () => {
                 />
             )}
 
-            {/* World Boss HUD - Center Top */}
+            {/* World Mushroom HUD - Center Top */}
             {state.currentScene === 'worldBoss' && (
                 <div style={{
                     position: 'fixed',
@@ -917,31 +922,35 @@ const GameCanvas = () => {
                     left: '50%',
                     transform: 'translate(-50%, -300%)',
                     display: 'flex',
-                    gap: '20px',
+                    gap: '15px',
                     zIndex: 9999,
                     pointerEvents: 'none'
                 }}>
                     <div style={{
                         color: 'white',
-                        fontSize: '1.5rem',
+                        fontSize: '1rem',
                         fontWeight: 'bold',
-                        textShadow: '0 0 10px black, 2px 2px 4px black',
-                        background: 'rgba(0,0,0,0.8)',
-                        padding: '10px 20px',
-                        borderRadius: '15px',
-                        border: '2px solid white'
+                        textShadow: '0 0 8px black',
+                        background: 'rgba(0,0,0,0.75)',
+                        padding: '6px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid white',
+                        minWidth: '80px',
+                        textAlign: 'center'
                     }}>
                         ⏳ {state.worldBoss.timeLeft}s
                     </div>
                     <div style={{
                         color: '#FFD700',
-                        fontSize: '1.5rem',
+                        fontSize: '1rem',
                         fontWeight: 'bold',
-                        textShadow: '0 0 10px black, 2px 2px 4px black',
-                        background: 'rgba(0,0,0,0.8)',
-                        padding: '10px 20px',
-                        borderRadius: '15px',
-                        border: '2px solid #FFD700'
+                        textShadow: '0 0 8px black',
+                        background: 'rgba(0,0,0,0.75)',
+                        padding: '6px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid #FFD700',
+                        minWidth: '120px',
+                        textAlign: 'center'
                     }}>
                         ⚔️ {formatDamage(state.worldBoss.damage)}
                     </div>

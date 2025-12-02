@@ -315,10 +315,26 @@ const BottomPanel = () => {
                             color: activeTab === 'artifacts' ? '#fff' : '#888',
                             fontSize: '1rem',
                             fontWeight: 'bold',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '5px'
                         }}
                     >
                         🏺 유물
+                        {(state.currentStage.chapter < 10 || (state.currentStage.chapter === 10 && state.currentStage.stage < 1)) && (
+                            <span style={{
+                                fontSize: '0.7rem',
+                                color: '#ff9800',
+                                background: 'rgba(255, 152, 0, 0.2)',
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                border: '1px solid #ff9800'
+                            }}>
+                                10-1 해금
+                            </span>
+                        )}
                     </button>
                 </div>
             )}
