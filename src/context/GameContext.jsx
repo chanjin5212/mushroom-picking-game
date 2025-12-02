@@ -33,7 +33,7 @@ const generateWeapons = () => {
         '나일의 악어', '공룡왕 검', '고대 공룡', '신화의 용', '마왕의 검'];
 
     const weapons = {};
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 200; i++) {
         // MASSIVE damage scaling: 1, 10, 100, 1000, 10000, 100000...
         const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.5) * 10);
         // Cost: First weapon is free to equip, but has a 'value' for enhancement calc
@@ -41,9 +41,23 @@ const generateWeapons = () => {
         const cost = i === 0 ? 100 : Math.floor(Math.pow(10, i * 0.6) * 100 / 3);
         const upgradeBonus = Math.max(1, Math.floor(baseDamage * 0.3));
 
+        let name, icon;
+
+        if (i < 100) {
+            // 0-99: Normal weapons
+            name = weaponNames[i] || `무기 ${i + 1}`;
+            icon = weaponIcons[i % weaponIcons.length];
+        } else {
+            // 100-199: Transcended weapons
+            const baseIndex = i % 100;
+            const baseName = weaponNames[baseIndex] || `무기 ${baseIndex + 1}`;
+            name = `[초월] ${baseName}`;
+            icon = weaponIcons[baseIndex % weaponIcons.length];
+        }
+
         weapons[i] = {
-            icon: weaponIcons[i],
-            name: weaponNames[i],
+            icon: icon,
+            name: name,
             baseDamage: baseDamage,
             cost: cost,
             upgradeBonus: upgradeBonus
