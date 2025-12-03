@@ -22,14 +22,13 @@ function GameContent() {
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: '#1a1a1a',
-      overflow: 'hidden'
+      overflow: 'auto'
     }}>
       <div style={{
         position: 'relative',
-        width: 'min(100vw, calc(100vh * 9 / 16))',
-        height: 'min(100vh, calc(100vw * 16 / 9))',
-        maxWidth: '430px',
-        maxHeight: '932px',
+        width: '430px',
+        height: '932px',
+        flexShrink: 0,
         backgroundColor: '#fff',
         overflow: 'hidden',
         boxShadow: '0 0 50px rgba(0,0,0,0.5)'

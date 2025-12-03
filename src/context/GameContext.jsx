@@ -1846,8 +1846,8 @@ const gameReducer = (state, action) => {
             };
 
         case 'END_BOSS_BATTLE':
-            // Award gold equal to 1/100 of damage dealt
-            const goldReward = Math.floor(state.worldBoss.damage / 100);
+            // Award gold equal to 1/10000 of damage dealt
+            const goldReward = Math.floor(state.worldBoss.damage / 10000);
 
             // Update max damage if current damage is higher
             const newMaxDamage = Math.max(state.worldBoss.maxDamage, state.worldBoss.damage);
