@@ -134,7 +134,7 @@ const applyMushroomRarity = (baseHp, baseReward, rarityMultiplier = 1) => {
             rarity: 'unique',
             hp: baseHp * 100,
             reward: baseReward,
-            diamondReward: 10,
+            diamondReward: 20,
             color: '#FFD700',
             scale: 3
         };
