@@ -5,6 +5,7 @@ import GameCanvas from './components/GameCanvas';
 import HUD from './components/HUD';
 import BottomPanel from './components/BottomPanel';
 import PortalMenu from './components/PortalMenu';
+import AdminPage from './components/AdminPage';
 
 function GameContent() {
   const { state } = useGame();
@@ -43,6 +44,12 @@ function GameContent() {
 }
 
 function App() {
+  // Simple routing
+  const path = window.location.pathname;
+  if (path === '/admin') {
+    return <AdminPage />;
+  }
+
   return (
     <GameProvider>
       <GameContent />

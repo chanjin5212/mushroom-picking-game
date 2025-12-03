@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatNumber } from '../utils/formatNumber';
 
 const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNextStage, onBossChallenge, onToggleAutoProgress, autoProgress, bossHp, bossMaxHp }) => {
     const { chapter, stage } = currentStage;
@@ -12,14 +13,6 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
     const difficultyLevel = (chapter - 1) * 10 + stage;
     const normalHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
     const normalReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
-
-    // Format numbers for display with Korean units (single digit only)
-    const formatNumber = (num) => {
-        if (num >= 100000000) return Math.floor(num / 100000000) + '억'; // 억
-        if (num >= 10000) return Math.floor(num / 10000) + '만'; // 만
-        if (num >= 1000) return Math.floor(num / 1000) + '천'; // 천
-        return num;
-    };
 
     return (
         <div style={{

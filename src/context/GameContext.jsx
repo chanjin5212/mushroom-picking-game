@@ -99,41 +99,63 @@ const getMushroomName = (chapter) => {
     return MUSHROOM_NAMES[index];
 };
 
+// Helper function to get Eagle pet rare mushroom multiplier
+const getPetRarityMultiplier = (equippedPets) => {
+    if (!equippedPets || equippedPets.length === 0) return 1;
+
+    const rarityMultipliers = { common: 1.1, rare: 1.3, epic: 1.6, legendary: 2, mythic: 3 };
+    let multiplier = 1;
+
+    equippedPets.forEach(petId => {
+        const [type, rarity] = petId.split('_');
+        if (type === 'eagle' && rarityMultipliers[rarity]) {
+            multiplier = Math.max(multiplier, rarityMultipliers[rarity]);
+        }
+    });
+
+    return multiplier;
+};
+
 // Determine mushroom rarity and apply modifiers
 // Rare: 1% chance, 3x rewards/HP, cyan color, 1.5x scale
 // Epic: 0.1% chance, 10x rewards/HP, purple color, 2x scale
 // Unique: 0.01% chance, 10 diamonds, 100x HP, yellow color, 3x scale
-const applyMushroomRarity = (baseHp, baseReward) => {
+const applyMushroomRarity = (baseHp, baseReward, rarityMultiplier = 1) => {
     const roll = Math.random() * 100;
 
-    if (roll < 0.01) {
-        // Unique (0.01%)
+    // Apply Eagle pet multiplier to rare mushroom rates
+    const uniqueRate = 0.01 * rarityMultiplier;
+    const epicRate = 0.1 * rarityMultiplier;
+    const rareRate = 1 * rarityMultiplier;
+
+    if (roll < uniqueRate) {
+        // Unique
         return {
             rarity: 'unique',
             hp: baseHp * 100,
-            reward: baseReward, // Not used, gives diamonds instead
+            reward: baseReward,
             diamondReward: 10,
-            color: '#FFD700', // Gold/Yellow
+            color: '#FFD700',
             scale: 3
         };
-    } else if (roll < 0.11) {
-        // Epic (0.1%)
+    } else if (roll < uniqueRate + epicRate) {
+        // Epic
         return {
             rarity: 'epic',
             hp: baseHp * 10,
             reward: baseReward * 10,
             diamondReward: 0,
-            color: '#9C27B0', // Purple
+            color: '#9C27B0',
             scale: 2
         };
-    } else if (roll < 1.11) {
-        // Rare (1%)
+    } else if (roll < uniqueRate + epicRate + rareRate) {
+        // Rare
         return {
             rarity: 'rare',
             hp: baseHp * 3,
             reward: baseReward * 3,
             diamondReward: 0,
-            color: '#00BCD4', // Cyan
+            color: '#00BCD4',
             scale: 1.5
         };
     } else {
@@ -241,10 +263,15 @@ const initialState = {
     artifacts: {
         attackBonus: { count: 0, level: 0 },
         critDamageBonus: { count: 0, level: 0 },
-        attackSpeed: { count: 0, level: 0 }, // New: Max 2x speed (1000Lv)
         moveSpeed: { count: 0, level: 0 },   // New: Max +5 speed (1000Lv)
         attackRange: { count: 0, level: 0 }, // New: Max +40 range (1000Lv)
         goldBonus: { count: 0, level: 0 }
+    },
+    // Pet System
+    pets: {
+        inventory: {}, // { [petId]: count } e.g. 'slime_common': 5
+        equipped: [],  // Array of petIds
+        unlockedSlots: 3
     },
     lastPullResults: null, // Array of pulled artifact IDs
     // Mushroom Collection System (400 total: 100 types × 4 rarities)
@@ -314,7 +341,9 @@ const saveState = async (state) => {
                 totalDamage: state.worldBoss.totalDamage || 0,
                 dailyAttempts: state.worldBoss.dailyAttempts,
                 lastResetDate: state.worldBoss.lastResetDate
-            }
+            },
+            // Pet System
+            pets: state.pets
             // Do NOT save mushroomsCollected or bossPhase - always start fresh
         };
 
@@ -408,9 +437,25 @@ const gameReducer = (state, action) => {
                 delete loadedState.artifacts.megaCritDamageBonus;
 
                 // Initialize new artifacts if missing
-                if (!loadedState.artifacts.attackSpeed) loadedState.artifacts.attackSpeed = { count: 0, level: 0 };
                 if (!loadedState.artifacts.moveSpeed) loadedState.artifacts.moveSpeed = { count: 0, level: 0 };
                 if (!loadedState.artifacts.attackRange) loadedState.artifacts.attackRange = { count: 0, level: 0 };
+
+                // Remove attackSpeed artifact if it exists
+                delete loadedState.artifacts.attackSpeed;
+            }
+
+            // Pet Migration
+            if (!loadedState.pets) {
+                loadedState.pets = {
+                    inventory: {},
+                    equipped: [],
+                    unlockedSlots: 3
+                };
+            } else {
+                // Ensure at least 3 slots for existing users
+                if (!loadedState.pets.unlockedSlots || loadedState.pets.unlockedSlots < 3) {
+                    loadedState.pets.unlockedSlots = 3;
+                }
             }
 
             return loadedState;
@@ -780,8 +825,9 @@ const gameReducer = (state, action) => {
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
 
-                // Apply rarity system
-                const rarityData = applyMushroomRarity(baseHp, baseReward);
+                // Apply rarity system with Eagle pet multiplier
+                const rarityMultiplier = getPetRarityMultiplier(state.pets?.equipped || []);
+                const rarityData = applyMushroomRarity(baseHp, baseReward, rarityMultiplier);
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -840,8 +886,9 @@ const gameReducer = (state, action) => {
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
 
-                // Apply rarity system
-                const rarityData = applyMushroomRarity(baseHp, baseReward);
+                // Apply rarity system with Eagle pet multiplier
+                const rarityMultiplier = getPetRarityMultiplier(state.pets?.equipped || []);
+                const rarityData = applyMushroomRarity(baseHp, baseReward, rarityMultiplier);
 
                 newMushrooms.push({
                     id: `mushroom-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
@@ -1040,8 +1087,9 @@ const gameReducer = (state, action) => {
                         const x = 30 + Math.random() * 340;
                         const y = 80 + Math.random() * 380;
 
-                        // Apply new rarity
-                        const rarityData = applyMushroomRarity(baseHp, baseReward);
+                        // Apply new rarity with Eagle pet multiplier
+                        const rarityMultiplier = getPetRarityMultiplier(state.pets?.equipped || []);
+                        const rarityData = applyMushroomRarity(baseHp, baseReward, rarityMultiplier);
 
                         // Generate new ID to force re-mount and avoid "moving" visual artifact
                         // This ensures the mushroom appears instantly at the new location
@@ -1081,7 +1129,6 @@ const gameReducer = (state, action) => {
                 'attackBonus',
                 'critDamageBonus',
                 'goldBonus',
-                'attackSpeed',
                 'moveSpeed',
                 'attackRange'
             ];
@@ -1127,6 +1174,97 @@ const gameReducer = (state, action) => {
                 ...state,
                 lastPullResults: null
             };
+
+        case 'PULL_PET': {
+            const { count, cost } = action.payload;
+            if (state.diamond < cost) return state;
+
+            const newInventory = { ...state.pets.inventory };
+            const pullResults = [];
+            const petTypes = ['slime', 'wolf', 'eagle', 'dragon', 'fairy'];
+
+            // Rates: 83.9, 10, 5, 1, 0.1
+            const getRarity = () => {
+                const rand = Math.random() * 100;
+                if (rand < 0.1) return 'mythic';
+                if (rand < 1.1) return 'legendary';
+                if (rand < 6.1) return 'epic';
+                if (rand < 16.1) return 'rare';
+                return 'common';
+            };
+
+            for (let i = 0; i < count; i++) {
+                const type = petTypes[Math.floor(Math.random() * petTypes.length)];
+                const rarity = getRarity();
+                const petId = `${type}_${rarity}`;
+
+                newInventory[petId] = (newInventory[petId] || 0) + 1;
+                pullResults.push(petId);
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond - cost,
+                pets: {
+                    ...state.pets,
+                    inventory: newInventory
+                },
+                lastPullResults: pullResults
+            };
+        }
+
+        case 'MERGE_PET': {
+            const { petId } = action.payload;
+            const [type, rarity] = petId.split('_');
+            const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+            const rarityIndex = rarities.indexOf(rarity);
+
+            if (rarityIndex === -1 || rarityIndex === rarities.length - 1) return state;
+
+            const currentCount = state.pets.inventory[petId] || 0;
+            if (currentCount < 5) return state;
+
+            const nextRarity = rarities[rarityIndex + 1];
+            const nextPetId = `${type}_${nextRarity}`;
+
+            return {
+                ...state,
+                pets: {
+                    ...state.pets,
+                    inventory: {
+                        ...state.pets.inventory,
+                        [petId]: currentCount - 5,
+                        [nextPetId]: (state.pets.inventory[nextPetId] || 0) + 1
+                    }
+                }
+            };
+        }
+
+        case 'EQUIP_PET': {
+            const { petId } = action.payload;
+            if (state.pets.equipped.includes(petId)) return state;
+            if (state.pets.equipped.length >= state.pets.unlockedSlots) return state;
+            if ((state.pets.inventory[petId] || 0) < 1) return state;
+
+            return {
+                ...state,
+                pets: {
+                    ...state.pets,
+                    equipped: [...state.pets.equipped, petId]
+                }
+            };
+        }
+
+        case 'UNEQUIP_PET': {
+            const { petId } = action.payload;
+            return {
+                ...state,
+                pets: {
+                    ...state.pets,
+                    equipped: state.pets.equipped.filter(id => id !== petId)
+                }
+            };
+        }
 
         case 'COLLECT_MUSHROOM_TYPE': {
             const { name, rarity } = action.payload;
@@ -1384,6 +1522,107 @@ const gameReducer = (state, action) => {
                 }
             };
 
+        // Pet System Actions
+        case 'PULL_PET': {
+            const { count, cost } = action.payload;
+            if (state.diamond < cost) return state;
+
+            const petTypes = ['slime', 'wolf', 'eagle', 'dragon', 'fairy'];
+            const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+            const rarityRates = [83.9, 10, 5, 1, 0.1];
+
+            const getRarity = () => {
+                const rand = Math.random() * 100;
+                if (rand < 0.1) return 'mythic';
+                if (rand < 1.1) return 'legendary';
+                if (rand < 6.1) return 'epic';
+                if (rand < 16.1) return 'rare';
+                return 'common';
+            };
+
+            const results = [];
+            const newInventory = { ...state.pets.inventory };
+
+            for (let i = 0; i < count; i++) {
+                const rarity = getRarity();
+                const type = petTypes[Math.floor(Math.random() * petTypes.length)];
+                const petId = `${type}_${rarity}`;
+
+                results.push(petId);
+                newInventory[petId] = (newInventory[petId] || 0) + 1;
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond - cost,
+                pets: {
+                    ...state.pets,
+                    inventory: newInventory
+                },
+                lastPullResults: results
+            };
+        }
+
+        case 'CLEAR_PULL_RESULTS':
+            return {
+                ...state,
+                lastPullResults: null
+            };
+
+        case 'EQUIP_PET': {
+            const { petId } = action.payload;
+            if (state.pets.equipped.includes(petId)) return state;
+            if (state.pets.equipped.length >= state.pets.unlockedSlots) return state;
+            if (!state.pets.inventory[petId] || state.pets.inventory[petId] === 0) return state;
+
+            return {
+                ...state,
+                pets: {
+                    ...state.pets,
+                    equipped: [...state.pets.equipped, petId]
+                }
+            };
+        }
+
+        case 'UNEQUIP_PET': {
+            const { petId } = action.payload;
+            return {
+                ...state,
+                pets: {
+                    ...state.pets,
+                    equipped: state.pets.equipped.filter(id => id !== petId)
+                }
+            };
+        }
+
+        case 'MERGE_PET': {
+            const { petId } = action.payload;
+            const [type, rarity] = petId.split('_');
+            const count = state.pets.inventory[petId] || 0;
+
+            if (count < 5) return state;
+            if (rarity === 'mythic') return state;
+
+            const rarityOrder = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+            const currentIndex = rarityOrder.indexOf(rarity);
+            if (currentIndex === -1 || currentIndex === rarityOrder.length - 1) return state;
+
+            const nextRarity = rarityOrder[currentIndex + 1];
+            const nextPetId = `${type}_${nextRarity}`;
+
+            const newInventory = { ...state.pets.inventory };
+            newInventory[petId] = count - 5;
+            newInventory[nextPetId] = (newInventory[nextPetId] || 0) + 1;
+
+            return {
+                ...state,
+                pets: {
+                    ...state.pets,
+                    inventory: newInventory
+                }
+            };
+        }
+
         case 'RESET_GAME':
             return {
                 ...initialState,
@@ -1400,6 +1639,49 @@ export const GameProvider = ({ children }) => {
     const [state, dispatch] = useReducer(gameReducer, initialState);
 
     // Removed auto-save - now manual save only
+
+    const saveState = async (currentState) => {
+        if (!currentState.user) return;
+
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    game_data: {
+                        gold: currentState.gold,
+                        diamond: currentState.diamond,
+                        currentWeaponId: currentState.currentWeaponId,
+                        weaponLevel: currentState.weaponLevel,
+                        clickDamage: currentState.clickDamage,
+                        moveSpeed: currentState.moveSpeed,
+                        attackRange: currentState.attackRange,
+                        playerPos: currentState.playerPos,
+                        currentScene: currentState.currentScene,
+                        mushrooms: currentState.mushrooms,
+                        criticalChance: currentState.criticalChance,
+                        criticalDamage: currentState.criticalDamage,
+                        hyperCriticalChance: currentState.hyperCriticalChance,
+                        hyperCriticalDamage: currentState.hyperCriticalDamage,
+                        megaCriticalChance: currentState.megaCriticalChance,
+                        megaCriticalDamage: currentState.megaCriticalDamage,
+                        statLevels: currentState.statLevels,
+                        obtainedWeapons: currentState.obtainedWeapons,
+                        maxStage: currentState.maxStage,
+                        currentStage: currentState.currentStage,
+                        mushroomCollection: currentState.mushroomCollection,
+                        claimedRewards: currentState.claimedRewards,
+                        artifacts: currentState.artifacts,
+                        worldBoss: currentState.worldBoss,
+                        pets: currentState.pets
+                    }
+                })
+                .eq('id', currentState.user.id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Failed to save state:', error);
+        }
+    };
 
     // Auto-save every 10 seconds
     useEffect(() => {
@@ -1765,7 +2047,12 @@ export const GameProvider = ({ children }) => {
                             hyperCriticalChance: 0,
                             hyperCriticalDamage: 200,
                             statLevels: { critChance: 0, critDamage: 0, hyperCritChance: 0, hyperCritDamage: 0, moveSpeed: 0, attackRange: 0 },
-                            obtainedWeapons: [0]
+                            obtainedWeapons: [0],
+                            pets: {
+                                inventory: {},
+                                equipped: [],
+                                unlockedSlots: 1
+                            }
                         }
                     }
                 ])

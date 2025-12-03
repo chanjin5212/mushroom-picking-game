@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { formatNumber } from '../utils/formatNumber';
 import ArtifactPanel from './ArtifactPanel';
+import PetPanel from './PetPanel';
 
 const BottomPanel = () => {
     const { state, dispatch, WEAPONS } = useGame();
     const [isOpen, setIsOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stats' or 'artifacts'
+    const [activeTab, setActiveTab] = useState('weapon'); // 'weapon' or 'stats' or 'artifacts' or 'pets'
     const [upgradeMultiplier, setUpgradeMultiplier] = useState(1);
 
     // For hold-to-repeat functionality
@@ -323,6 +324,37 @@ const BottomPanel = () => {
                         }}
                     >
                         🏺 유물
+                        {(state.currentStage.chapter < 10 || (state.currentStage.chapter === 10 && state.currentStage.stage < 1)) && (
+                            <span style={{
+                                fontSize: '0.7rem',
+                                color: '#ff9800',
+                                background: 'rgba(255, 152, 0, 0.2)',
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                border: '1px solid #ff9800'
+                            }}>
+                                10-1 해금
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('pets')}
+                        style={{
+                            flex: 1,
+                            padding: '15px',
+                            background: activeTab === 'pets' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            border: 'none',
+                            color: activeTab === 'pets' ? '#fff' : '#888',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '5px'
+                        }}
+                    >
+                        🐾 펫
                         {(state.currentStage.chapter < 10 || (state.currentStage.chapter === 10 && state.currentStage.stage < 1)) && (
                             <span style={{
                                 fontSize: '0.7rem',
@@ -877,6 +909,7 @@ const BottomPanel = () => {
                 )}
 
                 {activeTab === 'artifacts' && <ArtifactPanel />}
+                {activeTab === 'pets' && <PetPanel />}
             </div>
         </div>
     );

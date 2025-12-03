@@ -29,8 +29,7 @@ const HUD = () => {
         return () => clearInterval(interval);
     }, [state.user, state.currentStage, state.maxStage]);
 
-    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100)
-    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100)
+    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100) * Pet Multipliers
     const calculateCombatPower = () => {
         // Artifact Bonuses
         const attackBonus = (state.artifacts?.attackBonus?.level || 0) * 0.5;
@@ -38,12 +37,36 @@ const HUD = () => {
         const hyperCritDamageBonus = (state.artifacts?.hyperCritDamageBonus?.level || 0) * 10;
         const megaCritDamageBonus = (state.artifacts?.megaCritDamageBonus?.level || 0) * 10;
 
+        // Pet Effects
+        const equippedPets = state.pets?.equipped || [];
+
+        // Dragon Pet: Final Damage Multiplier
+        let dragonMultiplier = 1;
+        equippedPets.forEach(petId => {
+            const [type, rarity] = petId.split('_');
+            if (type === 'dragon') {
+                const multipliers = { common: 1.05, rare: 1.1, epic: 1.2, legendary: 1.4, mythic: 2 };
+                dragonMultiplier = Math.max(dragonMultiplier, multipliers[rarity] || 1);
+            }
+        });
+
+        // Wolf Pet: Boss Damage (average 50% effectiveness for combat power)
+        let wolfBonus = 0;
+        equippedPets.forEach(petId => {
+            const [type, rarity] = petId.split('_');
+            if (type === 'wolf') {
+                const bonuses = { common: 0.1, rare: 0.2, epic: 0.4, legendary: 0.8, mythic: 2 };
+                wolfBonus = Math.max(wolfBonus, bonuses[rarity] || 0);
+            }
+        });
+        const wolfMultiplier = 1 + (wolfBonus * 0.5); // 50% weight for combat power
+
         const baseDmg = state.clickDamage * (1 + attackBonus / 100);
         const critMultiplier = 1 + (state.criticalChance / 100) * ((state.criticalDamage + critDamageBonus) / 100);
         const hyperCritMultiplier = 1 + (state.hyperCriticalChance / 100) * ((state.hyperCriticalDamage + hyperCritDamageBonus) / 100);
         const megaCritMultiplier = 1 + (state.megaCriticalChance / 100) * ((state.megaCriticalDamage + megaCritDamageBonus) / 100);
 
-        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier);
+        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier * dragonMultiplier * wolfMultiplier);
     };
 
     const combatPower = calculateCombatPower();
@@ -90,48 +113,54 @@ const HUD = () => {
                     </div>
 
                     {/* Player Info Column */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                        {/* Username */}
-                        <div style={{
-                            color: 'white',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }}>
-                            {state.user?.username || 'Guest'}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, overflow: 'hidden' }}>
+                        {/* Username & Ranking Row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{
+                                color: 'white',
+                                fontSize: '0.9rem',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {state.user?.username || 'Guest'}
+                            </div>
+
+                            {/* Stage Ranking */}
+                            {stageRank !== null && (
+                                <div style={{
+                                    backgroundColor: 'rgba(255,215,0,0.2)',
+                                    padding: '1px 5px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255,215,0,0.4)',
+                                    fontSize: '0.65rem',
+                                    color: '#ffd700',
+                                    fontWeight: 'bold',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
+                                }}>
+                                    {stageRank}위
+                                </div>
+                            )}
                         </div>
 
                         {/* Stats Row - All in one line */}
                         <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
-                            flexWrap: 'nowrap'
+                            gap: '8px',
+                            flexWrap: 'nowrap',
+                            overflowX: 'auto',
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none'
                         }}>
-                            {/* Stage Ranking */}
-                            {stageRank !== null && (
-                                <div style={{
-                                    backgroundColor: 'rgba(255,215,0,0.2)',
-                                    padding: '2px 6px',
-                                    borderRadius: '10px',
-                                    border: '1px solid rgba(255,215,0,0.4)',
-                                    fontSize: '0.7rem',
-                                    color: '#ffd700',
-                                    fontWeight: 'bold',
-                                    whiteSpace: 'nowrap'
-                                }}>
-                                    {stageRank}위
-                                </div>
-                            )}
-
                             {/* Combat Power */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '2px',
-                                fontSize: '0.7rem',
+                                fontSize: '0.55rem',
                                 color: '#ff6b6b',
                                 fontWeight: 'bold',
                                 whiteSpace: 'nowrap'
@@ -145,7 +174,7 @@ const HUD = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '2px',
-                                fontSize: '0.7rem',
+                                fontSize: '0.55rem',
                                 color: '#ffc107',
                                 fontWeight: 'bold',
                                 whiteSpace: 'nowrap'
@@ -159,7 +188,7 @@ const HUD = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '2px',
-                                fontSize: '0.7rem',
+                                fontSize: '0.55rem',
                                 color: '#00bcd4',
                                 fontWeight: 'bold',
                                 whiteSpace: 'nowrap'

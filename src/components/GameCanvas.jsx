@@ -344,6 +344,33 @@ const GameCanvas = () => {
                     }
                 }
 
+                // Pet Effects
+                const equippedPets = currentState.pets?.equipped || [];
+
+                // Dragon Pet: Final Damage Multiplier
+                const dragonMultiplier = equippedPets.reduce((mult, petId) => {
+                    const [type, rarity] = petId.split('_');
+                    if (type === 'dragon') {
+                        const multipliers = { common: 1.05, rare: 1.1, epic: 1.2, legendary: 1.4, mythic: 2 };
+                        return Math.max(mult, multipliers[rarity] || 1);
+                    }
+                    return mult;
+                }, 1);
+                damage = Math.floor(damage * dragonMultiplier);
+
+                // Wolf Pet: Boss Damage Bonus
+                if (mushroom.type === 'boss') {
+                    const wolfBonus = equippedPets.reduce((bonus, petId) => {
+                        const [type, rarity] = petId.split('_');
+                        if (type === 'wolf') {
+                            const bonuses = { common: 0.1, rare: 0.2, epic: 0.4, legendary: 0.8, mythic: 2 };
+                            return Math.max(bonus, bonuses[rarity] || 0);
+                        }
+                        return bonus;
+                    }, 0);
+                    damage = Math.floor(damage * (1 + wolfBonus));
+                }
+
                 // Create floating damage number
                 const damageId = `damage-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 setDamageNumbers(prev => [...prev, {
@@ -367,11 +394,34 @@ const GameCanvas = () => {
                     dispatch({ type: 'DAMAGE_MUSHROOM', payload: { id: mushroom.id, damage: damage } });
 
                     if (mushroom.hp - damage <= 0) {
-                        dispatch({ type: 'ADD_GOLD', payload: mushroom.reward });
+                        // Slime Pet: Gold Bonus
+                        const slimeBonus = equippedPets.reduce((bonus, petId) => {
+                            const [type, rarity] = petId.split('_');
+                            if (type === 'slime') {
+                                const bonuses = { common: 0.1, rare: 0.2, epic: 0.4, legendary: 0.8, mythic: 2 };
+                                return Math.max(bonus, bonuses[rarity] || 0);
+                            }
+                            return bonus;
+                        }, 0);
+                        const goldReward = Math.floor(mushroom.reward * (1 + slimeBonus));
+                        dispatch({ type: 'ADD_GOLD', payload: goldReward });
 
                         // Give diamond reward if mushroom has diamondReward (Unique mushrooms)
                         if (mushroom.diamondReward && mushroom.diamondReward > 0) {
                             dispatch({ type: 'ADD_DIAMOND', payload: mushroom.diamondReward });
+                        }
+
+                        // Fairy Pet: Diamond Drop Chance (10 diamonds per drop)
+                        const fairyDropChance = equippedPets.reduce((chance, petId) => {
+                            const [type, rarity] = petId.split('_');
+                            if (type === 'fairy') {
+                                const chances = { common: 0.0001, rare: 0.0002, epic: 0.0005, legendary: 0.001, mythic: 0.002 };
+                                return Math.max(chance, chances[rarity] || 0);
+                            }
+                            return chance;
+                        }, 0);
+                        if (fairyDropChance > 0 && Math.random() < fairyDropChance) {
+                            dispatch({ type: 'ADD_DIAMOND', payload: 10 });
                         }
 
                         // Track mushroom collection
@@ -508,8 +558,7 @@ const GameCanvas = () => {
 
                 // Unified Attack Logic (Manual + Auto)
                 const now = Date.now();
-                const attackSpeedLevel = currentState.artifacts?.attackSpeed?.level || 0;
-                const attackInterval = 333 * (1 - (attackSpeedLevel * 0.0005)); // Max 50% reduction (2x speed)
+                const attackInterval = 100; // Fixed 10 attacks per second
 
                 if (now - lastAttackTimeRef.current >= attackInterval) {
                     if (isManualAttackingRef.current || shouldAutoAttack) {
