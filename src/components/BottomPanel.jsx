@@ -89,6 +89,38 @@ const BottomPanel = () => {
             maxLevel = 100000;
             baseCost = 10000000000; // 10B
             isTiered = true;
+        } else if (statType === 'gigaCritChance') {
+            maxLevel = 1000;
+            baseCost = 40000000000000; // 40T
+            isTiered = false;
+        } else if (statType === 'gigaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1000000000000; // 1T
+            isTiered = true;
+        } else if (statType === 'teraCritChance') {
+            maxLevel = 1000;
+            baseCost = 80000000000000000; // 80Q
+            isTiered = false;
+        } else if (statType === 'teraCritDamage') {
+            maxLevel = 100000;
+            baseCost = 100000000000000; // 100P
+            isTiered = true;
+        } else if (statType === 'petaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1.6e20; // 160Qi
+            isTiered = false;
+        } else if (statType === 'petaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e16; // 10Q
+            isTiered = true;
+        } else if (statType === 'exaCritChance') {
+            maxLevel = 1000;
+            baseCost = 3.2e23; // 320Sx
+            isTiered = false;
+        } else if (statType === 'exaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e18; // 1Qi
+            isTiered = true;
         }
 
         for (let i = 0; i < count; i++) {
@@ -118,6 +150,14 @@ const BottomPanel = () => {
     const hyperCritDamageInfo = getUpgradeInfo('hyperCritDamage');
     const megaCritChanceInfo = getUpgradeInfo('megaCritChance');
     const megaCritDamageInfo = getUpgradeInfo('megaCritDamage');
+    const gigaCritChanceInfo = getUpgradeInfo('gigaCritChance');
+    const gigaCritDamageInfo = getUpgradeInfo('gigaCritDamage');
+    const teraCritChanceInfo = getUpgradeInfo('teraCritChance');
+    const teraCritDamageInfo = getUpgradeInfo('teraCritDamage');
+    const petaCritChanceInfo = getUpgradeInfo('petaCritChance');
+    const petaCritDamageInfo = getUpgradeInfo('petaCritDamage');
+    const exaCritChanceInfo = getUpgradeInfo('exaCritChance');
+    const exaCritDamageInfo = getUpgradeInfo('exaCritDamage');
     const moveSpeedInfo = getUpgradeInfo('moveSpeed');
     const attackRangeInfo = getUpgradeInfo('attackRange');
 
@@ -603,35 +643,39 @@ const BottomPanel = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 치명타 데미지</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.criticalDamage}%</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.critDamage || 0}/100000 ({state.criticalDamage}%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f44336' }}>
                                     Lv.{state.statLevels?.critDamage || 0}
                                 </div>
                             </div>
-                            <button
-                                onMouseDown={() => startHold(() => handleUpgradeStat('critDamage'))}
-                                onMouseUp={stopHold}
-                                onMouseLeave={stopHold}
-                                onTouchStart={() => startHold(() => handleUpgradeStat('critDamage'))}
-                                onTouchEnd={stopHold}
-                                disabled={state.gold < critDamageInfo.totalCost || critDamageInfo.validCount === 0}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    backgroundColor: state.gold >= critDamageInfo.totalCost ? '#f44336' : '#555',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: state.gold >= critDamageInfo.totalCost ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <span>강화 (+{critDamageInfo.validCount}%)</span>
-                                <span style={{ color: '#ffeb3b' }}>{formatNumber(critDamageInfo.totalCost)} G</span>
-                            </button>
+                            {(state.statLevels?.critDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('critDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('critDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < critDamageInfo.totalCost || critDamageInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= critDamageInfo.totalCost ? '#f44336' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= critDamageInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{critDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(critDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#f44336', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
                         </div>
 
                         {/* Hyper Critical Section - Always visible, locked until level 100 crit */}
@@ -738,35 +782,39 @@ const BottomPanel = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>💥 하이퍼 치명타 데미지</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.hyperCriticalDamage}%</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.hyperCritDamage || 0}/100000 ({state.hyperCriticalDamage}%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff8e53' }}>
                                     Lv.{state.statLevels?.hyperCritDamage || 0}
                                 </div>
                             </div>
-                            <button
-                                onMouseDown={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
-                                onMouseUp={stopHold}
-                                onMouseLeave={stopHold}
-                                onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
-                                onTouchEnd={stopHold}
-                                disabled={state.gold < hyperCritDamageInfo.totalCost || hyperCritDamageInfo.validCount === 0 || (state.statLevels?.critChance || 0) < 1000}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    backgroundColor: (state.gold >= hyperCritDamageInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff8e53' : '#555',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: (state.gold >= hyperCritDamageInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <span>강화 (+{hyperCritDamageInfo.validCount}%)</span>
-                                <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageInfo.totalCost)} G</span>
-                            </button>
+                            {(state.statLevels?.hyperCritDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('hyperCritDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < hyperCritDamageInfo.totalCost || hyperCritDamageInfo.validCount === 0 || (state.statLevels?.critChance || 0) < 1000}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: (state.gold >= hyperCritDamageInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? '#ff8e53' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: (state.gold >= hyperCritDamageInfo.totalCost && (state.statLevels?.critChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{hyperCritDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(hyperCritDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#ff8e53', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
                         </div>
 
                         {/* Mega Critical Section - Always visible, locked until level 1000 hyper crit */}
@@ -875,35 +923,443 @@ const BottomPanel = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#E0B0FF' }}>🌌 메가 치명타 데미지</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.megaCriticalDamage}%</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.megaCritDamage || 0}/100000 ({state.megaCriticalDamage}%)</div>
                                 </div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4B0082' }}>
                                     Lv.{state.statLevels?.megaCritDamage || 0}
                                 </div>
                             </div>
-                            <button
-                                onMouseDown={() => startHold(() => handleUpgradeStat('megaCritDamage'))}
-                                onMouseUp={stopHold}
-                                onMouseLeave={stopHold}
-                                onTouchStart={() => startHold(() => handleUpgradeStat('megaCritDamage'))}
-                                onTouchEnd={stopHold}
-                                disabled={state.gold < megaCritDamageInfo.totalCost || megaCritDamageInfo.validCount === 0 || (state.statLevels?.hyperCritChance || 0) < 1000}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    backgroundColor: (state.gold >= megaCritDamageInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? '#4B0082' : '#555',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: (state.gold >= megaCritDamageInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <span>강화 (+{megaCritDamageInfo.validCount}%)</span>
-                                <span style={{ color: '#ffeb3b' }}>{formatNumber(megaCritDamageInfo.totalCost)} G</span>
-                            </button>
+                            {(state.statLevels?.megaCritDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('megaCritDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('megaCritDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < megaCritDamageInfo.totalCost || megaCritDamageInfo.validCount === 0 || (state.statLevels?.hyperCritChance || 0) < 1000}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: (state.gold >= megaCritDamageInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? '#4B0082' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: (state.gold >= megaCritDamageInfo.totalCost && (state.statLevels?.hyperCritChance || 0) >= 1000) ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{megaCritDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(megaCritDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#4B0082', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Giga Critical Section */}
+                {(state.statLevels?.megaCritChance || 0) >= 1000 && (
+                    <div style={{ marginTop: '20px', borderTop: '1px solid #444', paddingTop: '20px' }}>
+                        <div style={{ color: '#00CED1', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>
+                            ✨ 기가 치명타 (Giga Critical) ✨
+                        </div>
+                        {/* Giga Crit Chance */}
+                        <div style={{
+                            backgroundColor: 'rgba(0, 206, 209, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(0, 206, 209, 0.3)',
+                            marginBottom: '10px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#00CED1' }}>⚡ 기가 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.gigaCriticalChance.toFixed(1)}% (최대 100%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#00CED1' }}>
+                                    Lv.{state.statLevels?.gigaCritChance || 0}
+                                </div>
+                            </div>
+                            {state.gigaCriticalChance < 100 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('gigaCritChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('gigaCritChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < gigaCritChanceInfo.totalCost || gigaCritChanceInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= gigaCritChanceInfo.totalCost ? '#00CED1' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= gigaCritChanceInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{(gigaCritChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(gigaCritChanceInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#00CED1', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
+                        {/* Giga Crit Damage */}
+                        <div style={{
+                            backgroundColor: 'rgba(0, 206, 209, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(0, 206, 209, 0.3)',
+                            position: 'relative'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#00CED1' }}>⚡ 기가 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.gigaCritDamage || 0}/100000 ({state.gigaCriticalDamage}%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#00CED1' }}>
+                                    Lv.{state.statLevels?.gigaCritDamage || 0}
+                                </div>
+                            </div>
+                            {(state.statLevels?.gigaCritDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('gigaCritDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('gigaCritDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < gigaCritDamageInfo.totalCost || gigaCritDamageInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= gigaCritDamageInfo.totalCost ? '#00CED1' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= gigaCritDamageInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{gigaCritDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(gigaCritDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#00CED1', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Tera Critical Section */}
+                {(state.statLevels?.gigaCritChance || 0) >= 1000 && (
+                    <div style={{ marginTop: '20px', borderTop: '1px solid #444', paddingTop: '20px' }}>
+                        <div style={{ color: '#FF1493', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>
+                            🌌 테라 치명타 (Tera Critical) 🌌
+                        </div>
+                        {/* Tera Crit Chance */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 20, 147, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 20, 147, 0.3)',
+                            marginBottom: '10px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#FF1493' }}>☄️ 테라 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.teraCriticalChance.toFixed(1)}% (최대 100%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FF1493' }}>
+                                    Lv.{state.statLevels?.teraCritChance || 0}
+                                </div>
+                            </div>
+                            {state.teraCriticalChance < 100 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('teraCritChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('teraCritChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < teraCritChanceInfo.totalCost || teraCritChanceInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= teraCritChanceInfo.totalCost ? '#FF1493' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= teraCritChanceInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{(teraCritChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(teraCritChanceInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#FF1493', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
+                        {/* Tera Crit Damage */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 20, 147, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 20, 147, 0.3)',
+                            position: 'relative'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#FF1493' }}>☄️ 테라 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.teraCritDamage || 0}/100000 ({state.teraCriticalDamage}%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FF1493' }}>
+                                    Lv.{state.statLevels?.teraCritDamage || 0}
+                                </div>
+                            </div>
+                            {(state.statLevels?.teraCritDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('teraCritDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('teraCritDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < teraCritDamageInfo.totalCost || teraCritDamageInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= teraCritDamageInfo.totalCost ? '#FF1493' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= teraCritDamageInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>강화 (+{teraCritDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#ffeb3b' }}>{formatNumber(teraCritDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#FF1493', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Peta Critical Section */}
+                {(state.statLevels?.teraCritChance || 0) >= 1000 && (
+                    <div style={{ marginTop: '20px', borderTop: '1px solid #444', paddingTop: '20px' }}>
+                        <div style={{ color: '#FFD700', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' }}>
+                            🌟 페타 치명타 (Peta Critical) 🌟
+                        </div>
+                        {/* Peta Crit Chance */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            marginBottom: '10px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#FFD700' }}>💫 페타 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.petaCriticalChance.toFixed(1)}% (최대 100%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFD700' }}>
+                                    Lv.{state.statLevels?.petaCritChance || 0}
+                                </div>
+                            </div>
+                            {state.petaCriticalChance < 100 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('petaCritChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('petaCritChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < petaCritChanceInfo.totalCost || petaCritChanceInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= petaCritChanceInfo.totalCost ? '#FFD700' : '#555',
+                                        color: 'black',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= petaCritChanceInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    <span>강화 (+{(petaCritChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#333' }}>{formatNumber(petaCritChanceInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#FFD700', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
+                        {/* Peta Crit Damage */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            position: 'relative'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#FFD700' }}>💫 페타 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.petaCritDamage || 0}/100000 ({state.petaCriticalDamage}%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFD700' }}>
+                                    Lv.{state.statLevels?.petaCritDamage || 0}
+                                </div>
+                            </div>
+                            {(state.statLevels?.petaCritDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('petaCritDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('petaCritDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < petaCritDamageInfo.totalCost || petaCritDamageInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= petaCritDamageInfo.totalCost ? '#FFD700' : '#555',
+                                        color: 'black',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= petaCritDamageInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    <span>강화 (+{petaCritDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#333' }}>{formatNumber(petaCritDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#FFD700', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Exa Critical Section */}
+                {(state.statLevels?.petaCritChance || 0) >= 1000 && (
+                    <div style={{ marginTop: '20px', borderTop: '1px solid #444', paddingTop: '20px' }}>
+                        <div style={{ color: '#FFFFFF', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', textShadow: '0 0 10px #fff' }}>
+                            🌌 엑사 치명타 (Exa Critical) 🌌
+                        </div>
+                        {/* Exa Crit Chance */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            marginBottom: '10px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#FFFFFF' }}>♾️ 엑사 치명타 확률</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>현재: {state.exaCriticalChance.toFixed(1)}% (최대 100%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFFFFF' }}>
+                                    Lv.{state.statLevels?.exaCritChance || 0}
+                                </div>
+                            </div>
+                            {state.exaCriticalChance < 100 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('exaCritChance'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('exaCritChance'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < exaCritChanceInfo.totalCost || exaCritChanceInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= exaCritChanceInfo.totalCost ? '#FFFFFF' : '#555',
+                                        color: 'black',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= exaCritChanceInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    <span>강화 (+{(exaCritChanceInfo.validCount * 0.1).toFixed(1)}%)</span>
+                                    <span style={{ color: '#333' }}>{formatNumber(exaCritChanceInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold' }}>최대 레벨</div>
+                            )}
+                        </div>
+
+                        {/* Exa Crit Damage */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            position: 'relative'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#FFFFFF' }}>♾️ 엑사 치명타 데미지</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.9rem' }}>레벨: {state.statLevels?.exaCritDamage || 0}/100000 ({state.exaCriticalDamage}%)</div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFFFFF' }}>
+                                    Lv.{state.statLevels?.exaCritDamage || 0}
+                                </div>
+                            </div>
+                            {(state.statLevels?.exaCritDamage || 0) < 100000 ? (
+                                <button
+                                    onMouseDown={() => startHold(() => handleUpgradeStat('exaCritDamage'))}
+                                    onMouseUp={stopHold}
+                                    onMouseLeave={stopHold}
+                                    onTouchStart={() => startHold(() => handleUpgradeStat('exaCritDamage'))}
+                                    onTouchEnd={stopHold}
+                                    disabled={state.gold < exaCritDamageInfo.totalCost || exaCritDamageInfo.validCount === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: state.gold >= exaCritDamageInfo.totalCost ? '#FFFFFF' : '#555',
+                                        color: 'black',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: state.gold >= exaCritDamageInfo.totalCost ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    <span>강화 (+{exaCritDamageInfo.validCount}%)</span>
+                                    <span style={{ color: '#333' }}>{formatNumber(exaCritDamageInfo.totalCost)} G</span>
+                                </button>
+                            ) : (
+                                <div style={{ textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold' }}>최대 레벨 달성</div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -911,7 +1367,7 @@ const BottomPanel = () => {
                 {activeTab === 'artifacts' && <ArtifactPanel />}
                 {activeTab === 'pets' && <PetPanel />}
             </div>
-        </div>
+        </div >
     );
 };
 

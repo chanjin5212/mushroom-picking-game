@@ -82,6 +82,19 @@ const WeaponCollection = ({ onClose }) => {
             });
         });
 
+        // Unclaimed pet rewards
+        const petTypes = ['slime', 'wolf', 'eagle', 'dragon', 'fairy'];
+        const petRarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+
+        petTypes.forEach(type => {
+            petRarities.forEach(rarity => {
+                const petId = `${type}_${rarity}`;
+                if (state.pets.inventory[petId] && !state.claimedRewards.pets.includes(petId)) {
+                    total += 500;
+                }
+            });
+        });
+
         return total;
     };
 
@@ -93,10 +106,48 @@ const WeaponCollection = ({ onClose }) => {
         dispatch({ type: 'CLAIM_MUSHROOM_REWARD', payload: { name, rarity } });
     };
 
+    const handleClaimPet = (petId) => {
+        dispatch({ type: 'CLAIM_PET_REWARD', payload: { petId } });
+    };
+
     const handleClaimAll = () => {
         dispatch({ type: 'CLAIM_ALL_REWARDS' });
     };
 
+    const petTypes = [
+        { id: 'slime', name: '슬라임', icon: '🟢' },
+        { id: 'wolf', name: '늑대', icon: '🐺' },
+        { id: 'eagle', name: '독수리', icon: '🦅' },
+        { id: 'dragon', name: '드래곤', icon: '🐉' },
+        { id: 'fairy', name: '요정', icon: '🧚' }
+    ];
+
+    const petRarities = [
+        { id: 'common', name: '일반', color: '#4CAF50' },
+        { id: 'rare', name: '레어', color: '#00BCD4' },
+        { id: 'epic', name: '에픽', color: '#9C27B0' },
+        { id: 'legendary', name: '전설', color: '#FF9800' },
+        { id: 'mythic', name: '신화', color: '#FF5252' }
+    ];
+
+    const calculatePetStats = () => {
+        let collected = 0;
+        let total = 0;
+
+        petTypes.forEach(type => {
+            petRarities.forEach(rarity => {
+                total++;
+                const petId = `${type.id}_${rarity.id}`;
+                if (state.pets.inventory[petId]) {
+                    collected++;
+                }
+            });
+        });
+
+        return { collected, total };
+    };
+
+    const petStats = calculatePetStats();
 
     return (
         <div style={{
@@ -182,19 +233,36 @@ const WeaponCollection = ({ onClose }) => {
                     >
                         🍄 버섯 ({mushroomStats.collected}/{mushroomStats.total})
                     </button>
+                    <button
+                        onClick={() => setActiveTab('pets')}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: activeTab === 'pets' ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+                            border: 'none',
+                            borderBottom: activeTab === 'pets' ? '3px solid #FFD700' : '3px solid transparent',
+                            color: activeTab === 'pets' ? '#FFD700' : '#888',
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🐾 펫 ({petStats.collected}/{petStats.total})
+                    </button>
                 </div>
 
                 {/* Content */}
-                {activeTab === 'weapons' ? (
-                    // Weapons Tab
-                    <>
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '10px'
+                }}>
+                    {activeTab === 'weapons' && (
                         <div style={{
-                            flex: 1,
-                            overflowY: 'auto',
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                            gap: '15px',
-                            padding: '10px'
+                            gap: '15px'
                         }}>
                             {Object.keys(WEAPONS).map(weaponId => {
                                 const id = parseInt(weaponId);
@@ -274,47 +342,10 @@ const WeaponCollection = ({ onClose }) => {
                                 );
                             })}
                         </div>
-                        <div style={{
-                            marginTop: '20px',
-                            padding: '15px',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
-                            borderRadius: '10px',
-                            color: 'white',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '10px'
-                        }}>
-                            <div>획득한 무기: {state.obtainedWeapons?.length || 0} / {Object.keys(WEAPONS).length}</div>
-                            {calculateUnclaimedRewards() > 0 && (
-                                <button
-                                    onClick={handleClaimAll}
-                                    style={{
-                                        padding: '10px 20px',
-                                        backgroundColor: '#FFD700',
-                                        color: '#000',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 0 15px rgba(255, 215, 0, 0.6)',
-                                        animation: 'pulse 1.5s infinite',
-                                        fontSize: '0.9rem'
-                                    }}
-                                >
-                                    💎 모두 받기 ({calculateUnclaimedRewards()})
-                                </button>
-                            )}
-                        </div>
-                    </>
-                ) : (
-                    // Mushrooms Tab
-                    <>
-                        <div style={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            padding: '10px'
-                        }}>
+                    )}
+
+                    {activeTab === 'mushrooms' && (
+                        <div>
                             {MUSHROOM_NAMES.map((name, index) => {
                                 const collection = state.mushroomCollection[name] || {
                                     normal: false,
@@ -445,40 +476,137 @@ const WeaponCollection = ({ onClose }) => {
                                 );
                             })}
                         </div>
-                        <div style={{
-                            marginTop: '20px',
-                            padding: '15px',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
-                            borderRadius: '10px',
-                            color: 'white',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '10px'
-                        }}>
-                            <div>수집한 버섯: {mushroomStats.collected} / {mushroomStats.total}</div>
-                            {calculateUnclaimedRewards() > 0 && (
-                                <button
-                                    onClick={handleClaimAll}
-                                    style={{
-                                        padding: '10px 20px',
-                                        backgroundColor: '#FFD700',
-                                        color: '#000',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 0 15px rgba(255, 215, 0, 0.6)',
-                                        animation: 'pulse 1.5s infinite',
-                                        fontSize: '0.9rem'
-                                    }}
-                                >
-                                    💎 모두 받기 ({calculateUnclaimedRewards()})
-                                </button>
-                            )}
+                    )}
+
+                    {activeTab === 'pets' && (
+                        <div>
+                            {petTypes.map(type => (
+                                <div key={type.id} style={{ marginBottom: '20px' }}>
+                                    <h3 style={{ color: '#ddd', borderBottom: '1px solid #444', paddingBottom: '5px', marginBottom: '10px' }}>
+                                        {type.icon} {type.name}
+                                    </h3>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                        gap: '15px'
+                                    }}>
+                                        {petRarities.map(rarity => {
+                                            const petId = `${type.id}_${rarity.id}`;
+                                            const isCollected = !!state.pets.inventory[petId];
+                                            const isClaimed = state.claimedRewards.pets.includes(petId);
+
+                                            return (
+                                                <div
+                                                    key={petId}
+                                                    style={{
+                                                        position: 'relative',
+                                                        backgroundColor: isCollected ? `${rarity.color}22` : 'rgba(0,0,0,0.3)',
+                                                        border: `2px solid ${isCollected ? rarity.color : '#444'}`,
+                                                        borderRadius: '10px',
+                                                        padding: '15px',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        opacity: isCollected ? 1 : 0.4,
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    {/* Diamond Badge - show if collected but not claimed */}
+                                                    {isCollected && !isClaimed && (
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleClaimPet(petId);
+                                                            }}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 5,
+                                                                right: 5,
+                                                                backgroundColor: '#FFD700',
+                                                                color: '#000',
+                                                                borderRadius: '50%',
+                                                                width: '30px',
+                                                                height: '30px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '1rem',
+                                                                fontWeight: 'bold',
+                                                                cursor: 'pointer',
+                                                                boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)',
+                                                                animation: 'pulse 1.5s infinite',
+                                                                zIndex: 10
+                                                            }}
+                                                            title="500 다이아 받기"
+                                                        >
+                                                            💎
+                                                        </div>
+                                                    )}
+
+                                                    <div style={{ fontSize: '2.5rem' }}>
+                                                        {isCollected ? type.icon : '❓'}
+                                                    </div>
+                                                    <div style={{
+                                                        color: isCollected ? rarity.color : '#666',
+                                                        fontSize: '0.9rem',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        {rarity.name}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '0.8rem',
+                                                        color: '#aaa'
+                                                    }}>
+                                                        {isCollected ? '보유중' : '미획득'}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    </>
-                )}
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                    marginTop: '20px',
+                    padding: '15px',
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    borderRadius: '10px',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '10px'
+                }}>
+                    <div>
+                        {activeTab === 'weapons' && `획득한 무기: ${state.obtainedWeapons?.length || 0} / ${Object.keys(WEAPONS).length}`}
+                        {activeTab === 'mushrooms' && `수집한 버섯: ${mushroomStats.collected} / ${mushroomStats.total}`}
+                        {activeTab === 'pets' && `수집한 펫: ${petStats.collected} / ${petStats.total}`}
+                    </div>
+                    {calculateUnclaimedRewards() > 0 && (
+                        <button
+                            onClick={handleClaimAll}
+                            style={{
+                                padding: '10px 20px',
+                                backgroundColor: '#FFD700',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 15px rgba(255, 215, 0, 0.6)',
+                                animation: 'pulse 1.5s infinite',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            💎 모두 받기 ({calculateUnclaimedRewards()})
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

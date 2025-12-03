@@ -237,6 +237,15 @@ const initialState = {
     hyperCriticalDamage: 200, // 200% (multiplies on top of crit)
     megaCriticalChance: 0, // 0% (unlocked at 100% hyper crit)
     megaCriticalDamage: 3000, // 3000% (multiplies on top of hyper crit)
+    // New Tiers
+    gigaCriticalChance: 0,
+    gigaCriticalDamage: 150,
+    teraCriticalChance: 0,
+    teraCriticalDamage: 150,
+    petaCriticalChance: 0,
+    petaCriticalDamage: 150,
+    exaCriticalChance: 0,
+    exaCriticalDamage: 150,
     statLevels: {
         critChance: 0,
         critDamage: 0,
@@ -244,6 +253,15 @@ const initialState = {
         hyperCritDamage: 0,
         megaCritChance: 0,
         megaCritDamage: 0,
+        // New Tiers
+        gigaCritChance: 0,
+        gigaCritDamage: 0,
+        teraCritChance: 0,
+        teraCritDamage: 0,
+        petaCritChance: 0,
+        petaCritDamage: 0,
+        exaCritChance: 0,
+        exaCritDamage: 0,
         moveSpeed: 0,
         attackRange: 0
     },
@@ -279,7 +297,8 @@ const initialState = {
     // Collection Rewards System
     claimedRewards: {
         weapons: [],        // Array of weapon IDs that have been claimed
-        mushrooms: {}       // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
+        mushrooms: {},      // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
+        pets: []            // Array of petIds (e.g. 'slime_common') that have been claimed
     },
     // World Boss System
     worldBoss: {
@@ -630,6 +649,66 @@ const gameReducer = (state, action) => {
                 maxLevel = 100000;
                 baseCost = 10000000000; // 10B
                 isTiered = true;
+            } else if (statType === 'gigaCritChance') {
+                // Unlock condition: Mega Crit Chance >= 1000
+                if ((state.statLevels?.megaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.gigaCritChance || 0;
+                currentVal = state.gigaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 40000000000000; // 40T
+                isTiered = false;
+            } else if (statType === 'gigaCritDamage') {
+                currentLevel = state.statLevels?.gigaCritDamage || 0;
+                currentVal = state.gigaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1000000000000; // 1T
+                isTiered = true;
+            } else if (statType === 'teraCritChance') {
+                // Unlock condition: Giga Crit Chance >= 1000
+                if ((state.statLevels?.gigaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.teraCritChance || 0;
+                currentVal = state.teraCriticalChance;
+                maxLevel = 1000;
+                baseCost = 80000000000000000; // 80Q
+                isTiered = false;
+            } else if (statType === 'teraCritDamage') {
+                currentLevel = state.statLevels?.teraCritDamage || 0;
+                currentVal = state.teraCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 100000000000000; // 100P
+                isTiered = true;
+            } else if (statType === 'petaCritChance') {
+                // Unlock condition: Tera Crit Chance >= 1000
+                if ((state.statLevels?.teraCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.petaCritChance || 0;
+                currentVal = state.petaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 1.6e20; // 160Qi
+                isTiered = false;
+            } else if (statType === 'petaCritDamage') {
+                currentLevel = state.statLevels?.petaCritDamage || 0;
+                currentVal = state.petaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e16; // 10Q
+                isTiered = true;
+            } else if (statType === 'exaCritChance') {
+                // Unlock condition: Peta Crit Chance >= 1000
+                if ((state.statLevels?.petaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.exaCritChance || 0;
+                currentVal = state.exaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 3.2e23; // 320Sx
+                isTiered = false;
+            } else if (statType === 'exaCritDamage') {
+                currentLevel = state.statLevels?.exaCritDamage || 0;
+                currentVal = state.exaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e18; // 1Qi
+                isTiered = true;
             } else if (statType === 'moveSpeed') {
                 currentLevel = state.statLevels?.moveSpeed || 0;
                 currentVal = state.moveSpeed;
@@ -688,6 +767,30 @@ const gameReducer = (state, action) => {
             } else if (statType === 'megaCritDamage') {
                 newState.megaCriticalDamage = state.megaCriticalDamage + (1 * validCount);
                 newState.statLevels.megaCritDamage = currentLevel + validCount;
+            } else if (statType === 'gigaCritChance') {
+                newState.gigaCriticalChance = parseFloat((state.gigaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.gigaCritChance = currentLevel + validCount;
+            } else if (statType === 'gigaCritDamage') {
+                newState.gigaCriticalDamage = state.gigaCriticalDamage + (1 * validCount);
+                newState.statLevels.gigaCritDamage = currentLevel + validCount;
+            } else if (statType === 'teraCritChance') {
+                newState.teraCriticalChance = parseFloat((state.teraCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.teraCritChance = currentLevel + validCount;
+            } else if (statType === 'teraCritDamage') {
+                newState.teraCriticalDamage = state.teraCriticalDamage + (1 * validCount);
+                newState.statLevels.teraCritDamage = currentLevel + validCount;
+            } else if (statType === 'petaCritChance') {
+                newState.petaCriticalChance = parseFloat((state.petaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.petaCritChance = currentLevel + validCount;
+            } else if (statType === 'petaCritDamage') {
+                newState.petaCriticalDamage = state.petaCriticalDamage + (1 * validCount);
+                newState.statLevels.petaCritDamage = currentLevel + validCount;
+            } else if (statType === 'exaCritChance') {
+                newState.exaCriticalChance = parseFloat((state.exaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.exaCritChance = currentLevel + validCount;
+            } else if (statType === 'exaCritDamage') {
+                newState.exaCriticalDamage = state.exaCriticalDamage + (1 * validCount);
+                newState.statLevels.exaCritDamage = currentLevel + validCount;
             } else if (statType === 'moveSpeed') {
                 // Formula: 5 + (5 * level / 300) - Reduced effect by half
                 const newLevel = currentLevel + validCount;
@@ -867,11 +970,7 @@ const gameReducer = (state, action) => {
             };
         }
 
-        case 'UPDATE_BOSS_TIMER':
-            return {
-                ...state,
-                bossTimer: action.payload
-            };
+
 
         case 'SELECT_STAGE': {
             const { chapter, stage } = action.payload;
@@ -1354,10 +1453,34 @@ const gameReducer = (state, action) => {
             };
         }
 
+        case 'CLAIM_PET_REWARD': {
+            const { petId } = action.payload;
+
+            // Check if already claimed
+            if (state.claimedRewards.pets.includes(petId)) {
+                return state;
+            }
+
+            // Check if pet is collected (in inventory)
+            if (!state.pets.inventory[petId]) {
+                return state;
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond + 500, // 500 Diamonds per pet
+                claimedRewards: {
+                    ...state.claimedRewards,
+                    pets: [...state.claimedRewards.pets, petId]
+                }
+            };
+        }
+
         case 'CLAIM_ALL_REWARDS': {
             let totalDiamonds = 0;
             const newClaimedWeapons = [...state.claimedRewards.weapons];
             const newClaimedMushrooms = { ...state.claimedRewards.mushrooms };
+            const newClaimedPets = [...(state.claimedRewards.pets || [])];
 
             // Claim all weapon rewards
             state.obtainedWeapons.forEach(weaponId => {
@@ -1391,6 +1514,21 @@ const gameReducer = (state, action) => {
                 });
 
                 newClaimedMushrooms[name] = currentClaimed;
+            });
+
+            // Claim all pet rewards (NEW)
+            const petTypes = ['slime', 'wolf', 'eagle', 'dragon', 'fairy'];
+            const petRarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+
+            petTypes.forEach(type => {
+                petRarities.forEach(rarity => {
+                    const petId = `${type}_${rarity}`;
+                    // Check if collected (in inventory) and not claimed
+                    if (state.pets.inventory[petId] && !newClaimedPets.includes(petId)) {
+                        newClaimedPets.push(petId);
+                        totalDiamonds += 500;
+                    }
+                });
             });
 
             if (totalDiamonds === 0) {
@@ -1502,8 +1640,8 @@ const gameReducer = (state, action) => {
             };
 
         case 'END_BOSS_BATTLE':
-            // Award gold equal to 1/10 of damage dealt
-            const goldReward = Math.floor(state.worldBoss.damage / 10);
+            // Award gold equal to 1/100 of damage dealt
+            const goldReward = Math.floor(state.worldBoss.damage / 100);
 
             // Update max damage if current damage is higher
             const newMaxDamage = Math.max(state.worldBoss.maxDamage, state.worldBoss.damage);
@@ -1522,106 +1660,7 @@ const gameReducer = (state, action) => {
                 }
             };
 
-        // Pet System Actions
-        case 'PULL_PET': {
-            const { count, cost } = action.payload;
-            if (state.diamond < cost) return state;
 
-            const petTypes = ['slime', 'wolf', 'eagle', 'dragon', 'fairy'];
-            const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
-            const rarityRates = [83.9, 10, 5, 1, 0.1];
-
-            const getRarity = () => {
-                const rand = Math.random() * 100;
-                if (rand < 0.1) return 'mythic';
-                if (rand < 1.1) return 'legendary';
-                if (rand < 6.1) return 'epic';
-                if (rand < 16.1) return 'rare';
-                return 'common';
-            };
-
-            const results = [];
-            const newInventory = { ...state.pets.inventory };
-
-            for (let i = 0; i < count; i++) {
-                const rarity = getRarity();
-                const type = petTypes[Math.floor(Math.random() * petTypes.length)];
-                const petId = `${type}_${rarity}`;
-
-                results.push(petId);
-                newInventory[petId] = (newInventory[petId] || 0) + 1;
-            }
-
-            return {
-                ...state,
-                diamond: state.diamond - cost,
-                pets: {
-                    ...state.pets,
-                    inventory: newInventory
-                },
-                lastPullResults: results
-            };
-        }
-
-        case 'CLEAR_PULL_RESULTS':
-            return {
-                ...state,
-                lastPullResults: null
-            };
-
-        case 'EQUIP_PET': {
-            const { petId } = action.payload;
-            if (state.pets.equipped.includes(petId)) return state;
-            if (state.pets.equipped.length >= state.pets.unlockedSlots) return state;
-            if (!state.pets.inventory[petId] || state.pets.inventory[petId] === 0) return state;
-
-            return {
-                ...state,
-                pets: {
-                    ...state.pets,
-                    equipped: [...state.pets.equipped, petId]
-                }
-            };
-        }
-
-        case 'UNEQUIP_PET': {
-            const { petId } = action.payload;
-            return {
-                ...state,
-                pets: {
-                    ...state.pets,
-                    equipped: state.pets.equipped.filter(id => id !== petId)
-                }
-            };
-        }
-
-        case 'MERGE_PET': {
-            const { petId } = action.payload;
-            const [type, rarity] = petId.split('_');
-            const count = state.pets.inventory[petId] || 0;
-
-            if (count < 5) return state;
-            if (rarity === 'mythic') return state;
-
-            const rarityOrder = ['common', 'rare', 'epic', 'legendary', 'mythic'];
-            const currentIndex = rarityOrder.indexOf(rarity);
-            if (currentIndex === -1 || currentIndex === rarityOrder.length - 1) return state;
-
-            const nextRarity = rarityOrder[currentIndex + 1];
-            const nextPetId = `${type}_${nextRarity}`;
-
-            const newInventory = { ...state.pets.inventory };
-            newInventory[petId] = count - 5;
-            newInventory[nextPetId] = (newInventory[nextPetId] || 0) + 1;
-
-            return {
-                ...state,
-                pets: {
-                    ...state.pets,
-                    inventory: newInventory
-                }
-            };
-        }
 
         case 'RESET_GAME':
             return {
@@ -2344,7 +2383,7 @@ export const GameProvider = ({ children }) => {
             fetchWorldBossRankings,
             resetGame,
             sendChatMessage,
-            sendChatMessage,
+
             setChatOpen,
             isLoading: state.isLoading
         }}>

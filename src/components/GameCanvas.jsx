@@ -325,6 +325,10 @@ const GameCanvas = () => {
                 let damage = baseDamage;
                 let isHyperCritical = false;
                 let isMegaCritical = false;
+                let isGigaCritical = false;
+                let isTeraCritical = false;
+                let isPetaCritical = false;
+                let isExaCritical = false;
 
                 if (isCritical) {
                     const totalCritDamage = currentState.criticalDamage + critDamageBonus;
@@ -340,6 +344,34 @@ const GameCanvas = () => {
                         if (isMegaCritical) {
                             const totalMegaCritDamage = currentState.megaCriticalDamage;
                             damage = Math.floor(damage * (totalMegaCritDamage / 100));
+
+                            // Giga Critical Check
+                            isGigaCritical = Math.random() * 100 < currentState.gigaCriticalChance;
+                            if (isGigaCritical) {
+                                const totalGigaCritDamage = currentState.gigaCriticalDamage;
+                                damage = Math.floor(damage * (totalGigaCritDamage / 100));
+
+                                // Tera Critical Check
+                                isTeraCritical = Math.random() * 100 < currentState.teraCriticalChance;
+                                if (isTeraCritical) {
+                                    const totalTeraCritDamage = currentState.teraCriticalDamage;
+                                    damage = Math.floor(damage * (totalTeraCritDamage / 100));
+
+                                    // Peta Critical Check
+                                    isPetaCritical = Math.random() * 100 < currentState.petaCriticalChance;
+                                    if (isPetaCritical) {
+                                        const totalPetaCritDamage = currentState.petaCriticalDamage;
+                                        damage = Math.floor(damage * (totalPetaCritDamage / 100));
+
+                                        // Exa Critical Check
+                                        isExaCritical = Math.random() * 100 < currentState.exaCriticalChance;
+                                        if (isExaCritical) {
+                                            const totalExaCritDamage = currentState.exaCriticalDamage;
+                                            damage = Math.floor(damage * (totalExaCritDamage / 100));
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -379,6 +411,10 @@ const GameCanvas = () => {
                     isCritical: isCritical,
                     isHyperCritical: isHyperCritical,
                     isMegaCritical: isMegaCritical,
+                    isGigaCritical: isGigaCritical,
+                    isTeraCritical: isTeraCritical,
+                    isPetaCritical: isPetaCritical,
+                    isExaCritical: isExaCritical,
                     x: mushroom.x,
                     y: mushroom.y
                 }]);
@@ -845,14 +881,14 @@ const GameCanvas = () => {
                         left: dmg.x,
                         top: dmg.y,
                         transform: 'translate(-50%, -50%)',
-                        fontSize: dmg.isMegaCritical ? '36px' : (dmg.isHyperCritical ? '28px' : (dmg.isCritical ? '22px' : '16px')),
+                        fontSize: dmg.isExaCritical ? '20px' : (dmg.isPetaCritical ? '19px' : (dmg.isTeraCritical ? '18px' : (dmg.isGigaCritical ? '17px' : (dmg.isMegaCritical ? '16px' : (dmg.isHyperCritical ? '14px' : (dmg.isCritical ? '12px' : '10px')))))),
                         fontWeight: 'bold',
-                        color: dmg.isMegaCritical ? '#8A2BE2' : (dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700')), // BlueViolet for Mega
-                        textShadow: dmg.isMegaCritical ? '0 0 10px #4B0082, 2px 2px 4px rgba(0,0,0,0.8)' : '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)',
+                        color: dmg.isExaCritical ? '#FFFFFF' : (dmg.isPetaCritical ? '#FFD700' : (dmg.isTeraCritical ? '#FF1493' : (dmg.isGigaCritical ? '#00CED1' : (dmg.isMegaCritical ? '#8A2BE2' : (dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700')))))),
+                        textShadow: dmg.isExaCritical ? '0 0 10px #FFFFFF, 0 0 20px #FF00FF' : (dmg.isPetaCritical ? '0 0 10px #FFD700, 0 0 20px #FFA500' : (dmg.isTeraCritical ? '0 0 10px #FF1493, 0 0 20px #800080' : (dmg.isGigaCritical ? '0 0 10px #00CED1, 0 0 20px #0000FF' : (dmg.isMegaCritical ? '0 0 10px #4B0082, 2px 2px 4px rgba(0,0,0,0.8)' : '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)')))),
                         pointerEvents: 'none',
                         whiteSpace: 'nowrap',
                         animation: 'floatUp 1s ease-out forwards',
-                        zIndex: 50 // Below UI elements
+                        zIndex: 200 // Above mushrooms and game elements
                     }}
                 >
                     -{formatDamage(dmg.damage)}

@@ -123,6 +123,12 @@ const PetPanel = () => {
             overflowY: 'auto',
             color: 'white'
         }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFD700' }}>
+                    🐾 펫 관리
+                </div>
+            </div>
             {/* Summon Result Modal */}
             {lastPullResults && (
                 <div style={{

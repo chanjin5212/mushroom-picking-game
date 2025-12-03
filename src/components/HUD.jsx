@@ -65,8 +65,12 @@ const HUD = () => {
         const critMultiplier = 1 + (state.criticalChance / 100) * ((state.criticalDamage + critDamageBonus) / 100);
         const hyperCritMultiplier = 1 + (state.hyperCriticalChance / 100) * ((state.hyperCriticalDamage + hyperCritDamageBonus) / 100);
         const megaCritMultiplier = 1 + (state.megaCriticalChance / 100) * ((state.megaCriticalDamage + megaCritDamageBonus) / 100);
+        const gigaCritMultiplier = 1 + (state.gigaCriticalChance / 100) * (state.gigaCriticalDamage / 100);
+        const teraCritMultiplier = 1 + (state.teraCriticalChance / 100) * (state.teraCriticalDamage / 100);
+        const petaCritMultiplier = 1 + (state.petaCriticalChance / 100) * (state.petaCriticalDamage / 100);
+        const exaCritMultiplier = 1 + (state.exaCriticalChance / 100) * (state.exaCriticalDamage / 100);
 
-        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier * dragonMultiplier * wolfMultiplier);
+        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier * gigaCritMultiplier * teraCritMultiplier * petaCritMultiplier * exaCritMultiplier * dragonMultiplier * wolfMultiplier);
     };
 
     const combatPower = calculateCombatPower();
