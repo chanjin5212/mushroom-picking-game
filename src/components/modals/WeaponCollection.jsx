@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 
 // 100 different mushroom types
 const MUSHROOM_NAMES = [

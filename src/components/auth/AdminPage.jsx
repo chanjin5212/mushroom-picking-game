@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { formatNumber } from '../utils/formatNumber';
+import { supabase } from '../../lib/supabase';
+import { formatNumber } from '../../utils/formatNumber';
 
 const AdminPage = () => {
     const [users, setUsers] = useState([]);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatNumber } from '../utils/formatNumber';
+import { formatNumber } from '../../utils/formatNumber';
 
 const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNextStage, onBossChallenge, onToggleAutoProgress, autoProgress, bossHp, bossMaxHp }) => {
     const { chapter, stage } = currentStage;

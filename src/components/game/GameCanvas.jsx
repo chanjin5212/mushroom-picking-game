@@ -1,17 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useGame } from '../context/GameContext';
-import { formatDamage } from '../utils/formatNumber';
+import { useGame } from '../../context/GameContext';
+import { formatDamage } from '../../utils/formatNumber';
 import Player from './Player';
 import Mushroom from './Mushroom';
 import Joystick from './Joystick';
-import LoadingScreen from './LoadingScreen';
+import LoadingScreen from '../hud/LoadingScreen';
 import RemotePlayer from './RemotePlayer';
-import ChatWindow from './ChatWindow';
-import StageHUD from './StageHUD';
-import WorldBossModal from './WorldBossModal';
-import WorldBossResultModal from './WorldBossResultModal';
-import StageSelectMenu from './StageSelectMenu';
-import Toast from './Toast';
+import ChatWindow from '../hud/ChatWindow';
+import StageHUD from '../hud/StageHUD';
+import WorldBossModal from '../modals/WorldBossModal';
+import WorldBossResultModal from '../modals/WorldBossResultModal';
+import StageSelectMenu from '../modals/StageSelectMenu';
+import Toast from '../hud/Toast';
 
 const GameCanvas = () => {
     const { state, dispatch, setChatOpen } = useGame();
@@ -329,6 +329,14 @@ const GameCanvas = () => {
                 let isTeraCritical = false;
                 let isPetaCritical = false;
                 let isExaCritical = false;
+                let isZettaCritical = false;
+                let isYottaCritical = false;
+                let isRonnaCritical = false;
+                let isQuettaCritical = false;
+                let isXenoCritical = false;
+                let isUltimaCritical = false;
+                let isOmniCritical = false;
+                let isAbsoluteCritical = false;
 
                 if (isCritical) {
                     const totalCritDamage = currentState.criticalDamage + critDamageBonus;
@@ -368,6 +376,62 @@ const GameCanvas = () => {
                                         if (isExaCritical) {
                                             const totalExaCritDamage = currentState.exaCriticalDamage;
                                             damage = Math.floor(damage * (totalExaCritDamage / 100));
+
+                                            // Zetta Critical Check
+                                            isZettaCritical = Math.random() * 100 < currentState.zettaCriticalChance;
+                                            if (isZettaCritical) {
+                                                const totalZettaCritDamage = currentState.zettaCriticalDamage;
+                                                damage = Math.floor(damage * (totalZettaCritDamage / 100));
+
+                                                // Yotta Critical Check
+                                                isYottaCritical = Math.random() * 100 < currentState.yottaCriticalChance;
+                                                if (isYottaCritical) {
+                                                    const totalYottaCritDamage = currentState.yottaCriticalDamage;
+                                                    damage = Math.floor(damage * (totalYottaCritDamage / 100));
+
+                                                    // Ronna Critical Check
+                                                    isRonnaCritical = Math.random() * 100 < currentState.ronnaCriticalChance;
+                                                    if (isRonnaCritical) {
+                                                        const totalRonnaCritDamage = currentState.ronnaCriticalDamage;
+                                                        damage = Math.floor(damage * (totalRonnaCritDamage / 100));
+
+                                                        // Quetta Critical Check
+                                                        isQuettaCritical = Math.random() * 100 < currentState.quettaCriticalChance;
+                                                        if (isQuettaCritical) {
+                                                            const totalQuettaCritDamage = currentState.quettaCriticalDamage;
+                                                            damage = Math.floor(damage * (totalQuettaCritDamage / 100));
+
+                                                            // Xeno Critical Check
+                                                            isXenoCritical = Math.random() * 100 < currentState.xenoCriticalChance;
+                                                            if (isXenoCritical) {
+                                                                const totalXenoCritDamage = currentState.xenoCriticalDamage;
+                                                                damage = Math.floor(damage * (totalXenoCritDamage / 100));
+
+                                                                // Ultima Critical Check
+                                                                isUltimaCritical = Math.random() * 100 < currentState.ultimaCriticalChance;
+                                                                if (isUltimaCritical) {
+                                                                    const totalUltimaCritDamage = currentState.ultimaCriticalDamage;
+                                                                    damage = Math.floor(damage * (totalUltimaCritDamage / 100));
+
+                                                                    // Omni Critical Check
+                                                                    isOmniCritical = Math.random() * 100 < currentState.omniCriticalChance;
+                                                                    if (isOmniCritical) {
+                                                                        const totalOmniCritDamage = currentState.omniCriticalDamage;
+                                                                        damage = Math.floor(damage * (totalOmniCritDamage / 100));
+
+                                                                        // Absolute Critical Check
+                                                                        isAbsoluteCritical = Math.random() * 100 < currentState.absoluteCriticalChance;
+                                                                        if (isAbsoluteCritical) {
+                                                                            const totalAbsoluteCritDamage = currentState.absoluteCriticalDamage;
+                                                                            damage = Math.floor(damage * (totalAbsoluteCritDamage / 100));
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -415,6 +479,14 @@ const GameCanvas = () => {
                     isTeraCritical: isTeraCritical,
                     isPetaCritical: isPetaCritical,
                     isExaCritical: isExaCritical,
+                    isZettaCritical: isZettaCritical,
+                    isYottaCritical: isYottaCritical,
+                    isRonnaCritical: isRonnaCritical,
+                    isQuettaCritical: isQuettaCritical,
+                    isXenoCritical: isXenoCritical,
+                    isUltimaCritical: isUltimaCritical,
+                    isOmniCritical: isOmniCritical,
+                    isAbsoluteCritical: isAbsoluteCritical,
                     x: mushroom.x,
                     y: mushroom.y
                 }]);
@@ -881,14 +953,14 @@ const GameCanvas = () => {
                         left: dmg.x,
                         top: dmg.y,
                         transform: 'translate(-50%, -50%)',
-                        fontSize: dmg.isExaCritical ? '20px' : (dmg.isPetaCritical ? '19px' : (dmg.isTeraCritical ? '18px' : (dmg.isGigaCritical ? '17px' : (dmg.isMegaCritical ? '16px' : (dmg.isHyperCritical ? '14px' : (dmg.isCritical ? '12px' : '10px')))))),
+                        fontSize: dmg.isAbsoluteCritical ? '28px' : (dmg.isOmniCritical ? '27px' : (dmg.isUltimaCritical ? '26px' : (dmg.isXenoCritical ? '25px' : (dmg.isQuettaCritical ? '24px' : (dmg.isRonnaCritical ? '23px' : (dmg.isYottaCritical ? '22px' : (dmg.isZettaCritical ? '21px' : (dmg.isExaCritical ? '20px' : (dmg.isPetaCritical ? '19px' : (dmg.isTeraCritical ? '18px' : (dmg.isGigaCritical ? '17px' : (dmg.isMegaCritical ? '16px' : (dmg.isHyperCritical ? '14px' : (dmg.isCritical ? '12px' : '10px')))))))))))))),
                         fontWeight: 'bold',
-                        color: dmg.isExaCritical ? '#FFFFFF' : (dmg.isPetaCritical ? '#FFD700' : (dmg.isTeraCritical ? '#FF1493' : (dmg.isGigaCritical ? '#00CED1' : (dmg.isMegaCritical ? '#8A2BE2' : (dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700')))))),
-                        textShadow: dmg.isExaCritical ? '0 0 10px #FFFFFF, 0 0 20px #FF00FF' : (dmg.isPetaCritical ? '0 0 10px #FFD700, 0 0 20px #FFA500' : (dmg.isTeraCritical ? '0 0 10px #FF1493, 0 0 20px #800080' : (dmg.isGigaCritical ? '0 0 10px #00CED1, 0 0 20px #0000FF' : (dmg.isMegaCritical ? '0 0 10px #4B0082, 2px 2px 4px rgba(0,0,0,0.8)' : '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)')))),
+                        color: dmg.isAbsoluteCritical ? '#B0E0E6' : (dmg.isOmniCritical ? '#F0E68C' : (dmg.isUltimaCritical ? '#DC143C' : (dmg.isXenoCritical ? '#1E90FF' : (dmg.isQuettaCritical ? '#FF00FF' : (dmg.isRonnaCritical ? '#00FFFF' : (dmg.isYottaCritical ? '#ADFF2F' : (dmg.isZettaCritical ? '#FF4500' : (dmg.isExaCritical ? '#FFFFFF' : (dmg.isPetaCritical ? '#FFD700' : (dmg.isTeraCritical ? '#FF1493' : (dmg.isGigaCritical ? '#00CED1' : (dmg.isMegaCritical ? '#8A2BE2' : (dmg.isHyperCritical ? '#ff00ff' : (dmg.isCritical ? '#ff4444' : '#FFD700')))))))))))))),
+                        textShadow: dmg.isAbsoluteCritical ? '0 0 15px #B0E0E6, 0 0 30px #FFFFFF' : (dmg.isOmniCritical ? '0 0 15px #F0E68C, 0 0 30px #FFD700' : (dmg.isUltimaCritical ? '0 0 15px #DC143C, 0 0 30px #FF0000' : (dmg.isXenoCritical ? '0 0 15px #1E90FF, 0 0 30px #0000FF' : (dmg.isQuettaCritical ? '0 0 15px #FF00FF, 0 0 30px #FF1493' : (dmg.isRonnaCritical ? '0 0 15px #00FFFF, 0 0 30px #00CED1' : (dmg.isYottaCritical ? '0 0 15px #ADFF2F, 0 0 30px #7FFF00' : (dmg.isZettaCritical ? '0 0 15px #FF4500, 0 0 30px #FF6347' : (dmg.isExaCritical ? '0 0 10px #FFFFFF, 0 0 20px #FF00FF' : (dmg.isPetaCritical ? '0 0 10px #FFD700, 0 0 20px #FFA500' : (dmg.isTeraCritical ? '0 0 10px #FF1493, 0 0 20px #800080' : (dmg.isGigaCritical ? '0 0 10px #00CED1, 0 0 20px #0000FF' : (dmg.isMegaCritical ? '0 0 10px #4B0082, 2px 2px 4px rgba(0,0,0,0.8)' : '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.5)')))))))))))),
                         pointerEvents: 'none',
                         whiteSpace: 'nowrap',
                         animation: 'floatUp 1s ease-out forwards',
-                        zIndex: 200 // Above mushrooms and game elements
+                        zIndex: 200
                     }}
                 >
                     -{formatDamage(dmg.damage)}
@@ -901,20 +973,22 @@ const GameCanvas = () => {
             </div>
 
             {/* Remote Players (Village Only) */}
-            {!state.isLoading && state.currentScene === 'village' && Object.entries(state.otherPlayers || {}).map(([id, player]) => {
-                const p = Array.isArray(player) ? player[0] : player;
-                if (!p) return null;
-                return (
-                    <RemotePlayer
-                        key={id}
-                        username={p.username}
-                        x={p.x}
-                        y={p.y}
-                        lastMessage={p.lastMessage}
-                        messageTimestamp={p.messageTimestamp}
-                    />
-                );
-            })}
+            {
+                !state.isLoading && state.currentScene === 'village' && Object.entries(state.otherPlayers || {}).map(([id, player]) => {
+                    const p = Array.isArray(player) ? player[0] : player;
+                    if (!p) return null;
+                    return (
+                        <RemotePlayer
+                            key={id}
+                            username={p.username}
+                            x={p.x}
+                            y={p.y}
+                            lastMessage={p.lastMessage}
+                            messageTimestamp={p.messageTimestamp}
+                        />
+                    );
+                })
+            }
 
             <Joystick onMove={(vec) => joystickRef.current = vec} />
 
@@ -948,134 +1022,148 @@ const GameCanvas = () => {
             </button>
 
             {/* Auto Hunt Toggle Button */}
-            {state.currentScene !== 'village' && (
-                <button
-                    onClick={() => {
-                        const newState = !isAutoHunting;
-                        setIsAutoHunting(newState);
-                        // Reset target when starting to ensure we find the nearest one from CURRENT position
-                        if (newState) {
-                            autoHuntTargetRef.current = null;
-                        }
-                    }}
-                    style={{
-                        position: 'absolute',
-                        bottom: 130, // Above attack button
-                        right: 50,
-                        width: '60px',
-                        height: '60px',
-                        borderRadius: '50%',
-                        backgroundColor: isAutoHunting ? '#4caf50' : 'rgba(0,0,0,0.5)',
-                        border: '3px solid white',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                        zIndex: 100,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <span>AUTO</span>
-                    <span style={{ fontSize: '0.7rem' }}>{isAutoHunting ? 'ON' : 'OFF'}</span>
-                </button>
-            )}
+            {
+                state.currentScene !== 'village' && (
+                    <button
+                        onClick={() => {
+                            const newState = !isAutoHunting;
+                            setIsAutoHunting(newState);
+                            // Reset target when starting to ensure we find the nearest one from CURRENT position
+                            if (newState) {
+                                autoHuntTargetRef.current = null;
+                            }
+                        }}
+                        style={{
+                            position: 'absolute',
+                            bottom: 130, // Above attack button
+                            right: 50,
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '50%',
+                            backgroundColor: isAutoHunting ? '#4caf50' : 'rgba(0,0,0,0.5)',
+                            border: '3px solid white',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                            zIndex: 100,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <span>AUTO</span>
+                        <span style={{ fontSize: '0.7rem' }}>{isAutoHunting ? 'ON' : 'OFF'}</span>
+                    </button>
+                )
+            }
 
             {/* Stage HUD - Show in stage/forest scenes */}
-            {!state.isLoading && (state.currentScene === 'stage' || state.currentScene === 'forest') && (
-                <StageHUD
-                    currentStage={state.currentStage}
-                    mushroomsCollected={state.mushroomsCollected}
-                    bossTimer={state.bossTimer}
-                    bossPhase={state.bossPhase}
-                    onNextStage={handleNextStage}
-                    onBossChallenge={handleBossChallenge}
-                    onToggleAutoProgress={() => dispatch({ type: 'TOGGLE_AUTO_PROGRESS' })}
-                    autoProgress={state.autoProgress}
-                    bossHp={state.mushrooms.find(m => m.type === 'boss')?.hp}
-                    bossMaxHp={state.mushrooms.find(m => m.type === 'boss')?.maxHp}
-                />
-            )}
+            {
+                !state.isLoading && (state.currentScene === 'stage' || state.currentScene === 'forest') && (
+                    <StageHUD
+                        currentStage={state.currentStage}
+                        mushroomsCollected={state.mushroomsCollected}
+                        bossTimer={state.bossTimer}
+                        bossPhase={state.bossPhase}
+                        onNextStage={handleNextStage}
+                        onBossChallenge={handleBossChallenge}
+                        onToggleAutoProgress={() => dispatch({ type: 'TOGGLE_AUTO_PROGRESS' })}
+                        autoProgress={state.autoProgress}
+                        bossHp={state.mushrooms.find(m => m.type === 'boss')?.hp}
+                        bossMaxHp={state.mushrooms.find(m => m.type === 'boss')?.maxHp}
+                    />
+                )
+            }
 
             {/* Chat Window - Available in all scenes */}
-            {isChatOpen && (
-                <ChatWindow onClose={() => setIsChatOpen(false)} />
-            )}
+            {
+                isChatOpen && (
+                    <ChatWindow onClose={() => setIsChatOpen(false)} />
+                )
+            }
 
             {/* Stage Select Menu */}
-            {state.isPortalMenuOpen && (
-                <StageSelectMenu
-                    currentStage={state.currentStage}
-                    maxStage={state.maxStage}
-                    onSelectStage={handleSelectStage}
-                    onClose={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
-                />
-            )}
+            {
+                state.isPortalMenuOpen && (
+                    <StageSelectMenu
+                        currentStage={state.currentStage}
+                        maxStage={state.maxStage}
+                        onSelectStage={handleSelectStage}
+                        onClose={() => dispatch({ type: 'TOGGLE_PORTAL_MENU' })}
+                    />
+                )
+            }
 
             {/* World Mushroom HUD - Center Top */}
-            {state.currentScene === 'worldBoss' && (
-                <div style={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -300%)',
-                    display: 'flex',
-                    gap: '15px',
-                    zIndex: 9999,
-                    pointerEvents: 'none'
-                }}>
+            {
+                state.currentScene === 'worldBoss' && (
                     <div style={{
-                        color: 'white',
-                        fontSize: '1rem',
-                        fontWeight: 'bold',
-                        textShadow: '0 0 8px black',
-                        background: 'rgba(0,0,0,0.75)',
-                        padding: '6px 12px',
-                        borderRadius: '10px',
-                        border: '1px solid white',
-                        minWidth: '80px',
-                        textAlign: 'center'
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -300%)',
+                        display: 'flex',
+                        gap: '15px',
+                        zIndex: 9999,
+                        pointerEvents: 'none'
                     }}>
-                        ⏳ {state.worldBoss.timeLeft}s
+                        <div style={{
+                            color: 'white',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            textShadow: '0 0 8px black',
+                            background: 'rgba(0,0,0,0.75)',
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid white',
+                            minWidth: '80px',
+                            textAlign: 'center'
+                        }}>
+                            ⏳ {state.worldBoss.timeLeft}s
+                        </div>
+                        <div style={{
+                            color: '#FFD700',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            textShadow: '0 0 8px black',
+                            background: 'rgba(0,0,0,0.75)',
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid #FFD700',
+                            minWidth: '120px',
+                            textAlign: 'center'
+                        }}>
+                            ⚔️ {formatDamage(state.worldBoss.damage)}
+                        </div>
                     </div>
-                    <div style={{
-                        color: '#FFD700',
-                        fontSize: '1rem',
-                        fontWeight: 'bold',
-                        textShadow: '0 0 8px black',
-                        background: 'rgba(0,0,0,0.75)',
-                        padding: '6px 12px',
-                        borderRadius: '10px',
-                        border: '1px solid #FFD700',
-                        minWidth: '120px',
-                        textAlign: 'center'
-                    }}>
-                        ⚔️ {formatDamage(state.worldBoss.damage)}
-                    </div>
-                </div>
-            )}
+                )
+            }
 
             {/* World Boss Result Modal */}
-            {showBossResult && (
-                <WorldBossResultModal
-                    damage={lastBattleDamage}
-                    onClose={() => setShowBossResult(false)}
-                />
-            )}
+            {
+                showBossResult && (
+                    <WorldBossResultModal
+                        damage={lastBattleDamage}
+                        onClose={() => setShowBossResult(false)}
+                    />
+                )
+            }
 
             {/* World Boss Modal */}
             <WorldBossModal />
 
             {/* Toast Notification */}
-            {toast && (
-                <Toast
-                    message={toast}
-                    onClose={() => setToast(null)}
-                />
-            )}
+            {
+                toast && (
+                    <Toast
+                        message={toast}
+                        onClose={() => setToast(null)}
+                    />
+                )
+            }
         </div >
     );
 };

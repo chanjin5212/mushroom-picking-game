@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 
 const ArtifactPanel = () => {
     const { state, dispatch } = useGame();

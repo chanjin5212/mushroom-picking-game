@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useGame } from '../context/GameContext';
-import { formatNumber } from '../utils/formatNumber';
-import RankingBoard from './RankingBoard';
-import UserInfoModal from './UserInfoModal';
-import WeaponCollection from './WeaponCollection';
+import { useGame } from '../../context/GameContext';
+import { formatNumber } from '../../utils/formatNumber';
+import RankingBoard from '../modals/RankingBoard';
+import UserInfoModal from '../modals/UserInfoModal';
+import WeaponCollection from '../modals/WeaponCollection';
 
 const HUD = () => {
     const { state, fetchRankings } = useGame();
@@ -69,8 +69,16 @@ const HUD = () => {
         const teraCritMultiplier = 1 + (state.teraCriticalChance / 100) * (state.teraCriticalDamage / 100);
         const petaCritMultiplier = 1 + (state.petaCriticalChance / 100) * (state.petaCriticalDamage / 100);
         const exaCritMultiplier = 1 + (state.exaCriticalChance / 100) * (state.exaCriticalDamage / 100);
+        const zettaCritMultiplier = 1 + (state.zettaCriticalChance / 100) * (state.zettaCriticalDamage / 100);
+        const yottaCritMultiplier = 1 + (state.yottaCriticalChance / 100) * (state.yottaCriticalDamage / 100);
+        const ronnaCritMultiplier = 1 + (state.ronnaCriticalChance / 100) * (state.ronnaCriticalDamage / 100);
+        const quettaCritMultiplier = 1 + (state.quettaCriticalChance / 100) * (state.quettaCriticalDamage / 100);
+        const xenoCritMultiplier = 1 + (state.xenoCriticalChance / 100) * (state.xenoCriticalDamage / 100);
+        const ultimaCritMultiplier = 1 + (state.ultimaCriticalChance / 100) * (state.ultimaCriticalDamage / 100);
+        const omniCritMultiplier = 1 + (state.omniCriticalChance / 100) * (state.omniCriticalDamage / 100);
+        const absoluteCritMultiplier = 1 + (state.absoluteCriticalChance / 100) * (state.absoluteCriticalDamage / 100);
 
-        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier * gigaCritMultiplier * teraCritMultiplier * petaCritMultiplier * exaCritMultiplier * dragonMultiplier * wolfMultiplier);
+        return Math.floor(baseDmg * critMultiplier * hyperCritMultiplier * megaCritMultiplier * gigaCritMultiplier * teraCritMultiplier * petaCritMultiplier * exaCritMultiplier * zettaCritMultiplier * yottaCritMultiplier * ronnaCritMultiplier * quettaCritMultiplier * xenoCritMultiplier * ultimaCritMultiplier * omniCritMultiplier * absoluteCritMultiplier * dragonMultiplier * wolfMultiplier);
     };
 
     const combatPower = calculateCombatPower();

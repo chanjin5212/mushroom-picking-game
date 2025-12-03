@@ -35,7 +35,8 @@ const generateWeapons = () => {
     const weapons = {};
     for (let i = 0; i < 200; i++) {
         // MASSIVE damage scaling: 1, 10, 100, 1000, 10000, 100000...
-        const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.5) * 10);
+        // Changed exponent from 0.5 to 0.7 to ensure next tier is always stronger than previous tier max level
+        const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.7) * 10);
         // Cost: First weapon is free to equip, but has a 'value' for enhancement calc
         // Reduced to 1/3 for more affordable evolution
         const cost = i === 0 ? 100 : Math.floor(Math.pow(10, i * 0.6) * 100 / 3);
@@ -246,6 +247,22 @@ const initialState = {
     petaCriticalDamage: 150,
     exaCriticalChance: 0,
     exaCriticalDamage: 150,
+    zettaCriticalChance: 0,
+    zettaCriticalDamage: 150,
+    yottaCriticalChance: 0,
+    yottaCriticalDamage: 150,
+    ronnaCriticalChance: 0,
+    ronnaCriticalDamage: 150,
+    quettaCriticalChance: 0,
+    quettaCriticalDamage: 150,
+    xenoCriticalChance: 0,
+    xenoCriticalDamage: 150,
+    ultimaCriticalChance: 0,
+    ultimaCriticalDamage: 150,
+    omniCriticalChance: 0,
+    omniCriticalDamage: 150,
+    absoluteCriticalChance: 0,
+    absoluteCriticalDamage: 150,
     statLevels: {
         critChance: 0,
         critDamage: 0,
@@ -262,6 +279,22 @@ const initialState = {
         petaCritDamage: 0,
         exaCritChance: 0,
         exaCritDamage: 0,
+        zettaCritChance: 0,
+        zettaCritDamage: 0,
+        yottaCritChance: 0,
+        yottaCritDamage: 0,
+        ronnaCritChance: 0,
+        ronnaCritDamage: 0,
+        quettaCritChance: 0,
+        quettaCritDamage: 0,
+        xenoCritChance: 0,
+        xenoCritDamage: 0,
+        ultimaCritChance: 0,
+        ultimaCritDamage: 0,
+        omniCritChance: 0,
+        omniCritDamage: 0,
+        absoluteCritChance: 0,
+        absoluteCritDamage: 0,
         moveSpeed: 0,
         attackRange: 0
     },
@@ -384,9 +417,11 @@ const saveState = async (state) => {
 // Calculate pure weapon damage (no critical)
 const calculateDamage = (weaponId, level) => {
     const weapon = WEAPONS[weaponId];
-    // Base damage + (Level * 10% of Base Damage), Minimum +1 per level
-    const bonus = Math.ceil(weapon.baseDamage * 0.1 * level);
-    const damage = weapon.baseDamage + bonus;
+    if (!weapon) return 0;
+
+    // Ensure minimum +1 damage per level, matching upgradeBonus logic
+    const damagePerLevel = Math.max(1, weapon.upgradeBonus);
+    const damage = weapon.baseDamage + (damagePerLevel * level);
     return damage;
 };
 
@@ -447,6 +482,11 @@ const gameReducer = (state, action) => {
 
                 // New Formula: 80 + (40 * level / 300) -> Max 120 (was 160)
                 loadedState.attackRange = 80 + (40 * attackRangeLevel / 300);
+            }
+
+            // Recalculate weapon damage based on new formula
+            if (typeof loadedState.currentWeaponId !== 'undefined') {
+                loadedState.clickDamage = calculateDamage(loadedState.currentWeaponId, loadedState.weaponLevel || 0);
             }
 
             // Artifact Migration
@@ -518,10 +558,8 @@ const gameReducer = (state, action) => {
 
             if (isSuccess) {
                 const newLevel = state.weaponLevel + 1;
-                const weapon = WEAPONS[state.currentWeaponId];
-                // Ensure minimum +1 damage per level
-                const damagePerLevel = Math.max(1, weapon.upgradeBonus);
-                const newDamage = weapon.baseDamage + (damagePerLevel * newLevel);
+                // Use helper function for consistent damage calculation
+                const newDamage = calculateDamage(state.currentWeaponId, newLevel);
 
                 return {
                     ...state,
@@ -656,7 +694,7 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.gigaCritChance || 0;
                 currentVal = state.gigaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 40000000000000; // 40T
+                baseCost = 200000000000000; // 200T (10,000x from Mega's 20B)
                 isTiered = false;
             } else if (statType === 'gigaCritDamage') {
                 currentLevel = state.statLevels?.gigaCritDamage || 0;
@@ -671,7 +709,7 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.teraCritChance || 0;
                 currentVal = state.teraCriticalChance;
                 maxLevel = 1000;
-                baseCost = 80000000000000000; // 80Q
+                baseCost = 2000000000000000000; // 2Q (10,000x from Giga's 200T)
                 isTiered = false;
             } else if (statType === 'teraCritDamage') {
                 currentLevel = state.statLevels?.teraCritDamage || 0;
@@ -686,7 +724,7 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.petaCritChance || 0;
                 currentVal = state.petaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 1.6e20; // 160Qi
+                baseCost = 2e22; // 20Sx (10,000x from Tera's 2Q)
                 isTiered = false;
             } else if (statType === 'petaCritDamage') {
                 currentLevel = state.statLevels?.petaCritDamage || 0;
@@ -701,13 +739,133 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.exaCritChance || 0;
                 currentVal = state.exaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 3.2e23; // 320Sx
+                baseCost = 2e26; // 200Sx (10,000x from Peta's 20Sx)
                 isTiered = false;
             } else if (statType === 'exaCritDamage') {
                 currentLevel = state.statLevels?.exaCritDamage || 0;
                 currentVal = state.exaCriticalDamage;
                 maxLevel = 100000;
                 baseCost = 1e18; // 1Qi
+                isTiered = true;
+            } else if (statType === 'zettaCritChance') {
+                // Unlock condition: Exa Crit Chance >= 1000
+                if ((state.statLevels?.exaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.zettaCritChance || 0;
+                currentVal = state.zettaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e27; // 2 Nonillion (10,000x from Exa's 200 Septillion)
+                isTiered = false;
+            } else if (statType === 'zettaCritDamage') {
+                currentLevel = state.statLevels?.zettaCritDamage || 0;
+                currentVal = state.zettaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e20; // 100 Quintillion
+                isTiered = true;
+            } else if (statType === 'yottaCritChance') {
+                // Unlock condition: Zetta Crit Chance >= 1000
+                if ((state.statLevels?.zettaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.yottaCritChance || 0;
+                currentVal = state.yottaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e31; // 20 Decillion
+                isTiered = false;
+            } else if (statType === 'yottaCritDamage') {
+                currentLevel = state.statLevels?.yottaCritDamage || 0;
+                currentVal = state.yottaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e22; // 10 Sextillion
+                isTiered = true;
+            } else if (statType === 'ronnaCritChance') {
+                // Unlock condition: Yotta Crit Chance >= 1000
+                if ((state.statLevels?.yottaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.ronnaCritChance || 0;
+                currentVal = state.ronnaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e35; // 200 Decillion
+                isTiered = false;
+            } else if (statType === 'ronnaCritDamage') {
+                currentLevel = state.statLevels?.ronnaCritDamage || 0;
+                currentVal = state.ronnaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e24; // 1 Septillion
+                isTiered = true;
+            } else if (statType === 'quettaCritChance') {
+                // Unlock condition: Ronna Crit Chance >= 1000
+                if ((state.statLevels?.ronnaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.quettaCritChance || 0;
+                currentVal = state.quettaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e39; // 2 Undecillion
+                isTiered = false;
+            } else if (statType === 'quettaCritDamage') {
+                currentLevel = state.statLevels?.quettaCritDamage || 0;
+                currentVal = state.quettaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e26; // 100 Septillion
+                isTiered = true;
+            } else if (statType === 'xenoCritChance') {
+                // Unlock condition: Quetta Crit Chance >= 1000
+                if ((state.statLevels?.quettaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.xenoCritChance || 0;
+                currentVal = state.xenoCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e43; // 20 Undecillion
+                isTiered = false;
+            } else if (statType === 'xenoCritDamage') {
+                currentLevel = state.statLevels?.xenoCritDamage || 0;
+                currentVal = state.xenoCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e28; // 10 Octillion
+                isTiered = true;
+            } else if (statType === 'ultimaCritChance') {
+                // Unlock condition: Xeno Crit Chance >= 1000
+                if ((state.statLevels?.xenoCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.ultimaCritChance || 0;
+                currentVal = state.ultimaCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e47; // 200 Undecillion
+                isTiered = false;
+            } else if (statType === 'ultimaCritDamage') {
+                currentLevel = state.statLevels?.ultimaCritDamage || 0;
+                currentVal = state.ultimaCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e30; // 1 Nonillion
+                isTiered = true;
+            } else if (statType === 'omniCritChance') {
+                // Unlock condition: Ultima Crit Chance >= 1000
+                if ((state.statLevels?.ultimaCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.omniCritChance || 0;
+                currentVal = state.omniCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e51; // 2 Duodecillion
+                isTiered = false;
+            } else if (statType === 'omniCritDamage') {
+                currentLevel = state.statLevels?.omniCritDamage || 0;
+                currentVal = state.omniCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e32; // 100 Nonillion
+                isTiered = true;
+            } else if (statType === 'absoluteCritChance') {
+                // Unlock condition: Omni Crit Chance >= 1000
+                if ((state.statLevels?.omniCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.absoluteCritChance || 0;
+                currentVal = state.absoluteCriticalChance;
+                maxLevel = 1000;
+                baseCost = 2e55; // 20 Duodecillion
+                isTiered = false;
+            } else if (statType === 'absoluteCritDamage') {
+                currentLevel = state.statLevels?.absoluteCritDamage || 0;
+                currentVal = state.absoluteCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e34; // 10 Decillion
                 isTiered = true;
             } else if (statType === 'moveSpeed') {
                 currentLevel = state.statLevels?.moveSpeed || 0;
@@ -791,6 +949,54 @@ const gameReducer = (state, action) => {
             } else if (statType === 'exaCritDamage') {
                 newState.exaCriticalDamage = state.exaCriticalDamage + (1 * validCount);
                 newState.statLevels.exaCritDamage = currentLevel + validCount;
+            } else if (statType === 'zettaCritChance') {
+                newState.zettaCriticalChance = parseFloat((state.zettaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.zettaCritChance = currentLevel + validCount;
+            } else if (statType === 'zettaCritDamage') {
+                newState.zettaCriticalDamage = state.zettaCriticalDamage + (1 * validCount);
+                newState.statLevels.zettaCritDamage = currentLevel + validCount;
+            } else if (statType === 'yottaCritChance') {
+                newState.yottaCriticalChance = parseFloat((state.yottaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.yottaCritChance = currentLevel + validCount;
+            } else if (statType === 'yottaCritDamage') {
+                newState.yottaCriticalDamage = state.yottaCriticalDamage + (1 * validCount);
+                newState.statLevels.yottaCritDamage = currentLevel + validCount;
+            } else if (statType === 'ronnaCritChance') {
+                newState.ronnaCriticalChance = parseFloat((state.ronnaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.ronnaCritChance = currentLevel + validCount;
+            } else if (statType === 'ronnaCritDamage') {
+                newState.ronnaCriticalDamage = state.ronnaCriticalDamage + (1 * validCount);
+                newState.statLevels.ronnaCritDamage = currentLevel + validCount;
+            } else if (statType === 'quettaCritChance') {
+                newState.quettaCriticalChance = parseFloat((state.quettaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.quettaCritChance = currentLevel + validCount;
+            } else if (statType === 'quettaCritDamage') {
+                newState.quettaCriticalDamage = state.quettaCriticalDamage + (1 * validCount);
+                newState.statLevels.quettaCritDamage = currentLevel + validCount;
+            } else if (statType === 'xenoCritChance') {
+                newState.xenoCriticalChance = parseFloat((state.xenoCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.xenoCritChance = currentLevel + validCount;
+            } else if (statType === 'xenoCritDamage') {
+                newState.xenoCriticalDamage = state.xenoCriticalDamage + (1 * validCount);
+                newState.statLevels.xenoCritDamage = currentLevel + validCount;
+            } else if (statType === 'ultimaCritChance') {
+                newState.ultimaCriticalChance = parseFloat((state.ultimaCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.ultimaCritChance = currentLevel + validCount;
+            } else if (statType === 'ultimaCritDamage') {
+                newState.ultimaCriticalDamage = state.ultimaCriticalDamage + (1 * validCount);
+                newState.statLevels.ultimaCritDamage = currentLevel + validCount;
+            } else if (statType === 'omniCritChance') {
+                newState.omniCriticalChance = parseFloat((state.omniCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.omniCritChance = currentLevel + validCount;
+            } else if (statType === 'omniCritDamage') {
+                newState.omniCriticalDamage = state.omniCriticalDamage + (1 * validCount);
+                newState.statLevels.omniCritDamage = currentLevel + validCount;
+            } else if (statType === 'absoluteCritChance') {
+                newState.absoluteCriticalChance = parseFloat((state.absoluteCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.absoluteCritChance = currentLevel + validCount;
+            } else if (statType === 'absoluteCritDamage') {
+                newState.absoluteCriticalDamage = state.absoluteCriticalDamage + (1 * validCount);
+                newState.statLevels.absoluteCritDamage = currentLevel + validCount;
             } else if (statType === 'moveSpeed') {
                 // Formula: 5 + (5 * level / 300) - Reduced effect by half
                 const newLevel = currentLevel + validCount;

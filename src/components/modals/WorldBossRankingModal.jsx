@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useGame } from '../context/GameContext';
-import { formatNumber } from '../utils/formatNumber';
+import { useGame } from '../../context/GameContext';
+import { formatNumber } from '../../utils/formatNumber';
 
 const WorldBossRankingModal = ({ onClose }) => {
     const { fetchWorldBossRankings } = useGame();

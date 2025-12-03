@@ -1,11 +1,11 @@
 import React from 'react';
 import { GameProvider, useGame } from './context/GameContext';
-import Auth from './components/Auth';
-import GameCanvas from './components/GameCanvas';
-import HUD from './components/HUD';
-import BottomPanel from './components/BottomPanel';
-import PortalMenu from './components/PortalMenu';
-import AdminPage from './components/AdminPage';
+import Auth from './components/auth/Auth';
+import GameCanvas from './components/game/GameCanvas';
+import HUD from './components/hud/HUD';
+import BottomPanel from './components/panels/BottomPanel';
+import PortalMenu from './components/modals/PortalMenu';
+import AdminPage from './components/auth/AdminPage';
 
 function GameContent() {
   const { state } = useGame();

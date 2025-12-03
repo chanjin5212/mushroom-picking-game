@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 import WorldBossRankingModal from './WorldBossRankingModal';
-import { formatNumber } from '../utils/formatNumber';
+import { formatNumber } from '../../utils/formatNumber';
 
 const WorldBossModal = () => {
     const { state, dispatch } = useGame();

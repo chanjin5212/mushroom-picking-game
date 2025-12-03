@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../context/GameContext';
 
 const Player = forwardRef((props, ref) => {
   const { state, WEAPONS } = useGame();
