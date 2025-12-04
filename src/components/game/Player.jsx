@@ -6,6 +6,47 @@ const Player = forwardRef((props, ref) => {
 
   const currentWeapon = WEAPONS[state.currentWeaponId];
 
+  // Get skin visual effects
+  const getSkinStyle = () => {
+    if (!state.skins?.equipped) return {};
+
+    const parts = state.skins.equipped.split('_');
+    if (parts.length !== 4) return {};
+
+    const type = parts[1];
+    const rarity = parts[2];
+    const grade = parseInt(parts[3]);
+
+    // Base styles by type
+    const typeStyles = {
+      gatherer: {
+        filter: 'brightness(1.1)',
+        boxShadow: '0 0 15px rgba(139, 69, 19, 0.6)'
+      },
+      mage: {
+        filter: 'hue-rotate(270deg) saturate(1.5)',
+        boxShadow: '0 0 20px rgba(156, 39, 176, 0.8)'
+      },
+      assassin: {
+        filter: 'hue-rotate(0deg) saturate(1.3) brightness(0.8)',
+        boxShadow: '0 0 20px rgba(244, 67, 54, 0.7)'
+      },
+      druid: {
+        filter: 'hue-rotate(90deg) saturate(1.4) brightness(1.2)',
+        boxShadow: '0 0 25px rgba(76, 175, 80, 0.9)'
+      },
+      lord: {
+        filter: 'hue-rotate(45deg) saturate(2) brightness(1.3)',
+        boxShadow: '0 0 30px rgba(255, 215, 0, 1), 0 0 50px rgba(255, 152, 0, 0.5)',
+        transform: 'scale(1.15)'
+      }
+    };
+
+    return typeStyles[type] || {};
+  };
+
+  const skinStyle = getSkinStyle();
+
   return (
     <div
       ref={ref}
@@ -32,9 +73,12 @@ const Player = forwardRef((props, ref) => {
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.3))',
+          filter: skinStyle.filter || 'drop-shadow(0 4px 4px rgba(0,0,0,0.3))',
+          boxShadow: skinStyle.boxShadow,
+          transform: skinStyle.transform,
           imageRendering: 'pixelated',
-          mixBlendMode: 'multiply' // Make white background transparent
+          mixBlendMode: 'multiply',
+          transition: 'all 0.3s ease'
         }}
       />
 

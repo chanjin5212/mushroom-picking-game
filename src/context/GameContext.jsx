@@ -290,6 +290,14 @@ const gameReducer = (state, action) => {
                 }
             }
 
+            // Skin Migration
+            if (!loadedState.skins) {
+                loadedState.skins = {
+                    inventory: {},
+                    equipped: null
+                };
+            }
+
             return loadedState;
         }
 
@@ -1344,6 +1352,120 @@ const gameReducer = (state, action) => {
             };
         }
 
+        case 'PULL_SKIN': {
+            const { count, cost } = action.payload;
+            if (state.diamond < cost) return state;
+
+            const newInventory = { ...state.skins.inventory };
+            const pullResults = [];
+            const skinTypes = ['gatherer', 'mage', 'assassin', 'druid', 'lord'];
+
+            // Rarity rates: 83.9, 10, 5, 1, 0.1
+            const getRarity = () => {
+                const rand = Math.random() * 100;
+                if (rand < 0.1) return 'mythic';
+                if (rand < 1.1) return 'legendary';
+                if (rand < 6.1) return 'epic';
+                if (rand < 16.1) return 'rare';
+                return 'common';
+            };
+
+            // Grade rates: 40, 30, 20, 10
+            const getGrade = () => {
+                const rand = Math.random() * 100;
+                if (rand < 10) return 1;
+                if (rand < 30) return 2;
+                if (rand < 60) return 3;
+                return 4;
+            };
+
+            for (let i = 0; i < count; i++) {
+                const type = skinTypes[Math.floor(Math.random() * skinTypes.length)];
+                const rarity = getRarity();
+                const grade = getGrade();
+                const skinId = `skin_${type}_${rarity}_${grade}`;
+
+                newInventory[skinId] = (newInventory[skinId] || 0) + 1;
+                pullResults.push(skinId);
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond - cost,
+                skins: {
+                    ...state.skins,
+                    inventory: newInventory
+                },
+                lastPullResults: pullResults
+            };
+        }
+
+        case 'MERGE_SKIN': {
+            const { skinId } = action.payload;
+            const parts = skinId.split('_');
+            if (parts.length !== 4) return state;
+
+            const type = parts[1];
+            const rarity = parts[2];
+            const grade = parseInt(parts[3]);
+
+            const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+            const rarityIndex = rarities.indexOf(rarity);
+
+            if (rarityIndex === -1) return state;
+            if (rarity === 'mythic' && grade === 1) return state;
+
+            const currentCount = state.skins.inventory[skinId] || 0;
+            if (currentCount < 5) return state;
+
+            let nextRarity = rarity;
+            let nextGrade = grade - 1;
+
+            if (nextGrade < 1) {
+                if (rarityIndex >= rarities.length - 1) return state;
+                nextRarity = rarities[rarityIndex + 1];
+                nextGrade = 4;
+            }
+
+            const nextSkinId = `skin_${type}_${nextRarity}_${nextGrade}`;
+
+            return {
+                ...state,
+                skins: {
+                    ...state.skins,
+                    inventory: {
+                        ...state.skins.inventory,
+                        [skinId]: currentCount - 5,
+                        [nextSkinId]: (state.skins.inventory[nextSkinId] || 0) + 1
+                    }
+                }
+            };
+        }
+
+        case 'EQUIP_SKIN': {
+            const { skinId } = action.payload;
+            if (state.skins.equipped === skinId) return state;
+            if ((state.skins.inventory[skinId] || 0) < 1) return state;
+
+            return {
+                ...state,
+                skins: {
+                    ...state.skins,
+                    equipped: skinId
+                }
+            };
+        }
+
+        case 'UNEQUIP_SKIN': {
+            return {
+                ...state,
+                skins: {
+                    ...state.skins,
+                    equipped: null
+                }
+            };
+        }
+
         case 'COLLECT_MUSHROOM_TYPE': {
             const { name, rarity } = action.payload;
             const currentCollection = state.mushroomCollection[name] || {
@@ -1690,7 +1812,8 @@ export const GameProvider = ({ children }) => {
                         claimedRewards: currentState.claimedRewards,
                         artifacts: currentState.artifacts,
                         worldBoss: currentState.worldBoss,
-                        pets: currentState.pets
+                        pets: currentState.pets,
+                        skins: currentState.skins
                     }
                 })
                 .eq('id', currentState.user.id);

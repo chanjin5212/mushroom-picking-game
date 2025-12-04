@@ -4,6 +4,7 @@ import { formatNumber } from '../../utils/formatNumber';
 import RankingBoard from '../modals/RankingBoard';
 import UserInfoModal from '../modals/UserInfoModal';
 import WeaponCollection from '../modals/WeaponCollection';
+import SkinModal from '../modals/SkinModal';
 
 const HUD = () => {
     const { state, fetchRankings } = useGame();
@@ -11,6 +12,7 @@ const HUD = () => {
     const [showRanking, setShowRanking] = useState(false);
     const [showUserInfo, setShowUserInfo] = useState(false);
     const [showCollection, setShowCollection] = useState(false);
+    const [showSkins, setShowSkins] = useState(false);
     const [stageRank, setStageRank] = useState(null);
 
     // Fetch stage ranking
@@ -346,6 +348,42 @@ const HUD = () => {
                                 <button
                                     onClick={() => {
                                         setMenuOpen(false);
+                                        setShowSkins(true);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        backgroundColor: 'transparent',
+                                        color: '#9C27B0',
+                                        border: 'none',
+                                        textAlign: 'left',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.backgroundColor = 'rgba(156,39,176,0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.backgroundColor = 'transparent';
+                                    }}
+                                >
+                                    <span>👔</span>
+                                    <span>스킨</span>
+                                </button>
+
+                                <div style={{
+                                    height: '1px',
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    margin: '0'
+                                }} />
+
+                                <button
+                                    onClick={() => {
+                                        setMenuOpen(false);
                                         setShowUserInfo(true);
                                     }}
                                     style={{
@@ -390,6 +428,11 @@ const HUD = () => {
             {/* Weapon Collection Modal */}
             {showCollection && (
                 <WeaponCollection onClose={() => setShowCollection(false)} />
+            )}
+
+            {/* Skin Modal */}
+            {showSkins && (
+                <SkinModal onClose={() => setShowSkins(false)} />
             )}
         </>
     );
