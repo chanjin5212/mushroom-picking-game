@@ -1309,7 +1309,8 @@ const gameReducer = (state, action) => {
             const { type } = action.payload;
             const artifact = state.artifacts[type];
 
-            if (artifact.count < 1) return state;
+            // Validation: must have count and not exceed max level
+            if (artifact.count < 1 || artifact.level >= 1000) return state;
 
             const successChance = Math.max(0, 100 - (artifact.level * 0.05));
             const isSuccess = Math.random() * 100 < successChance;
