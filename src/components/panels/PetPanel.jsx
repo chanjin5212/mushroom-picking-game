@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useGame } from '../../context/GameContext';
 
 const PetPanel = () => {
     const { state, dispatch } = useGame();
     const { pets, diamond, lastPullResults, currentStage } = state;
+    const [showProbability, setShowProbability] = useState(false);
 
     // Check if pets are unlocked (stage 10-1+)
     const isUnlocked = currentStage.chapter > 10 || (currentStage.chapter === 10 && currentStage.stage >= 1);
@@ -125,10 +126,99 @@ const PetPanel = () => {
         }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFD700' }}>
-                    🐾 펫 관리
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFD700' }}>
+                        🐾 펫 관리
+                    </div>
+                    <button
+                        onClick={() => setShowProbability(true)}
+                        style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            color: '#ccc',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        ?
+                    </button>
                 </div>
             </div>
+
+            {/* Probability Modal */}
+            {showProbability && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    zIndex: 2000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backdropFilter: 'blur(3px)'
+                }} onClick={() => setShowProbability(false)}>
+                    <div style={{
+                        backgroundColor: '#1a1a2e',
+                        border: '2px solid #FFD700',
+                        borderRadius: '15px',
+                        padding: '20px',
+                        width: '85%',
+                        maxWidth: '350px',
+                        position: 'relative'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#FFD700', marginBottom: '15px', textAlign: 'center' }}>
+                            📊 소환 확률
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#F44336', fontWeight: 'bold' }}>
+                                <span>🔴 신화 (Mythic)</span>
+                                <span>0.1%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#FF9800', fontWeight: 'bold' }}>
+                                <span>🟡 전설 (Legendary)</span>
+                                <span>1.0%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9C27B0', fontWeight: 'bold' }}>
+                                <span>🟣 영웅 (Epic)</span>
+                                <span>5.0%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00BCD4', fontWeight: 'bold' }}>
+                                <span>🔵 희귀 (Rare)</span>
+                                <span>10.0%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontWeight: 'bold' }}>
+                                <span>⚪ 일반 (Common)</span>
+                                <span>83.9%</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowProbability(false)}
+                            style={{
+                                marginTop: '20px',
+                                width: '100%',
+                                padding: '10px',
+                                backgroundColor: '#555',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* Summon Result Modal */}
             {lastPullResults && (
                 <div style={{

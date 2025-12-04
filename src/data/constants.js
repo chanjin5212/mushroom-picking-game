@@ -109,6 +109,11 @@ export const initialState = {
         equipped: [],  // Array of petIds
         unlockedSlots: 3
     },
+    // Skin System
+    skins: {
+        inventory: {}, // { [skinId]: count } e.g. 'skin_gatherer_common_1': 1
+        equipped: null // Currently equipped skin ID
+    },
     lastPullResults: null, // Array of pulled artifact IDs
     // Mushroom Collection System (400 total: 100 types × 4 rarities)
     mushroomCollection: {}, // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
@@ -116,7 +121,8 @@ export const initialState = {
     claimedRewards: {
         weapons: [],        // Array of weapon IDs that have been claimed
         mushrooms: {},      // { [mushroomName]: { normal: false, rare: false, epic: false, unique: false } }
-        pets: []            // Array of petIds (e.g. 'slime_common') that have been claimed
+        pets: [],           // Array of petIds (e.g. 'slime_common') that have been claimed
+        skins: []           // Array of skinIds that have been claimed
     },
     // World Boss System
     worldBoss: {
