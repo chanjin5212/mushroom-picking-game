@@ -6,20 +6,13 @@ const SkinModal = ({ onClose }) => {
     const { skins, diamond, lastPullResults } = state;
     const [showProbability, setShowProbability] = useState(false);
 
-    const skinInfo = {
-        gatherer: { name: '채집가', icon: '🧺', desc: '기본 채집 전문가' },
-        mage: { name: '포자술사', icon: '🍄', desc: '버섯 포자 마법사' },
-        assassin: { name: '독버섯 암살자', icon: '🗡️', desc: '맹독 암살자' },
-        druid: { name: '드루이드', icon: '🍃', desc: '자연의 수호자' },
-        lord: { name: '버섯 군주', icon: '👑', desc: '버섯의 지배자' }
-    };
-
+    // Rarity = Job mapping
     const rarityInfo = {
-        common: { name: '일반', color: '#888', emoji: '⚪', score: 1 },
-        rare: { name: '희귀', color: '#00BCD4', emoji: '🔵', score: 2 },
-        epic: { name: '영웅', color: '#9C27B0', emoji: '🟣', score: 3 },
-        legendary: { name: '전설', color: '#FF9800', emoji: '🟡', score: 4 },
-        mythic: { name: '신화', color: '#F44336', emoji: '🔴', score: 5 }
+        common: { name: '채집가', color: '#888', emoji: '🧺', icon: '🧺', score: 1 },
+        rare: { name: '포자술사', color: '#00BCD4', emoji: '🍄', icon: '🍄', score: 2 },
+        epic: { name: '독버섯 암살자', color: '#9C27B0', emoji: '🗡️', icon: '🗡️', score: 3 },
+        legendary: { name: '드루이드', color: '#FF9800', emoji: '🍃', icon: '🍃', score: 4 },
+        mythic: { name: '버섯 군주', color: '#F44336', emoji: '👑', icon: '👑', score: 5 }
     };
 
     const gradeInfo = {
@@ -43,9 +36,9 @@ const SkinModal = ({ onClose }) => {
 
     const getSkinSortScore = (skinId) => {
         const parts = skinId.split('_');
-        if (parts.length !== 4) return 0;
-        const rarity = parts[2];
-        const grade = parseInt(parts[3]);
+        if (parts.length !== 3) return 0;
+        const rarity = parts[1];
+        const grade = parseInt(parts[2]);
         const rarityScore = rarityInfo[rarity]?.score || 0;
         const gradeScore = gradeInfo[grade]?.score || 0;
         return (rarityScore * 10) + gradeScore;
@@ -72,6 +65,10 @@ const SkinModal = ({ onClose }) => {
 
     const handleMerge = (skinId) => {
         dispatch({ type: 'MERGE_SKIN', payload: { skinId } });
+    };
+
+    const handleMergeAll = () => {
+        dispatch({ type: 'MERGE_ALL_SKINS' });
     };
 
     const handleEquip = (skinId) => {
@@ -189,23 +186,23 @@ const SkinModal = ({ onClose }) => {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#F44336', fontWeight: 'bold' }}>
-                                    <span>🔴 신화 (Mythic)</span>
+                                    <span>👑 버섯 군주 (신화)</span>
                                     <span>0.1%</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#FF9800', fontWeight: 'bold' }}>
-                                    <span>🟡 전설 (Legendary)</span>
+                                    <span>🍃 드루이드 (전설)</span>
                                     <span>1.0%</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9C27B0', fontWeight: 'bold' }}>
-                                    <span>🟣 영웅 (Epic)</span>
+                                    <span>🗡️ 독버섯 암살자 (영웅)</span>
                                     <span>5.0%</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00BCD4', fontWeight: 'bold' }}>
-                                    <span>🔵 희귀 (Rare)</span>
+                                    <span>🍄 포자술사 (희귀)</span>
                                     <span>10.0%</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontWeight: 'bold' }}>
-                                    <span>⚪ 일반 (Common)</span>
+                                    <span>🧺 채집가 (일반)</span>
                                     <span>83.9%</span>
                                 </div>
                             </div>
@@ -299,11 +296,9 @@ const SkinModal = ({ onClose }) => {
                                         .sort(([idA], [idB]) => getSkinSortScore(idB) - getSkinSortScore(idA))
                                         .map(([skinId, count]) => {
                                             const parts = skinId.split('_');
-                                            if (parts.length !== 4) return null;
-                                            const type = parts[1];
-                                            const rarity = parts[2];
-                                            const grade = parseInt(parts[3]);
-                                            const skin = skinInfo[type];
+                                            if (parts.length !== 3) return null;
+                                            const rarity = parts[1];
+                                            const grade = parseInt(parts[2]);
                                             const rarityData = rarityInfo[rarity];
 
                                             return (
@@ -325,7 +320,7 @@ const SkinModal = ({ onClose }) => {
                                                         border: `2px solid ${rarityData.color}`,
                                                         position: 'relative'
                                                     }}>
-                                                        {skin.icon}
+                                                        {rarityData.icon}
                                                         {count > 1 && (
                                                             <div style={{
                                                                 position: 'absolute',
@@ -344,10 +339,10 @@ const SkinModal = ({ onClose }) => {
                                                         )}
                                                     </div>
                                                     <div style={{ fontSize: '0.7rem', color: rarityData.color, textAlign: 'center' }}>
-                                                        {rarityData.name} {grade}등급
+                                                        {rarityData.name}
                                                     </div>
-                                                    <div style={{ fontSize: '0.65rem', color: '#ccc', textAlign: 'center' }}>
-                                                        {skin.name}
+                                                    <div style={{ fontSize: '0.65rem', color: '#FFD700', textAlign: 'center' }}>
+                                                        {grade}등급
                                                     </div>
                                                 </div>
                                             );
@@ -455,6 +450,23 @@ const SkinModal = ({ onClose }) => {
                         </div>
                     </div>
 
+                    {/* Merge All Button */}
+                    <button
+                        onClick={handleMergeAll}
+                        style={{
+                            padding: '12px',
+                            backgroundColor: '#9C27B0',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: 'white',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        🔄 모두 합성
+                    </button>
+
                     {/* Equipped Skin Section */}
                     {skins.equipped && (
                         <div style={{
@@ -468,11 +480,9 @@ const SkinModal = ({ onClose }) => {
                             </div>
                             {(() => {
                                 const parts = skins.equipped.split('_');
-                                if (parts.length !== 4) return null;
-                                const type = parts[1];
-                                const rarity = parts[2];
-                                const grade = parseInt(parts[3]);
-                                const skin = skinInfo[type];
+                                if (parts.length !== 3) return null;
+                                const rarity = parts[1];
+                                const grade = parseInt(parts[2]);
                                 const rarityData = rarityInfo[rarity];
                                 const effect = getSkinEffect(rarity, grade);
 
@@ -486,13 +496,13 @@ const SkinModal = ({ onClose }) => {
                                         alignItems: 'center',
                                         gap: '10px'
                                     }}>
-                                        <div style={{ fontSize: '3rem' }}>{skin.icon}</div>
+                                        <div style={{ fontSize: '3rem' }}>{rarityData.icon}</div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontSize: '0.9rem', color: rarityData.color, fontWeight: 'bold' }}>
-                                                {rarityData.emoji} {rarityData.name} {grade}등급
+                                                {rarityData.emoji} {rarityData.name}
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
-                                                {skin.name}
+                                            <div style={{ fontSize: '0.8rem', color: '#FFD700' }}>
+                                                {grade}등급
                                             </div>
                                             <div style={{ fontSize: '0.75rem', color: '#FFD700', marginTop: '3px' }}>
                                                 ⚔️ 공격력 +{effect}%
@@ -529,11 +539,9 @@ const SkinModal = ({ onClose }) => {
                                 if (count === 0) return null;
 
                                 const parts = skinId.split('_');
-                                if (parts.length !== 4) return null;
-                                const type = parts[1];
-                                const rarity = parts[2];
-                                const grade = parseInt(parts[3]);
-                                const skin = skinInfo[type];
+                                if (parts.length !== 3) return null;
+                                const rarity = parts[1];
+                                const grade = parseInt(parts[2]);
                                 const rarityData = rarityInfo[rarity];
                                 const isEquipped = skins.equipped === skinId;
                                 const canMerge = count >= 5 && !(rarity === 'mythic' && grade === 1);
@@ -551,15 +559,12 @@ const SkinModal = ({ onClose }) => {
                                         gap: '5px',
                                         position: 'relative'
                                     }}>
-                                        <div style={{ fontSize: '2.5rem' }}>{skin.icon}</div>
+                                        <div style={{ fontSize: '2.5rem' }}>{rarityData.icon}</div>
                                         <div style={{ fontSize: '0.75rem', color: rarityData.color, fontWeight: 'bold', textAlign: 'center' }}>
                                             {rarityData.emoji} {rarityData.name}
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: '#FFD700', textAlign: 'center' }}>
                                             {grade}등급
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#ccc', textAlign: 'center' }}>
-                                            {skin.name}
                                         </div>
                                         <div style={{ fontSize: '0.65rem', color: '#FFD700', textAlign: 'center' }}>
                                             ⚔️ +{effect}%

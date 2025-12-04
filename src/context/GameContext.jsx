@@ -1358,7 +1358,6 @@ const gameReducer = (state, action) => {
 
             const newInventory = { ...state.skins.inventory };
             const pullResults = [];
-            const skinTypes = ['gatherer', 'mage', 'assassin', 'druid', 'lord'];
 
             // Rarity rates: 83.9, 10, 5, 1, 0.1
             const getRarity = () => {
@@ -1380,10 +1379,9 @@ const gameReducer = (state, action) => {
             };
 
             for (let i = 0; i < count; i++) {
-                const type = skinTypes[Math.floor(Math.random() * skinTypes.length)];
                 const rarity = getRarity();
                 const grade = getGrade();
-                const skinId = `skin_${type}_${rarity}_${grade}`;
+                const skinId = `skin_${rarity}_${grade}`;
 
                 newInventory[skinId] = (newInventory[skinId] || 0) + 1;
                 pullResults.push(skinId);
@@ -1403,11 +1401,10 @@ const gameReducer = (state, action) => {
         case 'MERGE_SKIN': {
             const { skinId } = action.payload;
             const parts = skinId.split('_');
-            if (parts.length !== 4) return state;
+            if (parts.length !== 3) return state;
 
-            const type = parts[1];
-            const rarity = parts[2];
-            const grade = parseInt(parts[3]);
+            const rarity = parts[1];
+            const grade = parseInt(parts[2]);
 
             const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
             const rarityIndex = rarities.indexOf(rarity);
@@ -1427,7 +1424,7 @@ const gameReducer = (state, action) => {
                 nextGrade = 4;
             }
 
-            const nextSkinId = `skin_${type}_${nextRarity}_${nextGrade}`;
+            const nextSkinId = `skin_${nextRarity}_${nextGrade}`;
 
             return {
                 ...state,
@@ -1438,6 +1435,64 @@ const gameReducer = (state, action) => {
                         [skinId]: currentCount - 5,
                         [nextSkinId]: (state.skins.inventory[nextSkinId] || 0) + 1
                     }
+                }
+            };
+        }
+
+        case 'MERGE_ALL_SKINS': {
+            let newInventory = { ...state.skins.inventory };
+            let mergedAny = false;
+
+            const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+
+            // Iterate multiple times to handle cascading merges
+            for (let iteration = 0; iteration < 20; iteration++) {
+                let mergedThisRound = false;
+
+                Object.keys(newInventory).forEach(skinId => {
+                    const parts = skinId.split('_');
+                    if (parts.length !== 3) return;
+
+                    const rarity = parts[1];
+                    const grade = parseInt(parts[2]);
+                    const rarityIndex = rarities.indexOf(rarity);
+
+                    if (rarityIndex === -1) return;
+                    if (rarity === 'mythic' && grade === 1) return;
+
+                    const currentCount = newInventory[skinId] || 0;
+                    if (currentCount < 5) return;
+
+                    const mergeCount = Math.floor(currentCount / 5);
+                    if (mergeCount === 0) return;
+
+                    let nextRarity = rarity;
+                    let nextGrade = grade - 1;
+
+                    if (nextGrade < 1) {
+                        if (rarityIndex >= rarities.length - 1) return;
+                        nextRarity = rarities[rarityIndex + 1];
+                        nextGrade = 4;
+                    }
+
+                    const nextSkinId = `skin_${nextRarity}_${nextGrade}`;
+
+                    newInventory[skinId] = currentCount - (mergeCount * 5);
+                    newInventory[nextSkinId] = (newInventory[nextSkinId] || 0) + mergeCount;
+                    mergedThisRound = true;
+                    mergedAny = true;
+                });
+
+                if (!mergedThisRound) break;
+            }
+
+            if (!mergedAny) return state;
+
+            return {
+                ...state,
+                skins: {
+                    ...state.skins,
+                    inventory: newInventory
                 }
             };
         }

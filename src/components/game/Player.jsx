@@ -11,38 +11,37 @@ const Player = forwardRef((props, ref) => {
     if (!state.skins?.equipped) return {};
 
     const parts = state.skins.equipped.split('_');
-    if (parts.length !== 4) return {};
+    if (parts.length !== 3) return {};
 
-    const type = parts[1];
-    const rarity = parts[2];
-    const grade = parseInt(parts[3]);
+    const rarity = parts[1];
+    const grade = parseInt(parts[2]);
 
-    // Base styles by type
-    const typeStyles = {
-      gatherer: {
+    // Base styles by rarity (rarity = job)
+    const rarityStyles = {
+      common: {
         filter: 'brightness(1.1)',
         boxShadow: '0 0 15px rgba(139, 69, 19, 0.6)'
       },
-      mage: {
+      rare: {
         filter: 'hue-rotate(270deg) saturate(1.5)',
         boxShadow: '0 0 20px rgba(156, 39, 176, 0.8)'
       },
-      assassin: {
+      epic: {
         filter: 'hue-rotate(0deg) saturate(1.3) brightness(0.8)',
         boxShadow: '0 0 20px rgba(244, 67, 54, 0.7)'
       },
-      druid: {
+      legendary: {
         filter: 'hue-rotate(90deg) saturate(1.4) brightness(1.2)',
         boxShadow: '0 0 25px rgba(76, 175, 80, 0.9)'
       },
-      lord: {
+      mythic: {
         filter: 'hue-rotate(45deg) saturate(2) brightness(1.3)',
         boxShadow: '0 0 30px rgba(255, 215, 0, 1), 0 0 50px rgba(255, 152, 0, 0.5)',
         transform: 'scale(1.15)'
       }
     };
 
-    return typeStyles[type] || {};
+    return rarityStyles[rarity] || {};
   };
 
   const skinStyle = getSkinStyle();

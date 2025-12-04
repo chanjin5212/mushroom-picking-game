@@ -161,6 +161,51 @@ const GameCanvas = () => {
     // Helper to calculate damage
     const calculateDamage = () => {
         let damage = state.clickDamage * (1 + (state.artifacts.attackBonus.count * 0.005));
+
+        // Skin effects
+        const getSkinBonus = () => {
+            let equipBonus = 0;
+            let passiveBonus = 0;
+
+            const effects = {
+                common: { 1: 5, 2: 3, 3: 2, 4: 1 },
+                rare: { 1: 15, 2: 12, 3: 10, 4: 8 },
+                epic: { 1: 40, 2: 30, 3: 25, 4: 20 },
+                legendary: { 1: 80, 2: 70, 3: 60, 4: 50 },
+                mythic: { 1: 300, 2: 200, 3: 150, 4: 100 }
+            };
+
+            // Equipped skin bonus
+            if (state.skins?.equipped) {
+                const parts = state.skins.equipped.split('_');
+                if (parts.length === 3) {
+                    const rarity = parts[1];
+                    const grade = parseInt(parts[2]);
+                    equipBonus = effects[rarity]?.[grade] || 0;
+                }
+            }
+
+            // Passive bonus from all owned skins (1/10 of equipped effect)
+            if (state.skins?.inventory) {
+                Object.entries(state.skins.inventory).forEach(([skinId, count]) => {
+                    if (count > 0) {
+                        const parts = skinId.split('_');
+                        if (parts.length === 3) {
+                            const rarity = parts[1];
+                            const grade = parseInt(parts[2]);
+                            const skinEffect = effects[rarity]?.[grade] || 0;
+                            passiveBonus += (skinEffect / 10) * count;
+                        }
+                    }
+                });
+            }
+
+            return equipBonus + passiveBonus;
+        };
+
+        const skinBonus = getSkinBonus();
+        damage *= (1 + skinBonus / 100);
+
         let isCritical = false;
         let isHyperCritical = false;
         let isMegaCritical = false;
