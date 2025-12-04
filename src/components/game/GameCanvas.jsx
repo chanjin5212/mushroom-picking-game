@@ -185,17 +185,15 @@ const GameCanvas = () => {
                 }
             }
 
-            // Passive bonus from all owned skins (1/10 of equipped effect)
-            if (state.skins?.inventory) {
-                Object.entries(state.skins.inventory).forEach(([skinId, count]) => {
-                    if (count > 0) {
-                        const parts = skinId.split('_');
-                        if (parts.length === 3) {
-                            const rarity = parts[1];
-                            const grade = parseInt(parts[2]);
-                            const skinEffect = effects[rarity]?.[grade] || 0;
-                            passiveBonus += (skinEffect / 10) * count;
-                        }
+            // Passive bonus from all unlocked skins (1/10 of equipped effect)
+            if (state.skins?.unlocked) {
+                state.skins.unlocked.forEach(skinId => {
+                    const parts = skinId.split('_');
+                    if (parts.length === 3) {
+                        const rarity = parts[1];
+                        const grade = parseInt(parts[2]);
+                        const skinEffect = effects[rarity]?.[grade] || 0;
+                        passiveBonus += skinEffect / 10;
                     }
                 });
             }

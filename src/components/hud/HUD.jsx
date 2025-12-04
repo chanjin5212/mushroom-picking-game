@@ -31,13 +31,53 @@ const HUD = () => {
         return () => clearInterval(interval);
     }, [state.user, state.currentStage, state.maxStage]);
 
-    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100) * Pet Multipliers
+    // Combat Power Formula: Base Damage * (1 + CritChance/100 * CritDamage/100) * (1 + HyperCritChance/100 * HyperCritDamage/100) * (1 + MegaCritChance/100 * MegaCritDamage/100) * Pet Multipliers * Skin Multiplier
     const calculateCombatPower = () => {
         // Artifact Bonuses
         const attackBonus = (state.artifacts?.attackBonus?.level || 0) * 0.5;
         const critDamageBonus = (state.artifacts?.critDamageBonus?.level || 0) * 10;
         const hyperCritDamageBonus = (state.artifacts?.hyperCritDamageBonus?.level || 0) * 10;
         const megaCritDamageBonus = (state.artifacts?.megaCritDamageBonus?.level || 0) * 10;
+
+        // Skin Effects
+        const getSkinBonus = () => {
+            let equipBonus = 0;
+            let passiveBonus = 0;
+
+            const effects = {
+                common: { 1: 5, 2: 3, 3: 2, 4: 1 },
+                rare: { 1: 15, 2: 12, 3: 10, 4: 8 },
+                epic: { 1: 40, 2: 30, 3: 25, 4: 20 },
+                legendary: { 1: 80, 2: 70, 3: 60, 4: 50 },
+                mythic: { 1: 300, 2: 200, 3: 150, 4: 100 }
+            };
+
+            if (state.skins?.equipped) {
+                const parts = state.skins.equipped.split('_');
+                if (parts.length === 3) {
+                    const rarity = parts[1];
+                    const grade = parseInt(parts[2]);
+                    equipBonus = effects[rarity]?.[grade] || 0;
+                }
+            }
+
+            if (state.skins?.unlocked) {
+                state.skins.unlocked.forEach(skinId => {
+                    const parts = skinId.split('_');
+                    if (parts.length === 3) {
+                        const rarity = parts[1];
+                        const grade = parseInt(parts[2]);
+                        const skinEffect = effects[rarity]?.[grade] || 0;
+                        passiveBonus += skinEffect / 10;
+                    }
+                });
+            }
+
+            return equipBonus + passiveBonus;
+        };
+
+        const skinBonus = getSkinBonus();
+        const skinMultiplier = 1 + (skinBonus / 100);
 
         // Pet Effects
         const equippedPets = state.pets?.equipped || [];
@@ -63,7 +103,7 @@ const HUD = () => {
         });
         const wolfMultiplier = 1 + (wolfBonus * 0.5); // 50% weight for combat power
 
-        const baseDmg = state.clickDamage * (1 + attackBonus / 100);
+        const baseDmg = state.clickDamage * (1 + attackBonus / 100) * skinMultiplier;
         const critMultiplier = 1 + (state.criticalChance / 100) * ((state.criticalDamage + critDamageBonus) / 100);
         const hyperCritMultiplier = 1 + (state.hyperCriticalChance / 100) * ((state.hyperCriticalDamage + hyperCritDamageBonus) / 100);
         const megaCritMultiplier = 1 + (state.megaCriticalChance / 100) * ((state.megaCriticalDamage + megaCritDamageBonus) / 100);

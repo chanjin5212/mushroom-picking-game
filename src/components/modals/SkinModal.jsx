@@ -34,6 +34,23 @@ const SkinModal = ({ onClose }) => {
         return effects[rarity]?.[grade] || 0;
     };
 
+    // Calculate total passive bonus (unlocked skins only)
+    const getTotalPassiveBonus = () => {
+        let total = 0;
+        if (state.skins?.unlocked) {
+            state.skins.unlocked.forEach(skinId => {
+                const parts = skinId.split('_');
+                if (parts.length === 3) {
+                    const rarity = parts[1];
+                    const grade = parseInt(parts[2]);
+                    const skinEffect = getSkinEffect(rarity, grade);
+                    total += skinEffect / 10;
+                }
+            });
+        }
+        return total;
+    };
+
     const getSkinSortScore = (skinId) => {
         const parts = skinId.split('_');
         if (parts.length !== 3) return 0;
@@ -42,6 +59,24 @@ const SkinModal = ({ onClose }) => {
         const rarityScore = rarityInfo[rarity]?.score || 0;
         const gradeScore = gradeInfo[grade]?.score || 0;
         return (rarityScore * 10) + gradeScore;
+    };
+
+    // Generate all possible skins
+    const getAllSkins = () => {
+        const allSkins = [];
+        const rarities = ['mythic', 'legendary', 'epic', 'rare', 'common']; // High to low
+        const grades = [1, 2, 3, 4];
+
+        rarities.forEach(rarity => {
+            grades.forEach(grade => {
+                const skinId = `skin_${rarity}_${grade}`;
+                const count = skins.inventory[skinId] || 0;
+                const isUnlocked = skins.unlocked?.includes(skinId) || false;
+                allSkins.push({ skinId, count, isUnlocked, rarity, grade });
+            });
+        });
+
+        return allSkins;
     };
 
     const handlePull = (count) => {
@@ -71,7 +106,9 @@ const SkinModal = ({ onClose }) => {
         dispatch({ type: 'MERGE_ALL_SKINS' });
     };
 
-    const handleEquip = (skinId) => {
+    const handleEquip = (skinId, isUnlocked) => {
+        if (!isUnlocked) return;
+
         if (skins.equipped === skinId) {
             dispatch({ type: 'UNEQUIP_SKIN' });
         } else {
@@ -82,6 +119,8 @@ const SkinModal = ({ onClose }) => {
     const handleConfirmResult = () => {
         dispatch({ type: 'CLEAR_PULL_RESULTS' });
     };
+
+    const totalPassiveBonus = getTotalPassiveBonus();
 
     return (
         <div style={{
@@ -103,7 +142,7 @@ const SkinModal = ({ onClose }) => {
                 borderRadius: '15px',
                 padding: '20px',
                 width: '90%',
-                maxWidth: '500px',
+                maxWidth: '600px',
                 maxHeight: '80vh',
                 display: 'flex',
                 flexDirection: 'column',
@@ -467,6 +506,21 @@ const SkinModal = ({ onClose }) => {
                         🔄 모두 합성
                     </button>
 
+                    {/* Passive Bonus Display */}
+                    {totalPassiveBonus > 0 && (
+                        <div style={{
+                            backgroundColor: 'rgba(76,175,80,0.2)',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(76,175,80,0.5)',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '0.9rem', color: '#4CAF50', fontWeight: 'bold' }}>
+                                📚 보유 효과 총합: +{totalPassiveBonus.toFixed(1)}%
+                            </div>
+                        </div>
+                    )}
+
                     {/* Equipped Skin Section */}
                     {skins.equipped && (
                         <div style={{
@@ -509,7 +563,7 @@ const SkinModal = ({ onClose }) => {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => handleEquip(skins.equipped)}
+                                            onClick={() => handleEquip(skins.equipped, true)}
                                             style={{
                                                 padding: '8px 12px',
                                                 backgroundColor: '#F44336',
@@ -528,93 +582,90 @@ const SkinModal = ({ onClose }) => {
                         </div>
                     )}
 
-                    {/* Skin Inventory */}
+                    {/* Skin Collection */}
                     <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px' }}>
-                        보유 스킨 ({Object.keys(skins.inventory).filter(id => skins.inventory[id] > 0).length}종)
+                        스킨 컬렉션 (20종)
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
-                        {Object.entries(skins.inventory)
-                            .sort(([idA], [idB]) => getSkinSortScore(idB) - getSkinSortScore(idA))
-                            .map(([skinId, count]) => {
-                                if (count === 0) return null;
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                        {getAllSkins().map(({ skinId, count, isUnlocked, rarity, grade }) => {
+                            const rarityData = rarityInfo[rarity];
+                            const isEquipped = skins.equipped === skinId;
+                            const canMerge = count >= 5 && !(rarity === 'mythic' && grade === 1);
+                            const effect = getSkinEffect(rarity, grade);
 
-                                const parts = skinId.split('_');
-                                if (parts.length !== 3) return null;
-                                const rarity = parts[1];
-                                const grade = parseInt(parts[2]);
-                                const rarityData = rarityInfo[rarity];
-                                const isEquipped = skins.equipped === skinId;
-                                const canMerge = count >= 5 && !(rarity === 'mythic' && grade === 1);
-                                const effect = getSkinEffect(rarity, grade);
-
-                                return (
-                                    <div key={skinId} style={{
-                                        backgroundColor: isEquipped ? 'rgba(156,39,176,0.2)' : 'rgba(0,0,0,0.6)',
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        border: `2px solid ${isEquipped ? '#9C27B0' : rarityData.color}`,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        position: 'relative'
-                                    }}>
-                                        <div style={{ fontSize: '2.5rem' }}>{rarityData.icon}</div>
-                                        <div style={{ fontSize: '0.75rem', color: rarityData.color, fontWeight: 'bold', textAlign: 'center' }}>
-                                            {rarityData.emoji} {rarityData.name}
+                            return (
+                                <div key={skinId} style={{
+                                    backgroundColor: isEquipped ? 'rgba(156,39,176,0.2)' : (isUnlocked ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)'),
+                                    padding: '8px',
+                                    borderRadius: '8px',
+                                    border: `2px solid ${isEquipped ? '#9C27B0' : rarityData.color}`,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    position: 'relative',
+                                    opacity: isUnlocked ? 1 : 0.4
+                                }}>
+                                    <div style={{ fontSize: '2rem', filter: isUnlocked ? 'none' : 'grayscale(100%)' }}>
+                                        {rarityData.icon}
+                                    </div>
+                                    <div style={{ fontSize: '0.65rem', color: rarityData.color, fontWeight: 'bold', textAlign: 'center' }}>
+                                        {rarityData.name}
+                                    </div>
+                                    <div style={{ fontSize: '0.6rem', color: '#FFD700', textAlign: 'center' }}>
+                                        {grade}등급
+                                    </div>
+                                    <div style={{ fontSize: '0.55rem', color: '#FFD700', textAlign: 'center' }}>
+                                        ⚔️ +{effect}%
+                                    </div>
+                                    {isUnlocked && (
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'white' }}>
+                                            {count}개
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#FFD700', textAlign: 'center' }}>
-                                            {grade}등급
+                                    )}
+                                    {!isUnlocked && (
+                                        <div style={{ fontSize: '0.6rem', color: '#888' }}>
+                                            미획득
                                         </div>
-                                        <div style={{ fontSize: '0.65rem', color: '#FFD700', textAlign: 'center' }}>
-                                            ⚔️ +{effect}%
-                                        </div>
-                                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'white' }}>
-                                            보유: {count}개
-                                        </div>
+                                    )}
+                                    {isUnlocked && (
                                         <button
-                                            onClick={() => handleEquip(skinId)}
-                                            disabled={!isEquipped && count < 1}
+                                            onClick={() => handleEquip(skinId, isUnlocked)}
                                             style={{
                                                 width: '100%',
-                                                padding: '5px',
+                                                padding: '4px',
                                                 backgroundColor: isEquipped ? '#F44336' : '#4CAF50',
                                                 border: 'none',
                                                 borderRadius: '4px',
                                                 color: 'white',
-                                                fontSize: '0.75rem',
+                                                fontSize: '0.65rem',
                                                 cursor: 'pointer'
                                             }}
                                         >
                                             {isEquipped ? '해제' : '장착'}
                                         </button>
-                                        {canMerge && (
-                                            <button
-                                                onClick={() => handleMerge(skinId)}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '5px',
-                                                    backgroundColor: '#9C27B0',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    color: 'white',
-                                                    fontSize: '0.75rem',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                합성 (5→1)
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    )}
+                                    {canMerge && (
+                                        <button
+                                            onClick={() => handleMerge(skinId)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '4px',
+                                                backgroundColor: '#9C27B0',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                color: 'white',
+                                                fontSize: '0.65rem',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            합성
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
-
-                    {Object.keys(skins.inventory).filter(id => skins.inventory[id] > 0).length === 0 && (
-                        <div style={{ textAlign: 'center', color: '#888', padding: '40px 20px' }}>
-                            보유한 스킨이 없습니다. 소환해보세요!
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

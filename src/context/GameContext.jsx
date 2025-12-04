@@ -294,8 +294,11 @@ const gameReducer = (state, action) => {
             if (!loadedState.skins) {
                 loadedState.skins = {
                     inventory: {},
-                    equipped: null
+                    equipped: null,
+                    unlocked: []
                 };
+            } else if (!loadedState.skins.unlocked) {
+                loadedState.skins.unlocked = [];
             }
 
             return loadedState;
@@ -1357,6 +1360,7 @@ const gameReducer = (state, action) => {
             if (state.diamond < cost) return state;
 
             const newInventory = { ...state.skins.inventory };
+            const newUnlocked = [...(state.skins.unlocked || [])];
             const pullResults = [];
 
             // Rarity rates: 83.9, 10, 5, 1, 0.1
@@ -1385,6 +1389,11 @@ const gameReducer = (state, action) => {
 
                 newInventory[skinId] = (newInventory[skinId] || 0) + 1;
                 pullResults.push(skinId);
+
+                // Add to unlocked if not already there
+                if (!newUnlocked.includes(skinId)) {
+                    newUnlocked.push(skinId);
+                }
             }
 
             return {
@@ -1392,7 +1401,8 @@ const gameReducer = (state, action) => {
                 diamond: state.diamond - cost,
                 skins: {
                     ...state.skins,
-                    inventory: newInventory
+                    inventory: newInventory,
+                    unlocked: newUnlocked
                 },
                 lastPullResults: pullResults
             };

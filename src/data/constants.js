@@ -99,6 +99,8 @@ export const initialState = {
     artifacts: {
         attackBonus: { count: 0, level: 0 },
         critDamageBonus: { count: 0, level: 0 },
+        hyperCritDamageBonus: { count: 0, level: 0 },
+        megaCritDamageBonus: { count: 0, level: 0 },
         moveSpeed: { count: 0, level: 0 },   // New: Max +5 speed (1000Lv)
         attackRange: { count: 0, level: 0 }, // New: Max +40 range (1000Lv)
         goldBonus: { count: 0, level: 0 }
@@ -111,8 +113,9 @@ export const initialState = {
     },
     // Skin System
     skins: {
-        inventory: {}, // { [skinId]: count } e.g. 'skin_gatherer_common_1': 1
-        equipped: null // Currently equipped skin ID
+        inventory: {}, // { [skinId]: count } e.g. 'skin_common_1': 1
+        equipped: null, // Currently equipped skin ID
+        unlocked: [] // Array of unlocked skin IDs (permanent)
     },
     lastPullResults: null, // Array of pulled artifact IDs
     // Mushroom Collection System (400 total: 100 types × 4 rarities)
