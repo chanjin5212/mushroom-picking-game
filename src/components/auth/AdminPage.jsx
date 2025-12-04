@@ -2,14 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { formatNumber } from '../../utils/formatNumber';
 
+// 알파벳 숫자를 실제 숫자로 변환
+const parseAlphabetNumber = (str) => {
+    if (typeof str === 'number') return str;
+
+    const units = {
+        'K': 1e3, 'M': 1e6, 'B': 1e9, 'T': 1e12,
+        'AA': 1e15, 'AB': 1e18, 'AC': 1e21, 'AD': 1e24,
+        'AE': 1e27, 'AF': 1e30, 'AG': 1e33, 'AH': 1e36,
+        'AI': 1e39, 'AJ': 1e42, 'AK': 1e45, 'AL': 1e48
+    };
+
+    const match = String(str).match(/^([\d.]+)([A-Z]+)$/i);
+    if (match) {
+        const [, num, unit] = match;
+        const multiplier = units[unit.toUpperCase()] || 1;
+        return parseFloat(num) * multiplier;
+    }
+
+    return parseFloat(str) || 0;
+};
+
 const AdminPage = () => {
     const [users, setUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [editData, setEditData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(null); // ID of user being saved
-    const [error, setError] = useState(null);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         fetchUsers();
+
+        // body와 root 스타일 변경
+        const originalOverflow = document.body.style.overflow;
+        const originalPosition = document.body.style.position;
+        const originalHeight = document.body.style.height;
+
+        const root = document.getElementById('root');
+        const originalRootHeight = root?.style.height;
+        const originalRootDisplay = root?.style.display;
+
+        document.body.style.overflow = 'auto';
+        document.body.style.position = 'static';
+        document.body.style.height = 'auto';
+
+        if (root) {
+            root.style.height = 'auto';
+            root.style.display = 'block';
+        }
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            document.body.style.position = originalPosition;
+            document.body.style.height = originalHeight;
+
+            if (root) {
+                root.style.height = originalRootHeight || '';
+                root.style.display = originalRootDisplay || '';
+            }
+        };
     }, []);
 
     const fetchUsers = async () => {
@@ -21,66 +72,57 @@ const AdminPage = () => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            // Map data to editable format
-            const formattedUsers = data.map(user => ({
-                id: user.id,
-                username: user.username,
-                gold: user.game_data?.gold || 0,
-                diamond: user.game_data?.diamond || 0,
-                originalGold: user.game_data?.gold || 0,
-                originalDiamond: user.game_data?.diamond || 0,
-                game_data: user.game_data // Keep original game_data to preserve other fields
-            }));
-
-            setUsers(formattedUsers);
+            setUsers(data || []);
         } catch (err) {
             console.error('Error fetching users:', err);
-            setError('사용자 목록을 불러오는데 실패했습니다.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleInputChange = (id, field, value) => {
-        setUsers(users.map(user => {
-            if (user.id === id) {
-                return { ...user, [field]: Number(value) };
-            }
-            return user;
-        }));
+    const handleUserClick = (user) => {
+        setSelectedUser(user);
+        setEditData(JSON.parse(JSON.stringify(user.game_data || {})));
     };
 
-    const handleSave = async (user) => {
-        setSaving(user.id);
-        try {
-            const updatedGameData = {
-                ...user.game_data,
-                gold: user.gold,
-                diamond: user.diamond
-            };
+    const handleBack = () => {
+        setSelectedUser(null);
+        setEditData(null);
+    };
 
+    const handleChange = (path, value) => {
+        const keys = path.split('.');
+        const newData = { ...editData };
+        let current = newData;
+
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]]) current[keys[i]] = {};
+            current = current[keys[i]];
+        }
+
+        current[keys[keys.length - 1]] = value;
+        setEditData(newData);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
             const { error } = await supabase
                 .from('users')
-                .update({ game_data: updatedGameData })
-                .eq('id', user.id);
+                .update({ game_data: editData })
+                .eq('id', selectedUser.id);
 
             if (error) throw error;
 
-            // Update original values to reflect saved state
-            setUsers(users.map(u => {
-                if (u.id === user.id) {
-                    return { ...u, originalGold: u.gold, originalDiamond: u.diamond, game_data: updatedGameData };
-                }
-                return u;
-            }));
-
-            alert(`${user.username}님의 정보가 수정되었습니다.`);
+            alert('저장되었습니다!');
+            await fetchUsers();
+            setSelectedUser(null);
+            setEditData(null);
         } catch (err) {
-            console.error('Error updating user:', err);
-            alert('저장에 실패했습니다.');
+            console.error('Error saving:', err);
+            alert('저장 실패');
         } finally {
-            setSaving(null);
+            setSaving(false);
         }
     };
 
@@ -88,95 +130,189 @@ const AdminPage = () => {
         return <div style={{ padding: '20px', color: 'white' }}>로딩 중...</div>;
     }
 
+    // 사용자 목록 화면
+    if (!selectedUser) {
+        return (
+            <div style={{
+                padding: '20px',
+                backgroundColor: '#1a1a1a',
+                minHeight: '100vh',
+                color: 'white'
+            }}>
+                <h1 style={{ marginBottom: '20px' }}>🛠️ 관리자 페이지</h1>
+                <div style={{ display: 'grid', gap: '10px', maxWidth: '600px' }}>
+                    {users.map(user => (
+                        <div
+                            key={user.id}
+                            onClick={() => handleUserClick(user)}
+                            style={{
+                                padding: '15px',
+                                backgroundColor: '#2a2a2a',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#3a3a3a'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2a2a2a'}
+                        >
+                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{user.username}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
+                                ID: {user.id.substring(0, 8)}...
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // 사용자 상세 편집 화면
+    const InputField = ({ label, path, type = 'text', isAlphabetNumber = false }) => {
+        const keys = path.split('.');
+        let value = editData;
+        for (const key of keys) {
+            value = value?.[key];
+        }
+
+        return (
+            <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', color: '#aaa', fontSize: '0.9rem' }}>
+                    {label}
+                </label>
+                <input
+                    type={isAlphabetNumber ? 'text' : type}
+                    value={value || ''}
+                    onChange={(e) => {
+                        let val = e.target.value;
+                        if (isAlphabetNumber) {
+                            val = parseAlphabetNumber(val);
+                        } else if (type === 'number') {
+                            val = Number(val);
+                        }
+                        handleChange(path, val);
+                    }}
+                    placeholder={isAlphabetNumber ? '예: 100K, 1M, 1AL' : ''}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        backgroundColor: '#2a2a2a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: 'white',
+                        fontSize: '1rem'
+                    }}
+                />
+                {isAlphabetNumber && value && (
+                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
+                        = {formatNumber(value)}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div style={{
             padding: '20px',
             backgroundColor: '#1a1a1a',
             minHeight: '100vh',
-            color: 'white',
-            fontFamily: 'Arial, sans-serif'
+            color: 'white'
         }}>
-            <h1 style={{ marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-                🛠️ 관리자 페이지
-            </h1>
+            <button
+                onClick={handleBack}
+                style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    marginBottom: '20px'
+                }}
+            >
+                ← 목록으로
+            </button>
 
-            {error && <div style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}
+            <h1 style={{ marginBottom: '10px' }}>{selectedUser.username}</h1>
+            <p style={{ color: '#888', marginBottom: '30px' }}>ID: {selectedUser.id}</p>
 
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-                    <thead>
-                        <tr style={{ backgroundColor: '#333', textAlign: 'left' }}>
-                            <th style={{ padding: '12px', borderBottom: '1px solid #444' }}>Username</th>
-                            <th style={{ padding: '12px', borderBottom: '1px solid #444' }}>Gold</th>
-                            <th style={{ padding: '12px', borderBottom: '1px solid #444' }}>Diamond</th>
-                            <th style={{ padding: '12px', borderBottom: '1px solid #444' }}>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {users.map(user => {
-                            const isModified = user.gold !== user.originalGold || user.diamond !== user.originalDiamond;
+            <div style={{ maxWidth: '800px' }}>
+                <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px' }}>기본 정보</h2>
+                <InputField label="골드 (알파벳 입력 가능)" path="gold" isAlphabetNumber={true} />
+                <InputField label="다이아몬드 (알파벳 입력 가능)" path="diamond" isAlphabetNumber={true} />
+                <InputField label="무기 레벨" path="weaponLevel" type="number" />
 
-                            return (
-                                <tr key={user.id} style={{ borderBottom: '1px solid #2a2a2a' }}>
-                                    <td style={{ padding: '12px' }}>
-                                        <div style={{ fontWeight: 'bold' }}>{user.username}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#666' }}>{user.id.substring(0, 8)}...</div>
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        <input
-                                            type="number"
-                                            value={user.gold}
-                                            onChange={(e) => handleInputChange(user.id, 'gold', e.target.value)}
-                                            style={{
-                                                background: '#222',
-                                                border: '1px solid #444',
-                                                color: '#ffd700',
-                                                padding: '8px',
-                                                borderRadius: '4px',
-                                                width: '150px'
-                                            }}
-                                        />
-                                        <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '4px' }}>
-                                            {formatNumber(user.gold)}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        <input
-                                            type="number"
-                                            value={user.diamond}
-                                            onChange={(e) => handleInputChange(user.id, 'diamond', e.target.value)}
-                                            style={{
-                                                background: '#222',
-                                                border: '1px solid #444',
-                                                color: '#00bfff',
-                                                padding: '8px',
-                                                borderRadius: '4px',
-                                                width: '100px'
-                                            }}
-                                        />
-                                    </td>
-                                    <td style={{ padding: '12px' }}>
-                                        <button
-                                            onClick={() => handleSave(user)}
-                                            disabled={!isModified || saving === user.id}
-                                            style={{
-                                                padding: '8px 16px',
-                                                backgroundColor: isModified ? '#4CAF50' : '#444',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                cursor: isModified ? 'pointer' : 'default',
-                                                opacity: (isModified && saving !== user.id) ? 1 : 0.5
-                                            }}
-                                        >
-                                            {saving === user.id ? '저장 중...' : '저장'}
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>스탯 레벨</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <InputField label="치명타 확률 레벨" path="statLevels.critChance" type="number" />
+                    <InputField label="치명타 데미지 레벨" path="statLevels.critDamage" type="number" />
+                    <InputField label="하이퍼 확률 레벨" path="statLevels.hyperCritChance" type="number" />
+                    <InputField label="하이퍼 데미지 레벨" path="statLevels.hyperCritDamage" type="number" />
+                    <InputField label="메가 확률 레벨" path="statLevels.megaCritChance" type="number" />
+                    <InputField label="메가 데미지 레벨" path="statLevels.megaCritDamage" type="number" />
+                    <InputField label="기가 확률 레벨" path="statLevels.gigaCritChance" type="number" />
+                    <InputField label="기가 데미지 레벨" path="statLevels.gigaCritDamage" type="number" />
+                    <InputField label="테라 확률 레벨" path="statLevels.teraCritChance" type="number" />
+                    <InputField label="테라 데미지 레벨" path="statLevels.teraCritDamage" type="number" />
+                    <InputField label="페타 확률 레벨" path="statLevels.petaCritChance" type="number" />
+                    <InputField label="페타 데미지 레벨" path="statLevels.petaCritDamage" type="number" />
+                    <InputField label="엑사 확률 레벨" path="statLevels.exaCritChance" type="number" />
+                    <InputField label="엑사 데미지 레벨" path="statLevels.exaCritDamage" type="number" />
+                    <InputField label="제타 확률 레벨" path="statLevels.zettaCritChance" type="number" />
+                    <InputField label="제타 데미지 레벨" path="statLevels.zettaCritDamage" type="number" />
+                    <InputField label="요타 확률 레벨" path="statLevels.yottaCritChance" type="number" />
+                    <InputField label="요타 데미지 레벨" path="statLevels.yottaCritDamage" type="number" />
+                    <InputField label="론나 확률 레벨" path="statLevels.ronnaCritChance" type="number" />
+                    <InputField label="론나 데미지 레벨" path="statLevels.ronnaCritDamage" type="number" />
+                    <InputField label="퀘타 확률 레벨" path="statLevels.quettaCritChance" type="number" />
+                    <InputField label="퀘타 데미지 레벨" path="statLevels.quettaCritDamage" type="number" />
+                    <InputField label="제노 확률 레벨" path="statLevels.xenoCritChance" type="number" />
+                    <InputField label="제노 데미지 레벨" path="statLevels.xenoCritDamage" type="number" />
+                    <InputField label="울티마 확률 레벨" path="statLevels.ultimaCritChance" type="number" />
+                    <InputField label="울티마 데미지 레벨" path="statLevels.ultimaCritDamage" type="number" />
+                    <InputField label="옴니 확률 레벨" path="statLevels.omniCritChance" type="number" />
+                    <InputField label="옴니 데미지 레벨" path="statLevels.omniCritDamage" type="number" />
+                    <InputField label="앱솔루트 확률 레벨" path="statLevels.absoluteCritChance" type="number" />
+                    <InputField label="앱솔루트 데미지 레벨" path="statLevels.absoluteCritDamage" type="number" />
+                    <InputField label="이동속도 레벨" path="statLevels.moveSpeed" type="number" />
+                    <InputField label="공격범위 레벨" path="statLevels.attackRange" type="number" />
+                </div>
+
+                <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>유물</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <InputField label="공격력 유물 레벨" path="artifacts.attackBonus.level" type="number" />
+                    <InputField label="치명타 데미지 유물 레벨" path="artifacts.critDamageBonus.level" type="number" />
+                    <InputField label="이동속도 유물 레벨" path="artifacts.moveSpeed.level" type="number" />
+                    <InputField label="공격범위 유물 레벨" path="artifacts.attackRange.level" type="number" />
+                    <InputField label="골드 보너스 유물 레벨" path="artifacts.goldBonus.level" type="number" />
+                </div>
+
+                <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>스테이지</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <InputField label="현재 챕터" path="currentStage.chapter" type="number" />
+                    <InputField label="현재 스테이지" path="currentStage.stage" type="number" />
+                    <InputField label="최고 챕터" path="maxStage.chapter" type="number" />
+                    <InputField label="최고 스테이지" path="maxStage.stage" type="number" />
+                </div>
+
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    style={{
+                        marginTop: '30px',
+                        padding: '15px 40px',
+                        backgroundColor: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '1.1rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        width: '100%'
+                    }}
+                >
+                    {saving ? '저장 중...' : '💾 저장하기'}
+                </button>
             </div>
         </div>
     );

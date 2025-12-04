@@ -30,7 +30,11 @@ export const weaponNames = ['맨손', '나뭇가지', '녹슨 칼', '철검', '�
 // 무기 생성 함수
 export const generateWeapons = () => {
     const weapons = {};
-    for (let i = 0; i < 200; i++) {
+
+    // 접두사 정의 (100단계마다)
+    const prefixes = ['', '[초월]', '[신화]', '[태초]'];
+
+    for (let i = 0; i < 400; i++) {
         // MASSIVE damage scaling: 1, 10, 100, 1000, 10000, 100000...
         // Changed exponent from 0.5 to 0.7 to ensure next tier is always stronger than previous tier max level
         const baseDamage = i === 0 ? 1 : Math.floor(Math.pow(10, i * 0.7) * 10);
@@ -41,17 +45,16 @@ export const generateWeapons = () => {
 
         let name, icon;
 
-        if (i < 100) {
-            // 0-99: Normal weapons
-            name = weaponNames[i] || `무기 ${i + 1}`;
-            icon = weaponIcons[i % weaponIcons.length];
-        } else {
-            // 100-199: Transcended weapons
-            const baseIndex = i % 100;
-            const baseName = weaponNames[baseIndex] || `무기 ${baseIndex + 1}`;
-            name = `[초월] ${baseName}`;
-            icon = weaponIcons[baseIndex % weaponIcons.length];
-        }
+        // 100단계마다 접두사 변경
+        const tier = Math.floor(i / 100); // 0, 1, 2, 3
+        const baseIndex = i % 100;
+        const prefix = prefixes[tier] || '';
+
+        const baseName = weaponNames[baseIndex] || `무기 ${baseIndex + 1}`;
+        icon = weaponIcons[baseIndex % weaponIcons.length];
+
+        // 접두사가 있으면 추가, 없으면 그대로
+        name = prefix ? `${prefix} ${baseName}` : baseName;
 
         weapons[i] = {
             icon: icon,

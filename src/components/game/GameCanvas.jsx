@@ -52,6 +52,10 @@ const GameCanvas = () => {
     const [isAutoHunting, setIsAutoHunting] = useState(false);
     const autoHuntTargetRef = useRef(null);
 
+    // Virtual Joystick State
+    const [virtualJoystick, setVirtualJoystick] = useState(null); // { baseX, baseY, currentX, currentY }
+    const touchIdRef = useRef(null);
+
     // Chat State
     const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -282,6 +286,56 @@ const GameCanvas = () => {
             window.removeEventListener('keyup', handleKeyUp);
         };
     }, []);
+
+    // Virtual Joystick Handlers
+    const handlePointerDown = (e) => {
+        if (isChatOpen) return;
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const x = e.clientX || e.touches?.[0]?.clientX;
+        const y = e.clientY || e.touches?.[0]?.clientY;
+
+        if (x && y) {
+            const baseX = x - rect.left;
+            const baseY = y - rect.top;
+            setVirtualJoystick({ baseX, baseY, currentX: baseX, currentY: baseY });
+            touchIdRef.current = e.pointerId || e.touches?.[0]?.identifier;
+        }
+    };
+
+    const handlePointerMove = (e) => {
+        if (!virtualJoystick || isChatOpen) return;
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const x = e.clientX || e.touches?.[0]?.clientX;
+        const y = e.clientY || e.touches?.[0]?.clientY;
+
+        if (x && y) {
+            const currentX = x - rect.left;
+            const currentY = y - rect.top;
+            setVirtualJoystick(prev => ({ ...prev, currentX, currentY }));
+
+            // Calculate joystick vector
+            const dx = currentX - virtualJoystick.baseX;
+            const dy = currentY - virtualJoystick.baseY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = 50;
+
+            if (distance > 0) {
+                const normalizedX = dx / Math.max(distance, maxDistance);
+                const normalizedY = dy / Math.max(distance, maxDistance);
+                joystickRef.current = { x: normalizedX, y: normalizedY };
+            }
+        }
+    };
+
+    const handlePointerUp = () => {
+        setVirtualJoystick(null);
+        touchIdRef.current = null;
+        joystickRef.current = { x: 0, y: 0 };
+    };
 
     // Helper to update DOM
     const updatePlayerDOM = () => {
@@ -664,12 +718,22 @@ const GameCanvas = () => {
                     }
                 }
 
-                // Unified Attack Logic (Manual + Auto)
+                // Auto Attack Logic - Always attack if mushroom in range
                 const now = Date.now();
                 const attackInterval = 100; // Fixed 10 attacks per second
 
                 if (now - lastAttackTimeRef.current >= attackInterval) {
-                    if (isManualAttackingRef.current || shouldAutoAttack) {
+                    // Check if any mushroom is in range
+                    const inRange = currentState.mushrooms.some(m => {
+                        if (m.isDead) return false;
+                        const mX = m.x + (m.type === 'boss' ? 50 : 25);
+                        const mY = m.y + (m.type === 'boss' ? 50 : 25);
+                        const dist = Math.hypot((x + 20) - mX, (y + 20) - mY);
+                        const range = m.type === 'boss' ? 120 : 80;
+                        return dist <= range;
+                    });
+
+                    if (inRange) {
                         performAttack();
                         lastAttackTimeRef.current = now;
                     }
@@ -771,6 +835,10 @@ const GameCanvas = () => {
                 overflow: 'hidden',
                 touchAction: 'none'
             }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
         >
             {state.isLoading && <LoadingScreen />}
 
@@ -990,36 +1058,39 @@ const GameCanvas = () => {
                 })
             }
 
-            <Joystick onMove={(vec) => joystickRef.current = vec} />
-
-            {/* Attack Button */}
-            <button
-                onMouseDown={(e) => { e.preventDefault(); startManualAttack(); }}
-                onMouseUp={(e) => { e.preventDefault(); stopManualAttack(); }}
-                onMouseLeave={(e) => { e.preventDefault(); stopManualAttack(); }}
-                onTouchStart={(e) => { e.preventDefault(); startManualAttack(); }}
-                onTouchEnd={(e) => { e.preventDefault(); stopManualAttack(); }}
-                style={{
-                    position: 'absolute',
-                    bottom: 40,
-                    right: 40,
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '50%',
-                    backgroundColor: state.currentScene === 'village' ? '#ccc' : 'var(--color-primary)',
-                    border: '4px solid white',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    fontSize: '2rem',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    zIndex: 100
-                }}
-            >
-                ⚔️
-            </button>
+            {/* Virtual Joystick */}
+            {
+                virtualJoystick && (
+                    <>
+                        {/* Base Circle */}
+                        <div style={{
+                            position: 'absolute',
+                            left: virtualJoystick.baseX - 50,
+                            top: virtualJoystick.baseY - 50,
+                            width: '100px',
+                            height: '100px',
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            border: '2px solid rgba(255, 255, 255, 0.5)',
+                            pointerEvents: 'none',
+                            zIndex: 50
+                        }} />
+                        {/* Stick */}
+                        <div style={{
+                            position: 'absolute',
+                            left: virtualJoystick.currentX - 25,
+                            top: virtualJoystick.currentY - 25,
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                            border: '2px solid rgba(255, 255, 255, 0.8)',
+                            pointerEvents: 'none',
+                            zIndex: 51
+                        }} />
+                    </>
+                )
+            }
 
             {/* Auto Hunt Toggle Button */}
             {
@@ -1028,34 +1099,35 @@ const GameCanvas = () => {
                         onClick={() => {
                             const newState = !isAutoHunting;
                             setIsAutoHunting(newState);
-                            // Reset target when starting to ensure we find the nearest one from CURRENT position
                             if (newState) {
                                 autoHuntTargetRef.current = null;
                             }
                         }}
                         style={{
-                            position: 'absolute',
-                            bottom: 130, // Above attack button
-                            right: 50,
-                            width: '60px',
-                            height: '60px',
+                            position: 'fixed',
+                            bottom: '45px', // 5px above the BottomPanel handle (40px)
+                            right: '10px',
+                            width: '45px',
+                            height: '45px',
                             borderRadius: '50%',
                             backgroundColor: isAutoHunting ? '#4caf50' : 'rgba(0,0,0,0.5)',
-                            border: '3px solid white',
+                            border: '2px solid white',
                             color: 'white',
                             fontWeight: 'bold',
-                            fontSize: '0.8rem',
+                            fontSize: '0.65rem',
                             cursor: 'pointer',
                             boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                            zIndex: 100,
+                            zIndex: 999,
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'center',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            padding: '2px',
+                            transition: 'bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1)' // Smooth transition matching BottomPanel
                         }}
                     >
-                        <span>AUTO</span>
-                        <span style={{ fontSize: '0.7rem' }}>{isAutoHunting ? 'ON' : 'OFF'}</span>
+                        <span style={{ fontSize: '0.6rem' }}>AUTO</span>
+                        <span style={{ fontSize: '0.5rem' }}>{isAutoHunting ? 'ON' : 'OFF'}</span>
                     </button>
                 )
             }
