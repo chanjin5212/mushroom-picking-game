@@ -51,8 +51,14 @@ const WeaponPanel = () => {
     };
 
     const handleEvolve = () => {
-        if (nextWeapon && state.gold >= evolveCost) {
+        const currentState = stateRef.current;
+        const nextWeapon = WEAPONS[currentState.currentWeaponId + 1];
+        const evolveCost = nextWeapon ? nextWeapon.cost : 0;
+
+        if (nextWeapon && currentState.gold >= evolveCost) {
             dispatch({ type: 'EVOLVE_WEAPON' });
+        } else {
+            stopHold();
         }
     };
 
@@ -99,6 +105,11 @@ const WeaponPanel = () => {
             stopHold();
         }
     }, [state.weaponLevel]);
+
+    // Stop hold when weapon ID changes (successful evolution)
+    useEffect(() => {
+        stopHold();
+    }, [state.currentWeaponId]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -148,7 +159,11 @@ const WeaponPanel = () => {
                         <div>비용: <span style={{ color: '#ffeb3b' }}>{formatNumber(evolveCost)} G</span></div>
                     </div>
                     <button
-                        onClick={handleEvolve}
+                        onMouseDown={() => startHold(handleEvolve)}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        onTouchStart={() => startHold(handleEvolve)}
+                        onTouchEnd={stopHold}
                         disabled={state.gold < evolveCost}
                         style={{
                             width: '100%',
@@ -162,7 +177,7 @@ const WeaponPanel = () => {
                             cursor: state.gold >= evolveCost ? 'pointer' : 'not-allowed'
                         }}
                     >
-                        무기 진화
+                        무기 진화 (누르고 있으면 반복)
                     </button>
                 </div>
             ) : (

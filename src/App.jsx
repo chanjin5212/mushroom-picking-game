@@ -6,6 +6,7 @@ import HUD from './components/hud/HUD';
 import BottomPanel from './components/panels/BottomPanel';
 import PortalMenu from './components/modals/PortalMenu';
 import AdminPage from './components/auth/AdminPage';
+import PreRegister from './components/PreRegister';
 
 function GameContent() {
   const { state } = useGame();
@@ -22,13 +23,14 @@ function GameContent() {
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: '#1a1a1a',
-      overflow: 'auto'
+      overflow: 'hidden'
     }}>
       <div style={{
         position: 'relative',
-        width: '430px',
-        height: '932px',
-        flexShrink: 0,
+        width: 'min(100vw, calc(100vh * 9 / 16))',
+        height: 'min(100vh, calc(100vw * 16 / 9))',
+        maxWidth: '430px',
+        maxHeight: '932px',
         backgroundColor: '#fff',
         overflow: 'hidden',
         boxShadow: '0 0 50px rgba(0,0,0,0.5)'
@@ -45,8 +47,13 @@ function GameContent() {
 function App() {
   // Simple routing
   const path = window.location.pathname;
+
   if (path === '/admin') {
     return <AdminPage />;
+  }
+
+  if (path === '/pre-register') {
+    return <PreRegister />;
   }
 
   return (
