@@ -392,18 +392,18 @@ const ArtifactPanel = () => {
                                         onMouseLeave={stopHold}
                                         onTouchStart={() => startHold(() => handleUpgrade(type.id))}
                                         onTouchEnd={stopHold}
-                                        disabled={artifact.count < 1}
+                                        disabled={artifact.count < 1 || artifact.level >= 1000}
                                         style={{
                                             padding: '5px 10px',
-                                            backgroundColor: artifact.count >= 1 ? '#FF9800' : '#555',
+                                            backgroundColor: artifact.level >= 1000 ? '#666' : (artifact.count >= 1 ? '#FF9800' : '#555'),
                                             border: 'none',
                                             borderRadius: '4px',
                                             color: 'white',
-                                            cursor: artifact.count >= 1 ? 'pointer' : 'not-allowed',
+                                            cursor: (artifact.count >= 1 && artifact.level < 1000) ? 'pointer' : 'not-allowed',
                                             fontSize: '0.8rem'
                                         }}
                                     >
-                                        강화 ({successChance}%)
+                                        {artifact.level >= 1000 ? '최대 레벨' : `강화 (${successChance}%)`}
                                     </button>
                                     {artifact.level >= 1000 && artifact.count > 0 && (
                                         <button
