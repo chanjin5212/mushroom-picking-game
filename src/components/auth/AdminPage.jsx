@@ -23,6 +23,51 @@ const parseAlphabetNumber = (str) => {
     return parseFloat(str) || 0;
 };
 
+// InputField 컴포넌트 (외부로 이동하여 포커스 문제 해결)
+const InputField = ({ label, path, type = 'text', isAlphabetNumber = false, editData, handleChange }) => {
+    const keys = path.split('.');
+    let value = editData;
+    for (const key of keys) {
+        value = value?.[key];
+    }
+
+    const displayValue = value || '';
+
+    return (
+        <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', color: '#aaa', fontSize: '0.9rem' }}>
+                {label}
+            </label>
+            <input
+                type="text"
+                value={displayValue}
+                onChange={(e) => {
+                    let val = e.target.value;
+                    if (type === 'number' && !isAlphabetNumber) {
+                        val = Number(val);
+                    }
+                    handleChange(path, val);
+                }}
+                placeholder={isAlphabetNumber ? '예: 100K, 1M, 1AL' : ''}
+                style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#2a2a2a',
+                    border: '1px solid #444',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '1rem'
+                }}
+            />
+            {isAlphabetNumber && value && (
+                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
+                    실제 저장될 값: {parseAlphabetNumber(value).toExponential(2)}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const AdminPage = () => {
     const [users, setUsers] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -82,7 +127,13 @@ const AdminPage = () => {
 
     const handleUserClick = (user) => {
         setSelectedUser(user);
-        setEditData(JSON.parse(JSON.stringify(user.game_data || {})));
+        const data = JSON.parse(JSON.stringify(user.game_data || {}));
+
+        // 포맷팅이 필요한 필드들을 문자열로 변환
+        if (data.gold) data.gold = formatNumber(data.gold);
+        if (data.diamond) data.diamond = formatNumber(data.diamond);
+
+        setEditData(data);
     };
 
     const handleBack = () => {
@@ -107,9 +158,16 @@ const AdminPage = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
+            // 저장 전 데이터 파싱
+            const dataToSave = JSON.parse(JSON.stringify(editData));
+
+            // 문자열로 된 필드들을 숫자로 변환
+            if (dataToSave.gold) dataToSave.gold = parseAlphabetNumber(dataToSave.gold);
+            if (dataToSave.diamond) dataToSave.diamond = parseAlphabetNumber(dataToSave.diamond);
+
             const { error } = await supabase
                 .from('users')
-                .update({ game_data: editData })
+                .update({ game_data: dataToSave })
                 .eq('id', selectedUser.id);
 
             if (error) throw error;
@@ -166,50 +224,7 @@ const AdminPage = () => {
         );
     }
 
-    // 사용자 상세 편집 화면
-    const InputField = ({ label, path, type = 'text', isAlphabetNumber = false }) => {
-        const keys = path.split('.');
-        let value = editData;
-        for (const key of keys) {
-            value = value?.[key];
-        }
 
-        return (
-            <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#aaa', fontSize: '0.9rem' }}>
-                    {label}
-                </label>
-                <input
-                    type={isAlphabetNumber ? 'text' : type}
-                    value={value || ''}
-                    onChange={(e) => {
-                        let val = e.target.value;
-                        if (isAlphabetNumber) {
-                            val = parseAlphabetNumber(val);
-                        } else if (type === 'number') {
-                            val = Number(val);
-                        }
-                        handleChange(path, val);
-                    }}
-                    placeholder={isAlphabetNumber ? '예: 100K, 1M, 1AL' : ''}
-                    style={{
-                        width: '100%',
-                        padding: '10px',
-                        backgroundColor: '#2a2a2a',
-                        border: '1px solid #444',
-                        borderRadius: '4px',
-                        color: 'white',
-                        fontSize: '1rem'
-                    }}
-                />
-                {isAlphabetNumber && value && (
-                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
-                        = {formatNumber(value)}
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     return (
         <div style={{
@@ -238,61 +253,61 @@ const AdminPage = () => {
 
             <div style={{ maxWidth: '800px' }}>
                 <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px' }}>기본 정보</h2>
-                <InputField label="골드 (알파벳 입력 가능)" path="gold" isAlphabetNumber={true} />
-                <InputField label="다이아몬드 (알파벳 입력 가능)" path="diamond" isAlphabetNumber={true} />
-                <InputField label="무기 레벨" path="weaponLevel" type="number" />
+                <InputField label="골드 (알파벳 입력 가능)" path="gold" isAlphabetNumber={true} editData={editData} handleChange={handleChange} />
+                <InputField label="다이아몬드 (알파벳 입력 가능)" path="diamond" isAlphabetNumber={true} editData={editData} handleChange={handleChange} />
+                <InputField label="무기 레벨" path="weaponLevel" type="number" editData={editData} handleChange={handleChange} />
 
                 <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>스탯 레벨</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <InputField label="치명타 확률 레벨" path="statLevels.critChance" type="number" />
-                    <InputField label="치명타 데미지 레벨" path="statLevels.critDamage" type="number" />
-                    <InputField label="하이퍼 확률 레벨" path="statLevels.hyperCritChance" type="number" />
-                    <InputField label="하이퍼 데미지 레벨" path="statLevels.hyperCritDamage" type="number" />
-                    <InputField label="메가 확률 레벨" path="statLevels.megaCritChance" type="number" />
-                    <InputField label="메가 데미지 레벨" path="statLevels.megaCritDamage" type="number" />
-                    <InputField label="기가 확률 레벨" path="statLevels.gigaCritChance" type="number" />
-                    <InputField label="기가 데미지 레벨" path="statLevels.gigaCritDamage" type="number" />
-                    <InputField label="테라 확률 레벨" path="statLevels.teraCritChance" type="number" />
-                    <InputField label="테라 데미지 레벨" path="statLevels.teraCritDamage" type="number" />
-                    <InputField label="페타 확률 레벨" path="statLevels.petaCritChance" type="number" />
-                    <InputField label="페타 데미지 레벨" path="statLevels.petaCritDamage" type="number" />
-                    <InputField label="엑사 확률 레벨" path="statLevels.exaCritChance" type="number" />
-                    <InputField label="엑사 데미지 레벨" path="statLevels.exaCritDamage" type="number" />
-                    <InputField label="제타 확률 레벨" path="statLevels.zettaCritChance" type="number" />
-                    <InputField label="제타 데미지 레벨" path="statLevels.zettaCritDamage" type="number" />
-                    <InputField label="요타 확률 레벨" path="statLevels.yottaCritChance" type="number" />
-                    <InputField label="요타 데미지 레벨" path="statLevels.yottaCritDamage" type="number" />
-                    <InputField label="론나 확률 레벨" path="statLevels.ronnaCritChance" type="number" />
-                    <InputField label="론나 데미지 레벨" path="statLevels.ronnaCritDamage" type="number" />
-                    <InputField label="퀘타 확률 레벨" path="statLevels.quettaCritChance" type="number" />
-                    <InputField label="퀘타 데미지 레벨" path="statLevels.quettaCritDamage" type="number" />
-                    <InputField label="제노 확률 레벨" path="statLevels.xenoCritChance" type="number" />
-                    <InputField label="제노 데미지 레벨" path="statLevels.xenoCritDamage" type="number" />
-                    <InputField label="울티마 확률 레벨" path="statLevels.ultimaCritChance" type="number" />
-                    <InputField label="울티마 데미지 레벨" path="statLevels.ultimaCritDamage" type="number" />
-                    <InputField label="옴니 확률 레벨" path="statLevels.omniCritChance" type="number" />
-                    <InputField label="옴니 데미지 레벨" path="statLevels.omniCritDamage" type="number" />
-                    <InputField label="앱솔루트 확률 레벨" path="statLevels.absoluteCritChance" type="number" />
-                    <InputField label="앱솔루트 데미지 레벨" path="statLevels.absoluteCritDamage" type="number" />
-                    <InputField label="이동속도 레벨" path="statLevels.moveSpeed" type="number" />
-                    <InputField label="공격범위 레벨" path="statLevels.attackRange" type="number" />
+                    <InputField label="치명타 확률 레벨" path="statLevels.critChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="치명타 데미지 레벨" path="statLevels.critDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="하이퍼 확률 레벨" path="statLevels.hyperCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="하이퍼 데미지 레벨" path="statLevels.hyperCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="메가 확률 레벨" path="statLevels.megaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="메가 데미지 레벨" path="statLevels.megaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="기가 확률 레벨" path="statLevels.gigaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="기가 데미지 레벨" path="statLevels.gigaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="테라 확률 레벨" path="statLevels.teraCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="테라 데미지 레벨" path="statLevels.teraCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="페타 확률 레벨" path="statLevels.petaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="페타 데미지 레벨" path="statLevels.petaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="엑사 확률 레벨" path="statLevels.exaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="엑사 데미지 레벨" path="statLevels.exaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="제타 확률 레벨" path="statLevels.zettaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="제타 데미지 레벨" path="statLevels.zettaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="요타 확률 레벨" path="statLevels.yottaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="요타 데미지 레벨" path="statLevels.yottaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="론나 확률 레벨" path="statLevels.ronnaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="론나 데미지 레벨" path="statLevels.ronnaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="퀘타 확률 레벨" path="statLevels.quettaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="퀘타 데미지 레벨" path="statLevels.quettaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="제노 확률 레벨" path="statLevels.xenoCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="제노 데미지 레벨" path="statLevels.xenoCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="울티마 확률 레벨" path="statLevels.ultimaCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="울티마 데미지 레벨" path="statLevels.ultimaCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="옴니 확률 레벨" path="statLevels.omniCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="옴니 데미지 레벨" path="statLevels.omniCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="앱솔루트 확률 레벨" path="statLevels.absoluteCritChance" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="앱솔루트 데미지 레벨" path="statLevels.absoluteCritDamage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="이동속도 레벨" path="statLevels.moveSpeed" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="공격범위 레벨" path="statLevels.attackRange" type="number" editData={editData} handleChange={handleChange} />
                 </div>
 
                 <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>유물</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <InputField label="공격력 유물 레벨" path="artifacts.attackBonus.level" type="number" />
-                    <InputField label="치명타 데미지 유물 레벨" path="artifacts.critDamageBonus.level" type="number" />
-                    <InputField label="이동속도 유물 레벨" path="artifacts.moveSpeed.level" type="number" />
-                    <InputField label="공격범위 유물 레벨" path="artifacts.attackRange.level" type="number" />
-                    <InputField label="골드 보너스 유물 레벨" path="artifacts.goldBonus.level" type="number" />
+                    <InputField label="공격력 유물 레벨" path="artifacts.attackBonus.level" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="치명타 데미지 유물 레벨" path="artifacts.critDamageBonus.level" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="이동속도 유물 레벨" path="artifacts.moveSpeed.level" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="공격범위 유물 레벨" path="artifacts.attackRange.level" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="골드 보너스 유물 레벨" path="artifacts.goldBonus.level" type="number" editData={editData} handleChange={handleChange} />
                 </div>
 
                 <h2 style={{ borderBottom: '1px solid #444', paddingBottom: '10px', marginBottom: '20px', marginTop: '40px' }}>스테이지</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <InputField label="현재 챕터" path="currentStage.chapter" type="number" />
-                    <InputField label="현재 스테이지" path="currentStage.stage" type="number" />
-                    <InputField label="최고 챕터" path="maxStage.chapter" type="number" />
-                    <InputField label="최고 스테이지" path="maxStage.stage" type="number" />
+                    <InputField label="현재 챕터" path="currentStage.chapter" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="현재 스테이지" path="currentStage.stage" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="최고 챕터" path="maxStage.chapter" type="number" editData={editData} handleChange={handleChange} />
+                    <InputField label="최고 스테이지" path="maxStage.stage" type="number" editData={editData} handleChange={handleChange} />
                 </div>
 
                 <button

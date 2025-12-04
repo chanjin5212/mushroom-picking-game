@@ -76,6 +76,25 @@ const PetPanel = () => {
         dispatch({ type: 'MERGE_PET', payload: { petId } });
     };
 
+    const handleMergeAll = () => {
+        // Find all pets that can be merged (count >= 5 and not mythic)
+        const mergeable = Object.entries(pets.inventory)
+            .filter(([petId, count]) => {
+                const [, rarity] = petId.split('_');
+                return count >= 5 && rarity !== 'mythic';
+            });
+
+        if (mergeable.length === 0) {
+            alert('합성 가능한 펛이 없습니다!');
+            return;
+        }
+
+        // Merge all mergeable pets
+        mergeable.forEach(([petId]) => {
+            dispatch({ type: 'MERGE_PET', payload: { petId } });
+        });
+    };
+
     const handleEquip = (petId) => {
         if (pets.equipped.includes(petId)) {
             dispatch({ type: 'UNEQUIP_PET', payload: { petId } });
@@ -243,7 +262,7 @@ const PetPanel = () => {
                         maxWidth: '500px',
                         display: 'flex',
                         flexDirection: 'column',
-                        maxHeight: '70vh'
+                        maxHeight: '80vh'
                     }}>
                         <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#FFD700', marginBottom: '20px', textAlign: 'center', flexShrink: 0 }}>
                             소환 결과
@@ -546,8 +565,25 @@ const PetPanel = () => {
             )}
 
             {/* Pet Inventory */}
-            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px' }}>
-                보유 펫 ({Object.keys(pets.inventory).length}종)
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                    보유 펫 ({Object.keys(pets.inventory).length}종)
+                </div>
+                <button
+                    onClick={handleMergeAll}
+                    style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#9C27B0',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    모두 합성
+                </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
                 {Object.entries(pets.inventory)
