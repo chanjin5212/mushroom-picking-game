@@ -18,36 +18,38 @@ export const initialState = {
     lastEvolveResult: null,
     // New Stats
     criticalChance: 0, // 0%
-    criticalDamage: 150, // 150%
-    hyperCriticalChance: 0, // 0% (unlocked at 50% crit)
-    hyperCriticalDamage: 200, // 200% (multiplies on top of crit)
-    megaCriticalChance: 0, // 0% (unlocked at 100% hyper crit)
-    megaCriticalDamage: 3000, // 3000% (multiplies on top of hyper crit)
+    criticalDamage: 150, // x1.5
+    hyperCriticalChance: 0, // 0%
+    hyperCriticalDamage: 200, // x2.0
+    megaCriticalChance: 0, // 0%
+    megaCriticalDamage: 250, // x2.5
     // New Tiers
     gigaCriticalChance: 0,
-    gigaCriticalDamage: 150,
+    gigaCriticalDamage: 300, // x3.0
     teraCriticalChance: 0,
-    teraCriticalDamage: 150,
+    teraCriticalDamage: 350, // x3.5
     petaCriticalChance: 0,
-    petaCriticalDamage: 150,
+    petaCriticalDamage: 400, // x4.0
     exaCriticalChance: 0,
-    exaCriticalDamage: 150,
+    exaCriticalDamage: 450, // x4.5
     zettaCriticalChance: 0,
-    zettaCriticalDamage: 150,
+    zettaCriticalDamage: 500, // x5.0
     yottaCriticalChance: 0,
-    yottaCriticalDamage: 150,
+    yottaCriticalDamage: 550, // x5.5
     ronnaCriticalChance: 0,
-    ronnaCriticalDamage: 150,
+    ronnaCriticalDamage: 600, // x6.0
     quettaCriticalChance: 0,
-    quettaCriticalDamage: 150,
+    quettaCriticalDamage: 650, // x6.5
     xenoCriticalChance: 0,
-    xenoCriticalDamage: 150,
+    xenoCriticalDamage: 700, // x7.0
     ultimaCriticalChance: 0,
-    ultimaCriticalDamage: 150,
+    ultimaCriticalDamage: 800, // x8.0
     omniCriticalChance: 0,
-    omniCriticalDamage: 150,
+    omniCriticalDamage: 900, // x9.0
     absoluteCriticalChance: 0,
-    absoluteCriticalDamage: 150,
+    absoluteCriticalDamage: 1000, // x10.0
+    infinityCriticalChance: 0,
+    infinityCriticalDamage: 1500, // x15.0
     statLevels: {
         critChance: 0,
         critDamage: 0,
@@ -80,6 +82,8 @@ export const initialState = {
         omniCritDamage: 0,
         absoluteCritChance: 0,
         absoluteCritDamage: 0,
+        infinityCritChance: 0,
+        infinityCritDamage: 0,
         moveSpeed: 0,
         attackRange: 0
     },

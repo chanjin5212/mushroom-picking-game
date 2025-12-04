@@ -77,6 +77,21 @@ const ArtifactPanel = () => {
         dispatch({ type: 'UPGRADE_ARTIFACT', payload: { type } });
     };
 
+    const handleSell = (type) => {
+        const artifact = artifacts[type];
+
+        if (artifact.level < 1000 || artifact.count < 1) {
+            return;
+        }
+
+        const sellCount = artifact.count;
+        const diamondGain = sellCount * 100;
+
+        if (window.confirm(`${sellCount}개의 유물을 판매하여 💎${diamondGain}를 받으시겠습니까?`)) {
+            dispatch({ type: 'SELL_ARTIFACT', payload: { type, count: sellCount } });
+        }
+    };
+
     const startHold = (action) => {
         // Execute immediately
         action();
@@ -390,6 +405,23 @@ const ArtifactPanel = () => {
                                     >
                                         강화 ({successChance}%)
                                     </button>
+                                    {artifact.level >= 1000 && artifact.count > 0 && (
+                                        <button
+                                            onClick={() => handleSell(type.id)}
+                                            style={{
+                                                padding: '5px 10px',
+                                                backgroundColor: '#4CAF50',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                color: 'white',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8rem',
+                                                marginTop: '3px'
+                                            }}
+                                        >
+                                            판매 (💎{artifact.count * 100})
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

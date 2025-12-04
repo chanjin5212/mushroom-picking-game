@@ -19,11 +19,8 @@ const StatsPanel = () => {
 
     // Tiered Cost Calculation Helper (for Damage stats)
     const calculateTieredCost = (baseCost, level) => {
-        let exponent = 1.1; // Reduced from 1.2/1.5/2.0 to 1.1 for better scaling
-        if (level >= 10000) exponent = 1.2;
-        else if (level >= 1000) exponent = 1.15;
-
-        return Math.floor(baseCost * Math.pow(level + 1, exponent));
+        // Level^3 scaling for critical damage to allow max level before next tier
+        return Math.floor(baseCost * Math.pow(level + 1, 3));
     };
 
     // Linear Cost Calculation Helper (for Chance stats)
@@ -47,15 +44,127 @@ const StatsPanel = () => {
             isTiered = false;
         } else if (statType === 'critDamage') {
             maxLevel = 100000;
-            baseCost = 800;
+            baseCost = 1; // 1/1000 of Normal Chance Cost (1000)
             isTiered = true;
         } else if (statType === 'hyperCritChance') {
             maxLevel = 1000;
-            baseCost = 10000000; // 10M
+            baseCost = 1e15; // 1,000C
             isTiered = false;
         } else if (statType === 'hyperCritDamage') {
             maxLevel = 100000;
-            baseCost = 100000000; // 100M
+            baseCost = 1e12; // 1C
+            isTiered = true;
+        } else if (statType === 'megaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e30; // 100G
+            isTiered = false;
+        } else if (statType === 'megaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e27; // 100F
+            isTiered = true;
+        } else if (statType === 'gigaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e45; // 10K
+            isTiered = false;
+        } else if (statType === 'gigaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e42; // 1,000J
+            isTiered = true;
+        } else if (statType === 'teraCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e60; // 1O
+            isTiered = false;
+        } else if (statType === 'teraCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e57; // 100N
+            isTiered = true;
+        } else if (statType === 'petaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e75; // 1,000R
+            isTiered = false;
+        } else if (statType === 'petaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e72; // 10R
+            isTiered = true;
+        } else if (statType === 'exaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e90; // 100V
+            isTiered = false;
+        } else if (statType === 'exaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e87; // 1V
+            isTiered = true;
+        } else if (statType === 'zettaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e105; // 10Z
+            isTiered = false;
+        } else if (statType === 'zettaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e102; // 1,000Y
+            isTiered = true;
+        } else if (statType === 'yottaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e120; // 1AD
+            isTiered = false;
+        } else if (statType === 'yottaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e117; // 100AC
+            isTiered = true;
+        } else if (statType === 'ronnaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e135; // 1,000AG
+            isTiered = false;
+        } else if (statType === 'ronnaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e132; // 10AG
+            isTiered = true;
+        } else if (statType === 'quettaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e150; // 100AK
+            isTiered = false;
+        } else if (statType === 'quettaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e147; // 1AK
+            isTiered = true;
+        } else if (statType === 'xenoCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e165; // 10AO
+            isTiered = false;
+        } else if (statType === 'xenoCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e162; // 1,000AN
+            isTiered = true;
+        } else if (statType === 'ultimaCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e180; // 1AS
+            isTiered = false;
+        } else if (statType === 'ultimaCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e177; // 100AQ
+            isTiered = true;
+        } else if (statType === 'omniCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e195; // 1,000AV
+            isTiered = false;
+        } else if (statType === 'omniCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e192; // 10AV
+            isTiered = true;
+        } else if (statType === 'absoluteCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e210; // 100AZ
+            isTiered = false;
+        } else if (statType === 'absoluteCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e207; // 1AZ
+            isTiered = true;
+        } else if (statType === 'infinityCritChance') {
+            maxLevel = 1000;
+            baseCost = 1e225; // 10BD
+            isTiered = false;
+        } else if (statType === 'infinityCritDamage') {
+            maxLevel = 100000;
+            baseCost = 1e222; // 1,000BC
             isTiered = true;
         } else if (statType === 'moveSpeed') {
             maxLevel = 300;
@@ -64,110 +173,6 @@ const StatsPanel = () => {
         } else if (statType === 'attackRange') {
             maxLevel = 300;
             baseCost = 500;
-            isTiered = true;
-        } else if (statType === 'megaCritChance') {
-            maxLevel = 1000;
-            baseCost = 20000000000; // 20B
-            isTiered = false;
-        } else if (statType === 'megaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 10000000000; // 10B
-            isTiered = true;
-        } else if (statType === 'gigaCritChance') {
-            maxLevel = 1000;
-            baseCost = 200000000000000; // 200T
-            isTiered = false;
-        } else if (statType === 'gigaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1000000000000; // 1T
-            isTiered = true;
-        } else if (statType === 'teraCritChance') {
-            maxLevel = 1000;
-            baseCost = 2000000000000000000; // 2Q
-            isTiered = false;
-        } else if (statType === 'teraCritDamage') {
-            maxLevel = 100000;
-            baseCost = 100000000000000; // 100P
-            isTiered = true;
-        } else if (statType === 'petaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e22; // 20Sx
-            isTiered = false;
-        } else if (statType === 'petaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e16; // 10Q
-            isTiered = true;
-        } else if (statType === 'exaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e26; // 200Sx
-            isTiered = false;
-        } else if (statType === 'exaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e18; // 1Qi
-            isTiered = true;
-        } else if (statType === 'zettaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e27;
-            isTiered = false;
-        } else if (statType === 'zettaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e20;
-            isTiered = true;
-        } else if (statType === 'yottaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e31;
-            isTiered = false;
-        } else if (statType === 'yottaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e22;
-            isTiered = true;
-        } else if (statType === 'ronnaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e35;
-            isTiered = false;
-        } else if (statType === 'ronnaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e24;
-            isTiered = true;
-        } else if (statType === 'quettaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e39;
-            isTiered = false;
-        } else if (statType === 'quettaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e26;
-            isTiered = true;
-        } else if (statType === 'xenoCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e43;
-            isTiered = false;
-        } else if (statType === 'xenoCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e28;
-            isTiered = true;
-        } else if (statType === 'ultimaCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e47;
-            isTiered = false;
-        } else if (statType === 'ultimaCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e30;
-            isTiered = true;
-        } else if (statType === 'omniCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e51;
-            isTiered = false;
-        } else if (statType === 'omniCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e32;
-            isTiered = true;
-        } else if (statType === 'absoluteCritChance') {
-            maxLevel = 1000;
-            baseCost = 2e55;
-            isTiered = false;
-        } else if (statType === 'absoluteCritDamage') {
-            maxLevel = 100000;
-            baseCost = 1e34;
             isTiered = true;
         }
 
@@ -402,6 +407,16 @@ const StatsPanel = () => {
             damageStat: 'absoluteCritDamage',
             chanceValue: state.absoluteCriticalChance,
             damageValue: state.absoluteCriticalDamage
+        },
+        {
+            name: '인피니티',
+            color: '#000000',
+            unlockCondition: (state.statLevels?.absoluteCritChance || 0) >= 1000,
+            unlockMessage: '앱솔루트 치명타 Lv.1000 해제',
+            chanceStat: 'infinityCritChance',
+            damageStat: 'infinityCritDamage',
+            chanceValue: state.infinityCriticalChance,
+            damageValue: state.infinityCriticalDamage
         }
     ];
 

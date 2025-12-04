@@ -167,6 +167,9 @@ const saveState = async (state) => {
                 dailyAttempts: state.worldBoss.dailyAttempts,
                 lastResetDate: state.worldBoss.lastResetDate
             },
+            // Infinity Crit
+            infinityCriticalChance: state.infinityCriticalChance,
+            infinityCriticalDamage: state.infinityCriticalDamage,
             // Pet System
             pets: state.pets
             // Do NOT save mushroomsCollected or bossPhase - always start fresh
@@ -244,6 +247,52 @@ const gameReducer = (state, action) => {
                     timeLeft: 0 // Reset timer
                 }
             };
+
+            // Critical Tier Migration & Recalculation
+            const criticalTiers = [
+                { name: 'giga', base: 300 },
+                { name: 'tera', base: 350 },
+                { name: 'peta', base: 400 },
+                { name: 'exa', base: 450 },
+                { name: 'zetta', base: 500 },
+                { name: 'yotta', base: 550 },
+                { name: 'ronna', base: 600 },
+                { name: 'quetta', base: 650 },
+                { name: 'xeno', base: 700 },
+                { name: 'ultima', base: 800 },
+                { name: 'omni', base: 900 },
+                { name: 'absolute', base: 1000 },
+                { name: 'infinity', base: 1500 }
+            ];
+
+            // Ensure statLevels exists
+            if (!loadedState.statLevels) loadedState.statLevels = {};
+
+            // 1. Fix Mega Critical Base (was 3000, now 250)
+            const megaLevel = loadedState.statLevels.megaCritDamage || 0;
+            loadedState.megaCriticalDamage = 250 + megaLevel;
+
+            // 2. Fix Hyper Critical Base (was 200, unchanged but good to enforce)
+            const hyperLevel = loadedState.statLevels.hyperCritDamage || 0;
+            loadedState.hyperCriticalDamage = 200 + hyperLevel;
+
+            // 3. Initialize & Fix New Tiers
+            criticalTiers.forEach(tier => {
+                const chanceKey = `${tier.name}CriticalChance`;
+                const damageKey = `${tier.name}CriticalDamage`;
+                const chanceLevelKey = `${tier.name}CritChance`;
+                const damageLevelKey = `${tier.name}CritDamage`;
+
+                // Initialize if missing
+                if (typeof loadedState[chanceKey] === 'undefined') loadedState[chanceKey] = 0;
+                if (typeof loadedState.statLevels[chanceLevelKey] === 'undefined') loadedState.statLevels[chanceLevelKey] = 0;
+
+                if (typeof loadedState.statLevels[damageLevelKey] === 'undefined') loadedState.statLevels[damageLevelKey] = 0;
+
+                // Recalculate Damage Value based on New Base + Level
+                const currentLevel = loadedState.statLevels[damageLevelKey];
+                loadedState[damageKey] = tier.base + currentLevel;
+            });
 
             // Recalculate stats based on levels (to apply new formulas to old saves)
             if (loadedState.statLevels) {
@@ -414,10 +463,8 @@ const gameReducer = (state, action) => {
 
             // Helper functions to calculate costs
             const calculateTieredCost = (baseCost, level) => {
-                let exponent = 1.1; // Reduced from 1.2/1.5/2.0 to 1.1 for better scaling
-                if (level >= 10000) exponent = 1.2;
-                else if (level >= 1000) exponent = 1.15;
-                return Math.floor(baseCost * Math.pow(level + 1, exponent));
+                // Level^3 scaling for critical damage to allow max level before next tier
+                return Math.floor(baseCost * Math.pow(level + 1, 3));
             };
 
             const calculateLinearCost = (baseCost, level) => {
@@ -442,19 +489,19 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.critDamage || 0;
                 currentVal = state.criticalDamage;
                 maxLevel = 100000;
-                baseCost = 800;
+                baseCost = 1; // 1/1000 of Normal Chance Cost (1000)
                 isTiered = true;
             } else if (statType === 'hyperCritChance') {
                 currentLevel = state.statLevels?.hyperCritChance || 0;
                 currentVal = state.hyperCriticalChance;
                 maxLevel = 1000;
-                baseCost = 10000000; // 10M
+                baseCost = 1e15; // 1,000C (Weapon 25)
                 isTiered = false;
             } else if (statType === 'hyperCritDamage') {
                 currentLevel = state.statLevels?.hyperCritDamage || 0;
                 currentVal = state.hyperCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 100000000; // 100M
+                baseCost = 1e12; // 1C (1/1000 of Hyper Chance)
                 isTiered = true;
             } else if (statType === 'megaCritChance') {
                 // Unlock condition: Hyper Crit Chance >= 1000 (100%)
@@ -463,13 +510,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.megaCritChance || 0;
                 currentVal = state.megaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 20000000000; // 20B
+                baseCost = 1e30; // 100G (Weapon 50)
                 isTiered = false;
             } else if (statType === 'megaCritDamage') {
                 currentLevel = state.statLevels?.megaCritDamage || 0;
                 currentVal = state.megaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 10000000000; // 10B
+                baseCost = 1e27; // 100F (1/1000 of Mega Chance)
                 isTiered = true;
             } else if (statType === 'gigaCritChance') {
                 // Unlock condition: Mega Crit Chance >= 1000
@@ -478,13 +525,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.gigaCritChance || 0;
                 currentVal = state.gigaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 200000000000000; // 200T (10,000x from Mega's 20B)
+                baseCost = 1e45; // 10K (Weapon 75)
                 isTiered = false;
             } else if (statType === 'gigaCritDamage') {
                 currentLevel = state.statLevels?.gigaCritDamage || 0;
                 currentVal = state.gigaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1000000000000; // 1T
+                baseCost = 1e42; // 1,000J (1/1000 of Giga Chance)
                 isTiered = true;
             } else if (statType === 'teraCritChance') {
                 // Unlock condition: Giga Crit Chance >= 1000
@@ -493,13 +540,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.teraCritChance || 0;
                 currentVal = state.teraCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2000000000000000000; // 2Q (10,000x from Giga's 200T)
+                baseCost = 1e60; // 1O (Weapon 100)
                 isTiered = false;
             } else if (statType === 'teraCritDamage') {
                 currentLevel = state.statLevels?.teraCritDamage || 0;
                 currentVal = state.teraCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 100000000000000; // 100P
+                baseCost = 1e57; // 100N (1/1000 of Tera Chance)
                 isTiered = true;
             } else if (statType === 'petaCritChance') {
                 // Unlock condition: Tera Crit Chance >= 1000
@@ -508,13 +555,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.petaCritChance || 0;
                 currentVal = state.petaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e22; // 20Sx (10,000x from Tera's 2Q)
+                baseCost = 1e75; // 1,000R (Weapon 125)
                 isTiered = false;
             } else if (statType === 'petaCritDamage') {
                 currentLevel = state.statLevels?.petaCritDamage || 0;
                 currentVal = state.petaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e16; // 10Q
+                baseCost = 1e72; // 10R (1/1000 of Peta Chance)
                 isTiered = true;
             } else if (statType === 'exaCritChance') {
                 // Unlock condition: Peta Crit Chance >= 1000
@@ -523,13 +570,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.exaCritChance || 0;
                 currentVal = state.exaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e26; // 200Sx (10,000x from Peta's 20Sx)
+                baseCost = 1e90; // 100V (Weapon 150)
                 isTiered = false;
             } else if (statType === 'exaCritDamage') {
                 currentLevel = state.statLevels?.exaCritDamage || 0;
                 currentVal = state.exaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e18; // 1Qi
+                baseCost = 1e87; // 1V (1/1000 of Exa Chance)
                 isTiered = true;
             } else if (statType === 'zettaCritChance') {
                 // Unlock condition: Exa Crit Chance >= 1000
@@ -538,13 +585,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.zettaCritChance || 0;
                 currentVal = state.zettaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e27; // 2 Nonillion (10,000x from Exa's 200 Septillion)
+                baseCost = 1e105; // 10Z (Weapon 175)
                 isTiered = false;
             } else if (statType === 'zettaCritDamage') {
                 currentLevel = state.statLevels?.zettaCritDamage || 0;
                 currentVal = state.zettaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e20; // 100 Quintillion
+                baseCost = 1e102; // 1,000Y (1/1000 of Zetta Chance)
                 isTiered = true;
             } else if (statType === 'yottaCritChance') {
                 // Unlock condition: Zetta Crit Chance >= 1000
@@ -553,13 +600,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.yottaCritChance || 0;
                 currentVal = state.yottaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e31; // 20 Decillion
+                baseCost = 1e120; // 1AD (Weapon 200)
                 isTiered = false;
             } else if (statType === 'yottaCritDamage') {
                 currentLevel = state.statLevels?.yottaCritDamage || 0;
                 currentVal = state.yottaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e22; // 10 Sextillion
+                baseCost = 1e117; // 100AC (1/1000 of Yotta Chance)
                 isTiered = true;
             } else if (statType === 'ronnaCritChance') {
                 // Unlock condition: Yotta Crit Chance >= 1000
@@ -568,13 +615,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.ronnaCritChance || 0;
                 currentVal = state.ronnaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e35; // 200 Decillion
+                baseCost = 1e135; // 1,000AG (Weapon 225)
                 isTiered = false;
             } else if (statType === 'ronnaCritDamage') {
                 currentLevel = state.statLevels?.ronnaCritDamage || 0;
                 currentVal = state.ronnaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e24; // 1 Septillion
+                baseCost = 1e132; // 10AG (1/1000 of Ronna Chance)
                 isTiered = true;
             } else if (statType === 'quettaCritChance') {
                 // Unlock condition: Ronna Crit Chance >= 1000
@@ -583,13 +630,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.quettaCritChance || 0;
                 currentVal = state.quettaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e39; // 2 Undecillion
+                baseCost = 1e150; // 100AK (Weapon 250)
                 isTiered = false;
             } else if (statType === 'quettaCritDamage') {
                 currentLevel = state.statLevels?.quettaCritDamage || 0;
                 currentVal = state.quettaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e26; // 100 Septillion
+                baseCost = 1e147; // 1AK (1/1000 of Quetta Chance)
                 isTiered = true;
             } else if (statType === 'xenoCritChance') {
                 // Unlock condition: Quetta Crit Chance >= 1000
@@ -598,13 +645,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.xenoCritChance || 0;
                 currentVal = state.xenoCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e43; // 20 Undecillion
+                baseCost = 1e165; // 10AO (Weapon 275)
                 isTiered = false;
             } else if (statType === 'xenoCritDamage') {
                 currentLevel = state.statLevels?.xenoCritDamage || 0;
                 currentVal = state.xenoCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e28; // 10 Octillion
+                baseCost = 1e162; // 1,000AN (1/1000 of Xeno Chance)
                 isTiered = true;
             } else if (statType === 'ultimaCritChance') {
                 // Unlock condition: Xeno Crit Chance >= 1000
@@ -613,13 +660,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.ultimaCritChance || 0;
                 currentVal = state.ultimaCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e47; // 200 Undecillion
+                baseCost = 1e180; // 1AS (Weapon 300)
                 isTiered = false;
             } else if (statType === 'ultimaCritDamage') {
                 currentLevel = state.statLevels?.ultimaCritDamage || 0;
                 currentVal = state.ultimaCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e30; // 1 Nonillion
+                baseCost = 1e177; // 100AQ (1/1000 of Ultima Chance)
                 isTiered = true;
             } else if (statType === 'omniCritChance') {
                 // Unlock condition: Ultima Crit Chance >= 1000
@@ -628,13 +675,13 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.omniCritChance || 0;
                 currentVal = state.omniCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e51; // 2 Duodecillion
+                baseCost = 1e195; // 1,000AV (Weapon 325)
                 isTiered = false;
             } else if (statType === 'omniCritDamage') {
                 currentLevel = state.statLevels?.omniCritDamage || 0;
                 currentVal = state.omniCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e32; // 100 Nonillion
+                baseCost = 1e192; // 10AV (1/1000 of Omni Chance)
                 isTiered = true;
             } else if (statType === 'absoluteCritChance') {
                 // Unlock condition: Omni Crit Chance >= 1000
@@ -643,13 +690,29 @@ const gameReducer = (state, action) => {
                 currentLevel = state.statLevels?.absoluteCritChance || 0;
                 currentVal = state.absoluteCriticalChance;
                 maxLevel = 1000;
-                baseCost = 2e55; // 20 Duodecillion
+                baseCost = 1e210; // 100AZ (Weapon 350)
                 isTiered = false;
             } else if (statType === 'absoluteCritDamage') {
                 currentLevel = state.statLevels?.absoluteCritDamage || 0;
                 currentVal = state.absoluteCriticalDamage;
                 maxLevel = 100000;
-                baseCost = 1e34; // 10 Decillion
+                baseCost = 1e207; // 1AZ (1/1000 of Absolute Chance)
+                isTiered = true;
+
+            } else if (statType === 'infinityCritChance') {
+                // Unlock condition: Absolute Crit Chance >= 1000
+                if ((state.statLevels?.absoluteCritChance || 0) < 1000) return state;
+
+                currentLevel = state.statLevels?.infinityCritChance || 0;
+                currentVal = state.infinityCriticalChance;
+                maxLevel = 1000;
+                baseCost = 1e225; // 10BD (Weapon 375)
+                isTiered = false;
+            } else if (statType === 'infinityCritDamage') {
+                currentLevel = state.statLevels?.infinityCritDamage || 0;
+                currentVal = state.infinityCriticalDamage;
+                maxLevel = 100000;
+                baseCost = 1e222; // 1,000BC (1/1000 of Infinity Chance)
                 isTiered = true;
             } else if (statType === 'moveSpeed') {
                 currentLevel = state.statLevels?.moveSpeed || 0;
@@ -781,6 +844,12 @@ const gameReducer = (state, action) => {
             } else if (statType === 'absoluteCritDamage') {
                 newState.absoluteCriticalDamage = state.absoluteCriticalDamage + (1 * validCount);
                 newState.statLevels.absoluteCritDamage = currentLevel + validCount;
+            } else if (statType === 'infinityCritChance') {
+                newState.infinityCriticalChance = parseFloat((state.infinityCriticalChance + (0.1 * validCount)).toFixed(1));
+                newState.statLevels.infinityCritChance = currentLevel + validCount;
+            } else if (statType === 'infinityCritDamage') {
+                newState.infinityCriticalDamage = state.infinityCriticalDamage + (1 * validCount);
+                newState.statLevels.infinityCritDamage = currentLevel + validCount;
             } else if (statType === 'moveSpeed') {
                 // Formula: 5 + (5 * level / 300) - Reduced effect by half
                 const newLevel = currentLevel + validCount;
@@ -910,8 +979,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50);
             const mushroomName = getMushroomName(nextStage.chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -967,8 +1036,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50);
             const mushroomName = getMushroomName(chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -1055,8 +1124,8 @@ const gameReducer = (state, action) => {
             const mushroomName = getMushroomName(nextChapter);
 
             for (let i = 0; i < 100; i++) {
-                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
+                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50);
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
 
@@ -1094,9 +1163,9 @@ const gameReducer = (state, action) => {
         case 'SPAWN_BOSS': {
             // Clear all mobs and spawn ONE big boss
             const difficultyLevel = (state.stage.chapter - 1) * 10 + state.stage.level;
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
             const bossHp = baseHp * 1000; // 1000x HP
-            const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100; // 100x Reward
+            const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50) * 100; // 100x Reward
 
             const bossMushroom = {
                 id: 'boss-' + Date.now(),
@@ -1253,6 +1322,30 @@ const gameReducer = (state, action) => {
                         ...artifact,
                         count: artifact.count - 1,
                         level: isSuccess ? artifact.level + 1 : artifact.level
+                    }
+                }
+            };
+        }
+
+        case 'SELL_ARTIFACT': {
+            const { type, count } = action.payload;
+            const artifact = state.artifacts[type];
+
+            // Validation: artifact must be level 1000+ and have enough count
+            if (!artifact || artifact.level < 1000 || artifact.count < count || count <= 0) {
+                return state;
+            }
+
+            const diamondGain = count * 100; // 100 diamond per artifact (same as pull price)
+
+            return {
+                ...state,
+                diamond: state.diamond + diamondGain,
+                artifacts: {
+                    ...state.artifacts,
+                    [type]: {
+                        ...artifact,
+                        count: artifact.count - count
                     }
                 }
             };

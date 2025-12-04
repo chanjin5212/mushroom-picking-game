@@ -204,26 +204,95 @@ const GameCanvas = () => {
         const skinBonus = getSkinBonus();
         damage *= (1 + skinBonus / 100);
 
-        let isCritical = false;
-        let isHyperCritical = false;
-        let isMegaCritical = false;
+        let criticalTier = 0;
 
         // Critical Logic
         if (Math.random() * 100 < state.criticalChance) {
-            isCritical = true;
+            criticalTier = 1;
             damage *= (1 + state.criticalDamage / 100) * (1 + (state.artifacts.critDamageBonus.count * 0.1));
 
             if (Math.random() * 100 < state.hyperCriticalChance) {
-                isHyperCritical = true;
+                criticalTier = 2;
                 damage *= (1 + state.hyperCriticalDamage / 100) * (1 + (state.artifacts.hyperCritDamageBonus.count * 0.1));
 
                 if (Math.random() * 100 < state.megaCriticalChance) {
-                    isMegaCritical = true;
+                    criticalTier = 3;
                     damage *= (1 + state.megaCriticalDamage / 100) * (1 + (state.artifacts.megaCritDamageBonus.count * 0.1));
+
+                    if (Math.random() * 100 < state.gigaCriticalChance) {
+                        criticalTier = 4;
+                        damage *= (1 + state.gigaCriticalDamage / 100);
+
+                        if (Math.random() * 100 < state.teraCriticalChance) {
+                            criticalTier = 5;
+                            damage *= (1 + state.teraCriticalDamage / 100);
+
+                            if (Math.random() * 100 < state.petaCriticalChance) {
+                                criticalTier = 6;
+                                damage *= (1 + state.petaCriticalDamage / 100);
+
+                                if (Math.random() * 100 < state.exaCriticalChance) {
+                                    criticalTier = 7;
+                                    damage *= (1 + state.exaCriticalDamage / 100);
+
+                                    if (Math.random() * 100 < state.zettaCriticalChance) {
+                                        criticalTier = 8;
+                                        damage *= (1 + state.zettaCriticalDamage / 100);
+
+                                        if (Math.random() * 100 < state.yottaCriticalChance) {
+                                            criticalTier = 9;
+                                            damage *= (1 + state.yottaCriticalDamage / 100);
+
+                                            if (Math.random() * 100 < state.ronnaCriticalChance) {
+                                                criticalTier = 10;
+                                                damage *= (1 + state.ronnaCriticalDamage / 100);
+
+                                                if (Math.random() * 100 < state.quettaCriticalChance) {
+                                                    criticalTier = 11;
+                                                    damage *= (1 + state.quettaCriticalDamage / 100);
+
+                                                    if (Math.random() * 100 < state.xenoCriticalChance) {
+                                                        criticalTier = 12;
+                                                        damage *= (1 + state.xenoCriticalDamage / 100);
+
+                                                        if (Math.random() * 100 < state.ultimaCriticalChance) {
+                                                            criticalTier = 13;
+                                                            damage *= (1 + state.ultimaCriticalDamage / 100);
+
+                                                            if (Math.random() * 100 < state.omniCriticalChance) {
+                                                                criticalTier = 14;
+                                                                damage *= (1 + state.omniCriticalDamage / 100);
+
+                                                                if (Math.random() * 100 < state.absoluteCriticalChance) {
+                                                                    criticalTier = 15;
+                                                                    damage *= (1 + state.absoluteCriticalDamage / 100);
+
+                                                                    if (Math.random() * 100 < state.infinityCriticalChance) {
+                                                                        criticalTier = 16;
+                                                                        damage *= (1 + state.infinityCriticalDamage / 100);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-        return { damage: Math.floor(damage), isCritical, isHyperCritical, isMegaCritical };
+        return {
+            damage: Math.floor(damage),
+            isCritical: criticalTier >= 1,
+            isHyperCritical: criticalTier >= 2,
+            isMegaCritical: criticalTier >= 3,
+            criticalTier
+        };
     };
 
 
