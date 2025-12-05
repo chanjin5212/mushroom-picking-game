@@ -151,6 +151,6 @@ export const SAVE_KEY = 'mushroom_game_save';
 
 // Game Balance Constants
 export const BALANCE = {
-    HP_EXPONENT: 0.060,
-    GOLD_EXPONENT: 0.030
+    HP_EXPONENT: 0.055,
+    GOLD_EXPONENT: 0.035
 };

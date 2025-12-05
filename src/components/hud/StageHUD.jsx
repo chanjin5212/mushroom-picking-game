@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatNumber } from '../../utils/formatNumber';
+import { initialState, SAVE_KEY, BALANCE } from '../../data/constants';
 
 const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNextStage, onBossChallenge, onToggleAutoProgress, autoProgress, bossHp, bossMaxHp, onOpenStageSelect }) => {
     const { chapter, stage } = currentStage;
@@ -11,8 +12,8 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
 
     // Calculate normal mushroom stats
     const difficultyLevel = (chapter - 1) * 10 + stage;
-    const normalHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
-    const normalReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
+    const normalHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
+    const normalReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50);
 
     return (
         <div style={{
