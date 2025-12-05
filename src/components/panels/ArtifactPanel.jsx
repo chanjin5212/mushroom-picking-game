@@ -5,8 +5,8 @@ const ArtifactPanel = () => {
     const { state, dispatch } = useGame();
     const { artifacts, diamond, lastPullResults, currentStage } = state;
 
-    // Check if artifacts are unlocked (stage 25-1+)
-    const isUnlocked = currentStage.chapter > 25 || (currentStage.chapter === 25 && currentStage.stage >= 1);
+    // Check if artifacts are unlocked (stage 10-1+)
+    const isUnlocked = currentStage.chapter > 10 || (currentStage.chapter === 10 && currentStage.stage >= 1);
 
     // Hold-to-repeat functionality
     const holdIntervalRef = useRef(null);
@@ -38,7 +38,7 @@ const ArtifactPanel = () => {
                     유물 시스템 잠금
                 </div>
                 <div style={{ fontSize: '1rem', marginBottom: '5px' }}>
-                    스테이지 <span style={{ color: '#FFD700', fontWeight: 'bold' }}>25-1</span>에 도달하면 해금됩니다
+                    스테이지 <span style={{ color: '#FFD700', fontWeight: 'bold' }}>10-1</span>에 도달하면 해금됩니다
                 </div>
                 <div style={{ fontSize: '0.9rem', color: '#666' }}>
                     현재 스테이지: {currentStage.chapter}-{currentStage.stage}

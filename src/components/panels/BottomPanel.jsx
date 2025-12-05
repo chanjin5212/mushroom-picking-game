@@ -106,7 +106,7 @@ const BottomPanel = () => {
                         }}
                     >
                         🏺 유물
-                        {(state.currentStage.chapter < 25 || (state.currentStage.chapter === 25 && state.currentStage.stage < 1)) && (
+                        {(state.currentStage.chapter < 10 || (state.currentStage.chapter === 10 && state.currentStage.stage < 1)) && (
                             <span style={{
                                 fontSize: '0.7rem',
                                 color: '#ff9800',
@@ -115,7 +115,7 @@ const BottomPanel = () => {
                                 borderRadius: '8px',
                                 border: '1px solid #ff9800'
                             }}>
-                                25-1 해금
+                                10-1 해금
                             </span>
                         )}
                     </button>
