@@ -101,6 +101,9 @@ const GameCanvas = () => {
             // Timer expired, restart the same boss stage
             // Only show toast if still in boss phase
             setToast('시간 초과! 보스 스테이지를 다시 시작합니다.');
+            if (state.autoProgress) {
+                dispatch({ type: 'DISABLE_AUTO_PROGRESS' });
+            }
             const timeoutId = setTimeout(() => {
                 setToast(null);
                 dispatch({ type: 'SELECT_STAGE', payload: state.currentStage });

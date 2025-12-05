@@ -371,6 +371,9 @@ const gameReducer = (state, action) => {
         case 'TOGGLE_AUTO_PROGRESS':
             return { ...state, autoProgress: !state.autoProgress };
 
+        case 'DISABLE_AUTO_PROGRESS':
+            return { ...state, autoProgress: false };
+
 
         case 'ADD_GOLD':
             return { ...state, gold: state.gold + action.payload };
