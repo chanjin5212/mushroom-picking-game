@@ -68,6 +68,9 @@ const GameCanvas = () => {
     // Chat State
     const [isChatOpen, setIsChatOpen] = useState(false);
 
+    // Stage Select Menu State
+    const [showStageSelect, setShowStageSelect] = useState(false);
+
     // Clear unread count when chat is open
     useEffect(() => {
         setChatOpen(isChatOpen);
@@ -137,6 +140,7 @@ const GameCanvas = () => {
     // Handle Stage Selection
     const handleSelectStage = (stage) => {
         dispatch({ type: 'SELECT_STAGE', payload: stage });
+        setShowStageSelect(false);
     };
 
     // Handle Boss Challenge
@@ -1300,6 +1304,7 @@ const GameCanvas = () => {
                         autoProgress={state.autoProgress}
                         bossHp={state.mushrooms.find(m => m.type === 'boss')?.hp}
                         bossMaxHp={state.mushrooms.find(m => m.type === 'boss')?.maxHp}
+                        onOpenStageSelect={() => setShowStageSelect(true)}
                     />
                 )
             }
@@ -1380,6 +1385,18 @@ const GameCanvas = () => {
 
             {/* World Boss Modal */}
             <WorldBossModal />
+
+            {/* Stage Select Menu */}
+            {
+                showStageSelect && (
+                    <StageSelectMenu
+                        currentStage={state.currentStage}
+                        maxStage={state.maxStage}
+                        onSelectStage={handleSelectStage}
+                        onClose={() => setShowStageSelect(false)}
+                    />
+                )
+            }
 
             {/* Toast Notification */}
             {

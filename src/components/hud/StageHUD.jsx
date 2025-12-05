@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatNumber } from '../../utils/formatNumber';
 
-const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNextStage, onBossChallenge, onToggleAutoProgress, autoProgress, bossHp, bossMaxHp }) => {
+const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNextStage, onBossChallenge, onToggleAutoProgress, autoProgress, bossHp, bossMaxHp, onOpenStageSelect }) => {
     const { chapter, stage } = currentStage;
     const isBossStage = stage === 10;
     // X-10 stages: show normal counter until boss phase
@@ -46,7 +46,37 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                 justifyContent: 'center'
             }}>
                 <span>스테이지 {chapter}-{stage}</span>
-                {isBossStage && <span style={{ color: '#ff4444', fontSize: '0.7rem' }}>{bossPhase ? '🔥' : '⚔️'}</span>}
+                {/* Stage Select Button */}
+                <button
+                    onClick={onOpenStageSelect}
+                    style={{
+                        background: 'linear-gradient(90deg, #2196f3, #1976d2)',
+                        color: 'white',
+                        border: '1px solid rgba(255,255,255,0.5)',
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        marginLeft: '6px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 3px 6px rgba(33,150,243,0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                    }}
+                    title="스테이지 선택"
+                >
+                    »
+                </button>
             </div>
 
             {/* Row 2: Controls (Auto + Buttons) */}
@@ -194,7 +224,7 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
                     50% { transform: translateY(-3px); }
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 
