@@ -52,6 +52,13 @@ const WeaponPanel = () => {
 
     const handleEvolve = () => {
         const currentState = stateRef.current;
+
+        // Safety: If weapon destroyed (level 0) or not ready, stop
+        if (currentState.weaponLevel < 10) {
+            stopHold();
+            return;
+        }
+
         const nextWeapon = WEAPONS[currentState.currentWeaponId + 1];
         const evolveCost = nextWeapon ? nextWeapon.cost : 0;
 
@@ -110,6 +117,13 @@ const WeaponPanel = () => {
     useEffect(() => {
         stopHold();
     }, [state.currentWeaponId]);
+
+    // Stop hold when evolution fails or is destroyed
+    useEffect(() => {
+        if (state.lastEvolveResult === 'destroyed' || state.lastEvolveResult === 'fail') {
+            stopHold();
+        }
+    }, [state.lastEvolveResult]);
 
     // Cleanup on unmount
     useEffect(() => {

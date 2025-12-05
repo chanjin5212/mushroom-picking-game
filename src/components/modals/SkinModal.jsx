@@ -3,8 +3,11 @@ import { useGame } from '../../context/GameContext';
 
 const SkinModal = ({ onClose }) => {
     const { state, dispatch } = useGame();
-    const { skins, diamond, lastPullResults } = state;
+    const { skins, diamond, lastPullResults, currentStage } = state;
     const [showProbability, setShowProbability] = useState(false);
+
+    // Check if skins are unlocked (stage 75-1+)
+    const isUnlocked = currentStage.chapter > 75 || (currentStage.chapter === 75 && currentStage.stage >= 1);
 
     // Rarity = Job mapping
     const rarityInfo = {
@@ -25,11 +28,11 @@ const SkinModal = ({ onClose }) => {
     // Get skin effect value (attack bonus)
     const getSkinEffect = (rarity, grade) => {
         const effects = {
-            common: { 1: 5, 2: 3, 3: 2, 4: 1 },
-            rare: { 1: 15, 2: 12, 3: 10, 4: 8 },
-            epic: { 1: 40, 2: 30, 3: 25, 4: 20 },
-            legendary: { 1: 80, 2: 70, 3: 60, 4: 50 },
-            mythic: { 1: 300, 2: 200, 3: 150, 4: 100 }
+            common: { 1: 10, 2: 6, 3: 4, 4: 2 },
+            rare: { 1: 30, 2: 24, 3: 20, 4: 16 },
+            epic: { 1: 80, 2: 60, 3: 50, 4: 40 },
+            legendary: { 1: 160, 2: 140, 3: 120, 4: 100 },
+            mythic: { 1: 600, 2: 400, 3: 300, 4: 200 }
         };
         return effects[rarity]?.[grade] || 0;
     };
@@ -148,525 +151,569 @@ const SkinModal = ({ onClose }) => {
                 flexDirection: 'column',
                 position: 'relative'
             }} onClick={e => e.stopPropagation()}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#9C27B0' }}>
-                            👔 스킨 관리
+                {/* Lock Screen */}
+                {!isUnlocked ? (
+                    <>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    width: '30px',
+                                    height: '30px',
+                                    borderRadius: '50%',
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '1.2rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ×
+                            </button>
                         </div>
-                        <button
-                            onClick={() => setShowProbability(true)}
-                            style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                backgroundColor: 'rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                color: '#ccc',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            ?
-                        </button>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            width: '30px',
-                            height: '30px',
-                            borderRadius: '50%',
-                            backgroundColor: 'rgba(255,255,255,0.1)',
-                            border: 'none',
-                            color: 'white',
-                            fontSize: '1.2rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        ×
-                    </button>
-                </div>
-
-                {/* Probability Modal */}
-                {showProbability && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        zIndex: 3000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backdropFilter: 'blur(3px)'
-                    }} onClick={() => setShowProbability(false)}>
                         <div style={{
-                            backgroundColor: '#1a1a2e',
-                            border: '2px solid #9C27B0',
-                            borderRadius: '15px',
-                            padding: '20px',
-                            width: '85%',
-                            maxWidth: '400px',
-                            position: 'relative'
-                        }} onClick={e => e.stopPropagation()}>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '15px', textAlign: 'center' }}>
-                                📊 소환 확률
+                            padding: '40px 20px',
+                            textAlign: 'center',
+                            color: '#888'
+                        }}>
+                            <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🔒</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '10px' }}>
+                                스킨 시스템 잠금
                             </div>
-                            <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '15px', textAlign: 'center' }}>
-                                등급 확률 (대분류)
+                            <div style={{ fontSize: '1rem', marginBottom: '5px', color: 'white' }}>
+                                스테이지 <span style={{ color: '#FFD700', fontWeight: 'bold' }}>75-1</span>에 도달하면 해금됩니다
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#F44336', fontWeight: 'bold' }}>
-                                    <span>👑 버섯 군주 (신화)</span>
-                                    <span>0.1%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#FF9800', fontWeight: 'bold' }}>
-                                    <span>🍃 드루이드 (전설)</span>
-                                    <span>1.0%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9C27B0', fontWeight: 'bold' }}>
-                                    <span>🗡️ 독버섯 암살자 (영웅)</span>
-                                    <span>5.0%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00BCD4', fontWeight: 'bold' }}>
-                                    <span>🍄 포자술사 (희귀)</span>
-                                    <span>10.0%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontWeight: 'bold' }}>
-                                    <span>🧺 채집가 (일반)</span>
-                                    <span>83.9%</span>
-                                </div>
+                            <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                                현재 스테이지: {currentStage.chapter}-{currentStage.stage}
                             </div>
-                            <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '10px', textAlign: 'center' }}>
-                                세부 등급 확률 (소분류)
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#FFD700', fontSize: '0.9rem' }}>
-                                    <span>⭐ 1등급</span>
-                                    <span>10%</span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#9C27B0' }}>
+                                    👔 스킨 관리
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', fontSize: '0.9rem' }}>
-                                    <span>⭐ 2등급</span>
-                                    <span>20%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', fontSize: '0.9rem' }}>
-                                    <span>⭐ 3등급</span>
-                                    <span>30%</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', fontSize: '0.9rem' }}>
-                                    <span>⭐ 4등급</span>
-                                    <span>40%</span>
-                                </div>
+                                <button
+                                    onClick={() => setShowProbability(true)}
+                                    style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        borderRadius: '50%',
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        color: '#ccc',
+                                        fontSize: '0.9rem',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    ?
+                                </button>
                             </div>
                             <button
-                                onClick={() => setShowProbability(false)}
+                                onClick={onClose}
                                 style={{
-                                    marginTop: '20px',
-                                    width: '100%',
-                                    padding: '10px',
-                                    backgroundColor: '#555',
+                                    width: '30px',
+                                    height: '30px',
+                                    borderRadius: '50%',
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '1.2rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {/* Probability Modal */}
+                        {showProbability && (
+                            <div style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                zIndex: 3000,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(3px)'
+                            }} onClick={() => setShowProbability(false)}>
+                                <div style={{
+                                    backgroundColor: '#1a1a2e',
+                                    border: '2px solid #9C27B0',
+                                    borderRadius: '15px',
+                                    padding: '20px',
+                                    width: '85%',
+                                    maxWidth: '400px',
+                                    position: 'relative'
+                                }} onClick={e => e.stopPropagation()}>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '15px', textAlign: 'center' }}>
+                                        📊 소환 확률
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '15px', textAlign: 'center' }}>
+                                        등급 확률 (대분류)
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#F44336', fontWeight: 'bold' }}>
+                                            <span>👑 버섯 군주 (신화)</span>
+                                            <span>0.1%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#FF9800', fontWeight: 'bold' }}>
+                                            <span>🍃 드루이드 (전설)</span>
+                                            <span>1.0%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9C27B0', fontWeight: 'bold' }}>
+                                            <span>🗡️ 독버섯 암살자 (영웅)</span>
+                                            <span>5.0%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00BCD4', fontWeight: 'bold' }}>
+                                            <span>🍄 포자술사 (희귀)</span>
+                                            <span>10.0%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontWeight: 'bold' }}>
+                                            <span>🧺 채집가 (일반)</span>
+                                            <span>83.9%</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '10px', textAlign: 'center' }}>
+                                        세부 등급 확률 (소분류)
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#FFD700', fontSize: '0.9rem' }}>
+                                            <span>⭐ 1등급</span>
+                                            <span>10%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', fontSize: '0.9rem' }}>
+                                            <span>⭐ 2등급</span>
+                                            <span>20%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', fontSize: '0.9rem' }}>
+                                            <span>⭐ 3등급</span>
+                                            <span>30%</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc', fontSize: '0.9rem' }}>
+                                            <span>⭐ 4등급</span>
+                                            <span>40%</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowProbability(false)}
+                                        style={{
+                                            marginTop: '20px',
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#555',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        닫기
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Summon Result Modal */}
+                        {lastPullResults && (
+                            <div style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0,0,0,0.85)',
+                                zIndex: 3000,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(5px)'
+                            }}>
+                                <div style={{
+                                    backgroundColor: '#1a1a2e',
+                                    border: '2px solid #9C27B0',
+                                    borderRadius: '15px',
+                                    padding: '20px',
+                                    width: '90%',
+                                    maxWidth: '500px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    maxHeight: '70vh'
+                                }}>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '20px', textAlign: 'center', flexShrink: 0 }}>
+                                        소환 결과
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '15px',
+                                        justifyContent: 'center',
+                                        overflowY: 'auto',
+                                        padding: '10px',
+                                        flex: '1 1 auto',
+                                        minHeight: 0
+                                    }}>
+                                        {(() => {
+                                            const grouped = {};
+                                            lastPullResults.forEach(skinId => {
+                                                grouped[skinId] = (grouped[skinId] || 0) + 1;
+                                            });
+
+                                            return Object.entries(grouped)
+                                                .sort(([idA], [idB]) => getSkinSortScore(idB) - getSkinSortScore(idA))
+                                                .map(([skinId, count]) => {
+                                                    const parts = skinId.split('_');
+                                                    if (parts.length !== 3) return null;
+                                                    const rarity = parts[1];
+                                                    const grade = parseInt(parts[2]);
+                                                    const rarityData = rarityInfo[rarity];
+
+                                                    return (
+                                                        <div key={skinId} style={{
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            gap: '5px'
+                                                        }}>
+                                                            <div style={{
+                                                                width: '70px',
+                                                                height: '70px',
+                                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                                borderRadius: '8px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '2.5rem',
+                                                                border: `2px solid ${rarityData.color}`,
+                                                                position: 'relative'
+                                                            }}>
+                                                                {rarityData.icon}
+                                                                {count > 1 && (
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        bottom: '-8px',
+                                                                        right: '-8px',
+                                                                        backgroundColor: '#FF5722',
+                                                                        color: 'white',
+                                                                        borderRadius: '12px',
+                                                                        padding: '3px 8px',
+                                                                        fontSize: '0.8rem',
+                                                                        fontWeight: 'bold',
+                                                                        border: '2px solid white'
+                                                                    }}>
+                                                                        x{count}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.7rem', color: rarityData.color, textAlign: 'center' }}>
+                                                                {rarityData.name}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.65rem', color: '#FFD700', textAlign: 'center' }}>
+                                                                {grade}등급
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                        })()}
+                                    </div>
+                                    <button
+                                        onClick={handleConfirmResult}
+                                        style={{
+                                            marginTop: '20px',
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#4CAF50',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'white',
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        확인
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Content - Scrollable */}
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '15px',
+                            color: 'white'
+                        }}>
+                            {/* Gacha Section */}
+                            <div style={{
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                padding: '15px',
+                                borderRadius: '10px'
+                            }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '10px' }}>
+                                    스킨 소환
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => handlePull(1)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px 20px',
+                                            backgroundColor: diamond >= 200 ? '#4CAF50' : '#555',
+                                            border: 'none',
+                                            borderRadius: '5px',
+                                            color: 'white',
+                                            cursor: diamond >= 200 ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '5px'
+                                        }}
+                                    >
+                                        <span>1회 소환</span>
+                                        <span style={{ fontSize: '0.8rem' }}>💎 200</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handlePull(10)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px 20px',
+                                            backgroundColor: diamond >= 2000 ? '#2196F3' : '#555',
+                                            border: 'none',
+                                            borderRadius: '5px',
+                                            color: 'white',
+                                            cursor: diamond >= 2000 ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '5px'
+                                        }}
+                                    >
+                                        <span>10회 소환</span>
+                                        <span style={{ fontSize: '0.8rem' }}>💎 2,000</span>
+                                    </button>
+                                    <button
+                                        onClick={handlePullAll}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px 20px',
+                                            backgroundColor: diamond >= 200 ? '#FF9800' : '#555',
+                                            border: 'none',
+                                            borderRadius: '5px',
+                                            color: 'white',
+                                            cursor: diamond >= 200 ? 'pointer' : 'not-allowed',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '5px'
+                                        }}
+                                    >
+                                        <span>모두 소환</span>
+                                        <span style={{ fontSize: '0.8rem' }}>💎 {Math.floor(diamond / 200) * 200}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Merge All Button */}
+                            <button
+                                onClick={handleMergeAll}
+                                style={{
+                                    padding: '12px',
+                                    backgroundColor: '#9C27B0',
                                     border: 'none',
                                     borderRadius: '8px',
                                     color: 'white',
+                                    fontSize: '1rem',
                                     fontWeight: 'bold',
                                     cursor: 'pointer'
                                 }}
                             >
-                                닫기
+                                🔄 모두 합성
                             </button>
-                        </div>
-                    </div>
-                )}
 
-                {/* Summon Result Modal */}
-                {lastPullResults && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.85)',
-                        zIndex: 3000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backdropFilter: 'blur(5px)'
-                    }}>
-                        <div style={{
-                            backgroundColor: '#1a1a2e',
-                            border: '2px solid #9C27B0',
-                            borderRadius: '15px',
-                            padding: '20px',
-                            width: '90%',
-                            maxWidth: '500px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            maxHeight: '70vh'
-                        }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '20px', textAlign: 'center', flexShrink: 0 }}>
-                                소환 결과
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '15px',
-                                justifyContent: 'center',
-                                overflowY: 'auto',
-                                padding: '10px',
-                                flex: '1 1 auto',
-                                minHeight: 0
-                            }}>
-                                {(() => {
-                                    const grouped = {};
-                                    lastPullResults.forEach(skinId => {
-                                        grouped[skinId] = (grouped[skinId] || 0) + 1;
-                                    });
+                            {/* Passive Bonus Display */}
+                            {totalPassiveBonus > 0 && (
+                                <div style={{
+                                    backgroundColor: 'rgba(76,175,80,0.2)',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(76,175,80,0.5)',
+                                    textAlign: 'center'
+                                }}>
+                                    <div style={{ fontSize: '0.9rem', color: '#4CAF50', fontWeight: 'bold' }}>
+                                        📚 보유 효과 총합: +{totalPassiveBonus.toFixed(1)}%
+                                    </div>
+                                </div>
+                            )}
 
-                                    return Object.entries(grouped)
-                                        .sort(([idA], [idB]) => getSkinSortScore(idB) - getSkinSortScore(idA))
-                                        .map(([skinId, count]) => {
-                                            const parts = skinId.split('_');
-                                            if (parts.length !== 3) return null;
-                                            const rarity = parts[1];
-                                            const grade = parseInt(parts[2]);
-                                            const rarityData = rarityInfo[rarity];
+                            {/* Equipped Skin Section */}
+                            {skins.equipped && (
+                                <div style={{
+                                    backgroundColor: 'rgba(156,39,176,0.2)',
+                                    padding: '15px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(156,39,176,0.5)'
+                                }}>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '10px' }}>
+                                        장착 중인 스킨
+                                    </div>
+                                    {(() => {
+                                        const parts = skins.equipped.split('_');
+                                        if (parts.length !== 3) return null;
+                                        const rarity = parts[1];
+                                        const grade = parseInt(parts[2]);
+                                        const rarityData = rarityInfo[rarity];
+                                        const effect = getSkinEffect(rarity, grade);
 
-                                            return (
-                                                <div key={skinId} style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    gap: '5px'
-                                                }}>
-                                                    <div style={{
-                                                        width: '70px',
-                                                        height: '70px',
-                                                        backgroundColor: 'rgba(255,255,255,0.1)',
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '2.5rem',
-                                                        border: `2px solid ${rarityData.color}`,
-                                                        position: 'relative'
-                                                    }}>
-                                                        {rarityData.icon}
-                                                        {count > 1 && (
-                                                            <div style={{
-                                                                position: 'absolute',
-                                                                bottom: '-8px',
-                                                                right: '-8px',
-                                                                backgroundColor: '#FF5722',
-                                                                color: 'white',
-                                                                borderRadius: '12px',
-                                                                padding: '3px 8px',
-                                                                fontSize: '0.8rem',
-                                                                fontWeight: 'bold',
-                                                                border: '2px solid white'
-                                                            }}>
-                                                                x{count}
-                                                            </div>
-                                                        )}
+                                        return (
+                                            <div style={{
+                                                backgroundColor: 'rgba(0,0,0,0.3)',
+                                                padding: '10px',
+                                                borderRadius: '8px',
+                                                border: `2px solid ${rarityData.color}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px'
+                                            }}>
+                                                <div style={{ fontSize: '3rem' }}>{rarityData.icon}</div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: '0.9rem', color: rarityData.color, fontWeight: 'bold' }}>
+                                                        {rarityData.emoji} {rarityData.name}
                                                     </div>
-                                                    <div style={{ fontSize: '0.7rem', color: rarityData.color, textAlign: 'center' }}>
-                                                        {rarityData.name}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.65rem', color: '#FFD700', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '0.8rem', color: '#FFD700' }}>
                                                         {grade}등급
                                                     </div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#FFD700', marginTop: '3px' }}>
+                                                        ⚔️ 공격력 +{effect}%
+                                                    </div>
                                                 </div>
-                                            );
-                                        });
-                                })()}
-                            </div>
-                            <button
-                                onClick={handleConfirmResult}
-                                style={{
-                                    marginTop: '20px',
-                                    width: '100%',
-                                    padding: '10px',
-                                    backgroundColor: '#4CAF50',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    color: 'white',
-                                    fontSize: '1.1rem',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    flexShrink: 0
-                                }}
-                            >
-                                확인
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Content - Scrollable */}
-                <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '15px',
-                    color: 'white'
-                }}>
-                    {/* Gacha Section */}
-                    <div style={{
-                        backgroundColor: 'rgba(0,0,0,0.5)',
-                        padding: '15px',
-                        borderRadius: '10px'
-                    }}>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '10px' }}>
-                            스킨 소환
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                            <button
-                                onClick={() => handlePull(1)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 20px',
-                                    backgroundColor: diamond >= 200 ? '#4CAF50' : '#555',
-                                    border: 'none',
-                                    borderRadius: '5px',
-                                    color: 'white',
-                                    cursor: diamond >= 200 ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '5px'
-                                }}
-                            >
-                                <span>1회 소환</span>
-                                <span style={{ fontSize: '0.8rem' }}>💎 200</span>
-                            </button>
-                            <button
-                                onClick={() => handlePull(10)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 20px',
-                                    backgroundColor: diamond >= 2000 ? '#2196F3' : '#555',
-                                    border: 'none',
-                                    borderRadius: '5px',
-                                    color: 'white',
-                                    cursor: diamond >= 2000 ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '5px'
-                                }}
-                            >
-                                <span>10회 소환</span>
-                                <span style={{ fontSize: '0.8rem' }}>💎 2,000</span>
-                            </button>
-                            <button
-                                onClick={handlePullAll}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 20px',
-                                    backgroundColor: diamond >= 200 ? '#FF9800' : '#555',
-                                    border: 'none',
-                                    borderRadius: '5px',
-                                    color: 'white',
-                                    cursor: diamond >= 200 ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '5px'
-                                }}
-                            >
-                                <span>모두 소환</span>
-                                <span style={{ fontSize: '0.8rem' }}>💎 {Math.floor(diamond / 200) * 200}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Merge All Button */}
-                    <button
-                        onClick={handleMergeAll}
-                        style={{
-                            padding: '12px',
-                            backgroundColor: '#9C27B0',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white',
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        🔄 모두 합성
-                    </button>
-
-                    {/* Passive Bonus Display */}
-                    {totalPassiveBonus > 0 && (
-                        <div style={{
-                            backgroundColor: 'rgba(76,175,80,0.2)',
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(76,175,80,0.5)',
-                            textAlign: 'center'
-                        }}>
-                            <div style={{ fontSize: '0.9rem', color: '#4CAF50', fontWeight: 'bold' }}>
-                                📚 보유 효과 총합: +{totalPassiveBonus.toFixed(1)}%
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Equipped Skin Section */}
-                    {skins.equipped && (
-                        <div style={{
-                            backgroundColor: 'rgba(156,39,176,0.2)',
-                            padding: '15px',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(156,39,176,0.5)'
-                        }}>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#9C27B0', marginBottom: '10px' }}>
-                                장착 중인 스킨
-                            </div>
-                            {(() => {
-                                const parts = skins.equipped.split('_');
-                                if (parts.length !== 3) return null;
-                                const rarity = parts[1];
-                                const grade = parseInt(parts[2]);
-                                const rarityData = rarityInfo[rarity];
-                                const effect = getSkinEffect(rarity, grade);
-
-                                return (
-                                    <div style={{
-                                        backgroundColor: 'rgba(0,0,0,0.3)',
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        border: `2px solid ${rarityData.color}`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '10px'
-                                    }}>
-                                        <div style={{ fontSize: '3rem' }}>{rarityData.icon}</div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '0.9rem', color: rarityData.color, fontWeight: 'bold' }}>
-                                                {rarityData.emoji} {rarityData.name}
+                                                <button
+                                                    onClick={() => handleEquip(skins.equipped, true)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        backgroundColor: '#F44336',
+                                                        border: 'none',
+                                                        borderRadius: '5px',
+                                                        color: 'white',
+                                                        fontSize: '0.8rem',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    해제
+                                                </button>
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: '#FFD700' }}>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* Skin Collection */}
+                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                                스킨 컬렉션 (20종)
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                                {getAllSkins().map(({ skinId, count, isUnlocked, rarity, grade }) => {
+                                    const rarityData = rarityInfo[rarity];
+                                    const isEquipped = skins.equipped === skinId;
+                                    const canMerge = count >= 5 && !(rarity === 'mythic' && grade === 1);
+                                    const effect = getSkinEffect(rarity, grade);
+
+                                    return (
+                                        <div key={skinId} style={{
+                                            backgroundColor: isEquipped ? 'rgba(156,39,176,0.2)' : (isUnlocked ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)'),
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: `2px solid ${isEquipped ? '#9C27B0' : rarityData.color}`,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            position: 'relative',
+                                            opacity: isUnlocked ? 1 : 0.4
+                                        }}>
+                                            <div style={{ fontSize: '2rem', filter: isUnlocked ? 'none' : 'grayscale(100%)' }}>
+                                                {rarityData.icon}
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: rarityData.color, fontWeight: 'bold', textAlign: 'center' }}>
+                                                {rarityData.name}
+                                            </div>
+                                            <div style={{ fontSize: '0.6rem', color: '#FFD700', textAlign: 'center' }}>
                                                 {grade}등급
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#FFD700', marginTop: '3px' }}>
-                                                ⚔️ 공격력 +{effect}%
+                                            <div style={{ fontSize: '0.55rem', color: '#FFD700', textAlign: 'center' }}>
+                                                ⚔️ +{effect}%
                                             </div>
+                                            {isUnlocked && (
+                                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'white' }}>
+                                                    {count}개
+                                                </div>
+                                            )}
+                                            {!isUnlocked && (
+                                                <div style={{ fontSize: '0.6rem', color: '#888' }}>
+                                                    미획득
+                                                </div>
+                                            )}
+                                            {isUnlocked && (
+                                                <button
+                                                    onClick={() => handleEquip(skinId, isUnlocked)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '4px',
+                                                        backgroundColor: isEquipped ? '#F44336' : '#4CAF50',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        color: 'white',
+                                                        fontSize: '0.65rem',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {isEquipped ? '해제' : '장착'}
+                                                </button>
+                                            )}
+                                            {canMerge && (
+                                                <button
+                                                    onClick={() => handleMerge(skinId)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '4px',
+                                                        backgroundColor: '#9C27B0',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        color: 'white',
+                                                        fontSize: '0.65rem',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    합성
+                                                </button>
+                                            )}
                                         </div>
-                                        <button
-                                            onClick={() => handleEquip(skins.equipped, true)}
-                                            style={{
-                                                padding: '8px 12px',
-                                                backgroundColor: '#F44336',
-                                                border: 'none',
-                                                borderRadius: '5px',
-                                                color: 'white',
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            해제
-                                        </button>
-                                    </div>
-                                );
-                            })()}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    )}
-
-                    {/* Skin Collection */}
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px' }}>
-                        스킨 컬렉션 (20종)
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                        {getAllSkins().map(({ skinId, count, isUnlocked, rarity, grade }) => {
-                            const rarityData = rarityInfo[rarity];
-                            const isEquipped = skins.equipped === skinId;
-                            const canMerge = count >= 5 && !(rarity === 'mythic' && grade === 1);
-                            const effect = getSkinEffect(rarity, grade);
-
-                            return (
-                                <div key={skinId} style={{
-                                    backgroundColor: isEquipped ? 'rgba(156,39,176,0.2)' : (isUnlocked ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)'),
-                                    padding: '8px',
-                                    borderRadius: '8px',
-                                    border: `2px solid ${isEquipped ? '#9C27B0' : rarityData.color}`,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    position: 'relative',
-                                    opacity: isUnlocked ? 1 : 0.4
-                                }}>
-                                    <div style={{ fontSize: '2rem', filter: isUnlocked ? 'none' : 'grayscale(100%)' }}>
-                                        {rarityData.icon}
-                                    </div>
-                                    <div style={{ fontSize: '0.65rem', color: rarityData.color, fontWeight: 'bold', textAlign: 'center' }}>
-                                        {rarityData.name}
-                                    </div>
-                                    <div style={{ fontSize: '0.6rem', color: '#FFD700', textAlign: 'center' }}>
-                                        {grade}등급
-                                    </div>
-                                    <div style={{ fontSize: '0.55rem', color: '#FFD700', textAlign: 'center' }}>
-                                        ⚔️ +{effect}%
-                                    </div>
-                                    {isUnlocked && (
-                                        <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'white' }}>
-                                            {count}개
-                                        </div>
-                                    )}
-                                    {!isUnlocked && (
-                                        <div style={{ fontSize: '0.6rem', color: '#888' }}>
-                                            미획득
-                                        </div>
-                                    )}
-                                    {isUnlocked && (
-                                        <button
-                                            onClick={() => handleEquip(skinId, isUnlocked)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px',
-                                                backgroundColor: isEquipped ? '#F44336' : '#4CAF50',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                color: 'white',
-                                                fontSize: '0.65rem',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {isEquipped ? '해제' : '장착'}
-                                        </button>
-                                    )}
-                                    {canMerge && (
-                                        <button
-                                            onClick={() => handleMerge(skinId)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px',
-                                                backgroundColor: '#9C27B0',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                color: 'white',
-                                                fontSize: '0.65rem',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            합성
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
         </div>
     );

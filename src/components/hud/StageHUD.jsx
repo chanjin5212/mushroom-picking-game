@@ -11,8 +11,8 @@ const StageHUD = ({ currentStage, mushroomsCollected, bossTimer, bossPhase, onNe
 
     // Calculate normal mushroom stats
     const difficultyLevel = (chapter - 1) * 10 + stage;
-    const normalHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-    const normalReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+    const normalHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+    const normalReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
 
     return (
         <div style={{

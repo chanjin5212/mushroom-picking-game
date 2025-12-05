@@ -89,8 +89,8 @@ const generateMaps = () => {
         const mushroomCount = 100;
 
         for (let i = 0; i < mushroomCount; i++) {
-            const baseHp = level === 1 ? 10 : Math.floor(Math.pow(10, level * 0.05) * 100);
-            const baseReward = Math.floor(Math.pow(10, level * 0.04) * 50);
+            const baseHp = level === 1 ? 10 : Math.floor(Math.pow(10, level * 0.065) * 100);
+            const baseReward = Math.floor(Math.pow(10, level * 0.025) * 50);
             const x = 30 + Math.random() * 340;
             const y = 80 + Math.random() * 380;
 
@@ -897,8 +897,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
             const mushroomName = getMushroomName(chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -942,6 +942,14 @@ const gameReducer = (state, action) => {
             return { ...state, mushroomsCollected: newCount };
         }
 
+        case 'ADD_GOLD': {
+            const amount = action.payload;
+            return {
+                ...state,
+                gold: state.gold + amount
+            };
+        }
+
         case 'COMPLETE_STAGE': {
             const { chapter, stage } = state.currentStage;
 
@@ -979,8 +987,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
             const mushroomName = getMushroomName(nextStage.chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -1036,8 +1044,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
             const mushroomName = getMushroomName(chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -1124,8 +1132,8 @@ const gameReducer = (state, action) => {
             const mushroomName = getMushroomName(nextChapter);
 
             for (let i = 0; i < 100; i++) {
-                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
-                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50);
+                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
 
@@ -1163,9 +1171,9 @@ const gameReducer = (state, action) => {
         case 'SPAWN_BOSS': {
             // Clear all mobs and spawn ONE big boss
             const difficultyLevel = (state.stage.chapter - 1) * 10 + state.stage.level;
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.055) * 100);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
             const bossHp = baseHp * 1000; // 1000x HP
-            const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.035) * 50) * 100; // 100x Reward
+            const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50) * 100; // 100x Reward
 
             const bossMushroom = {
                 id: 'boss-' + Date.now(),
@@ -1231,8 +1239,8 @@ const gameReducer = (state, action) => {
             // Calculate current difficulty to get base stats
             // Use currentStage instead of stage, and stage property instead of level
             const difficultyLevel = (state.currentStage.chapter - 1) * 10 + state.currentStage.stage;
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
 
             return {
                 ...state,
@@ -1628,11 +1636,16 @@ const gameReducer = (state, action) => {
         case 'COLLECT_MUSHROOM_TYPE': {
             const { name, rarity } = action.payload;
             const currentCollection = state.mushroomCollection[name] || {
-                normal: false,
-                rare: false,
-                epic: false,
-                unique: false
+                normal: 0,
+                rare: 0,
+                epic: 0,
+                unique: 0
             };
+
+            // Handle legacy boolean data
+            let currentCount = currentCollection[rarity];
+            if (currentCount === true) currentCount = 1;
+            if (currentCount === false || currentCount === undefined) currentCount = 0;
 
             return {
                 ...state,
@@ -1640,7 +1653,7 @@ const gameReducer = (state, action) => {
                     ...state.mushroomCollection,
                     [name]: {
                         ...currentCollection,
-                        [rarity]: true
+                        [rarity]: currentCount + 1
                     }
                 }
             };
@@ -2631,6 +2644,50 @@ export const GameProvider = ({ children }) => {
         }
     };
 
+    // Calculate Collection Bonuses (Mastery System)
+    const getCollectionBonuses = () => {
+        let bonuses = {
+            gold: 0,
+            attack: 0,
+            critDamage: 0,
+            finalDamage: 0
+        };
+
+        if (!state.mushroomCollection) return bonuses;
+
+        Object.values(state.mushroomCollection).forEach(collection => {
+            // Normal: 1000 kills -> Gold +0.1%
+            let normalCount = collection.normal;
+            if (normalCount === true) normalCount = 1; // Legacy
+            if (typeof normalCount === 'number' && normalCount >= 1000) {
+                bonuses.gold += 0.1;
+            }
+
+            // Rare: 100 kills -> Attack +0.2%
+            let rareCount = collection.rare;
+            if (rareCount === true) rareCount = 1;
+            if (typeof rareCount === 'number' && rareCount >= 100) {
+                bonuses.attack += 0.2;
+            }
+
+            // Epic: 50 kills -> Crit Damage +0.5%
+            let epicCount = collection.epic;
+            if (epicCount === true) epicCount = 1;
+            if (typeof epicCount === 'number' && epicCount >= 50) {
+                bonuses.critDamage += 0.5;
+            }
+
+            // Unique: 10 kills -> Final Damage +0.1%
+            let uniqueCount = collection.unique;
+            if (uniqueCount === true) uniqueCount = 1;
+            if (typeof uniqueCount === 'number' && uniqueCount >= 10) {
+                bonuses.finalDamage += 0.1;
+            }
+        });
+
+        return bonuses;
+    };
+
     return (
         <GameContext.Provider value={{
             state,
@@ -2643,7 +2700,10 @@ export const GameProvider = ({ children }) => {
             fetchRankings,
             fetchWorldBossRankings,
             resetGame,
+            fetchWorldBossRankings,
+            resetGame,
             sendChatMessage,
+            getCollectionBonuses,
 
             setChatOpen,
             isLoading: state.isLoading

@@ -66,7 +66,7 @@ const WeaponCollection = ({ onClose }) => {
 
         // Unclaimed weapon rewards
         state.obtainedWeapons.forEach(weaponId => {
-            if (!state.claimedRewards.weapons.includes(weaponId)) {
+            if (!state.claimedRewards?.weapons?.includes(weaponId)) {
                 total += 200;
             }
         });
@@ -74,7 +74,7 @@ const WeaponCollection = ({ onClose }) => {
         // Unclaimed mushroom rewards
         const rewardAmounts = { normal: 20, rare: 50, epic: 100, unique: 200 };
         Object.entries(state.mushroomCollection).forEach(([name, rarities]) => {
-            const claimed = state.claimedRewards.mushrooms[name] || {};
+            const claimed = state.claimedRewards?.mushrooms?.[name] || {};
             ['normal', 'rare', 'epic', 'unique'].forEach(rarity => {
                 if (rarities[rarity] && !claimed[rarity]) {
                     total += rewardAmounts[rarity];
@@ -89,7 +89,7 @@ const WeaponCollection = ({ onClose }) => {
         petTypes.forEach(type => {
             petRarities.forEach(rarity => {
                 const petId = `${type}_${rarity}`;
-                if (state.pets.inventory[petId] && !state.claimedRewards.pets.includes(petId)) {
+                if (state.pets.inventory[petId] && !state.claimedRewards?.pets?.includes(petId)) {
                     total += 500;
                 }
             });
@@ -289,7 +289,7 @@ const WeaponCollection = ({ onClose }) => {
                                         }}
                                     >
                                         {/* Diamond Badge - show if obtained but not claimed */}
-                                        {isObtained && !state.claimedRewards.weapons.includes(id) && (
+                                        {isObtained && !state.claimedRewards?.weapons?.includes(id) && (
                                             <div
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -346,15 +346,40 @@ const WeaponCollection = ({ onClose }) => {
 
                     {activeTab === 'mushrooms' && (
                         <div>
+                            {/* Total Bonus Stats Header */}
+                            <div style={{
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                padding: '15px',
+                                borderRadius: '10px',
+                                marginBottom: '20px',
+                                border: '1px solid #FFD700',
+                                display: 'flex',
+                                justifyContent: 'space-around',
+                                flexWrap: 'wrap',
+                                gap: '10px'
+                            }}>
+                                {(() => {
+                                    const bonuses = useGame().getCollectionBonuses();
+                                    return (
+                                        <>
+                                            <div style={{ color: '#FFD700' }}>💰 골드 +{bonuses.gold.toFixed(1)}%</div>
+                                            <div style={{ color: '#FF5252' }}>⚔️ 공격력 +{bonuses.attack.toFixed(1)}%</div>
+                                            <div style={{ color: '#E040FB' }}>💥 치명타피해 +{bonuses.critDamage.toFixed(1)}%</div>
+                                            <div style={{ color: '#00E676' }}>✨ 최종데미지 +{bonuses.finalDamage.toFixed(1)}%</div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+
                             {MUSHROOM_NAMES.map((name, index) => {
                                 const collection = state.mushroomCollection[name] || {
-                                    normal: false,
-                                    rare: false,
-                                    epic: false,
-                                    unique: false
+                                    normal: 0,
+                                    rare: 0,
+                                    epic: 0,
+                                    unique: 0
                                 };
 
-                                const hasAny = collection.normal || collection.rare || collection.epic || collection.unique;
+                                const hasAny = collection.normal > 0 || collection.rare > 0 || collection.epic > 0 || collection.unique > 0;
 
                                 return (
                                     <div
@@ -387,7 +412,7 @@ const WeaponCollection = ({ onClose }) => {
                                             </div>
                                         </div>
 
-                                        {/* Rarity Badges */}
+                                        {/* Rarity Badges & Mastery */}
                                         <div style={{
                                             flex: 1,
                                             display: 'grid',
@@ -395,9 +420,25 @@ const WeaponCollection = ({ onClose }) => {
                                             gap: '8px'
                                         }}>
                                             {['normal', 'rare', 'epic', 'unique'].map(rarity => {
-                                                const isCollected = collection[rarity];
-                                                const isClaimed = (state.claimedRewards.mushrooms[name] || {})[rarity];
+                                                let count = collection[rarity];
+                                                if (count === true) count = 1; // Legacy
+                                                if (count === false || count === undefined) count = 0;
+
+                                                const isClaimed = (state.claimedRewards?.mushrooms?.[name] || {})[rarity];
                                                 const color = getRarityColor(rarity);
+
+                                                const goals = { normal: 1000, rare: 100, epic: 50, unique: 10 };
+                                                const goal = goals[rarity];
+                                                const isMastered = count >= goal;
+                                                const progress = Math.min(100, (count / goal) * 100);
+
+                                                const bonusText = {
+                                                    normal: '골드+0.1%',
+                                                    rare: '공격+0.2%',
+                                                    epic: '치피+0.5%',
+                                                    unique: '최종+0.1%'
+                                                };
+
                                                 const labels = {
                                                     normal: '일반',
                                                     rare: '레어',
@@ -416,17 +457,18 @@ const WeaponCollection = ({ onClose }) => {
                                                         key={rarity}
                                                         style={{
                                                             position: 'relative',
-                                                            background: isCollected ? `${color}22` : 'rgba(0,0,0,0.3)',
-                                                            border: `2px solid ${isCollected ? color : '#444'}`,
+                                                            background: count > 0 ? `${color}22` : 'rgba(0,0,0,0.3)',
+                                                            border: isMastered ? `2px solid #FFD700` : `1px solid ${count > 0 ? color : '#444'}`,
                                                             borderRadius: '6px',
-                                                            padding: '8px',
+                                                            padding: '6px',
                                                             textAlign: 'center',
-                                                            opacity: isCollected ? 1 : 0.3,
-                                                            transition: 'all 0.2s'
+                                                            opacity: count > 0 ? 1 : 0.5,
+                                                            transition: 'all 0.2s',
+                                                            boxShadow: isMastered ? '0 0 10px rgba(255, 215, 0, 0.3)' : 'none'
                                                         }}
                                                     >
-                                                        {/* Diamond Badge - show if collected but not claimed */}
-                                                        {isCollected && !isClaimed && (
+                                                        {/* Diamond Badge */}
+                                                        {count > 0 && !isClaimed && (
                                                             <div
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -460,13 +502,40 @@ const WeaponCollection = ({ onClose }) => {
                                                         <div style={{
                                                             fontSize: '0.65rem',
                                                             fontWeight: 'bold',
-                                                            color: isCollected ? color : '#666',
-                                                            marginBottom: '3px'
+                                                            color: isMastered ? '#FFD700' : (count > 0 ? color : '#666'),
+                                                            marginBottom: '2px'
                                                         }}>
                                                             {labels[rarity]}
                                                         </div>
-                                                        <div style={{ fontSize: '1rem' }}>
-                                                            {isCollected ? '✓' : '○'}
+
+                                                        {/* Count / Goal */}
+                                                        <div style={{ fontSize: '0.7rem', color: '#fff', marginBottom: '2px' }}>
+                                                            {count}/{goal}
+                                                        </div>
+
+                                                        {/* Progress Bar */}
+                                                        <div style={{
+                                                            width: '100%',
+                                                            height: '3px',
+                                                            backgroundColor: '#333',
+                                                            borderRadius: '2px',
+                                                            overflow: 'hidden',
+                                                            marginBottom: '2px'
+                                                        }}>
+                                                            <div style={{
+                                                                width: `${progress}%`,
+                                                                height: '100%',
+                                                                backgroundColor: isMastered ? '#FFD700' : color
+                                                            }} />
+                                                        </div>
+
+                                                        {/* Bonus Text */}
+                                                        <div style={{
+                                                            fontSize: '0.55rem',
+                                                            color: isMastered ? '#FFD700' : '#888',
+                                                            fontWeight: isMastered ? 'bold' : 'normal'
+                                                        }}>
+                                                            {bonusText[rarity]}
                                                         </div>
                                                     </div>
                                                 );
@@ -493,7 +562,7 @@ const WeaponCollection = ({ onClose }) => {
                                         {petRarities.map(rarity => {
                                             const petId = `${type.id}_${rarity.id}`;
                                             const isCollected = !!state.pets.inventory[petId];
-                                            const isClaimed = state.claimedRewards.pets.includes(petId);
+                                            const isClaimed = state.claimedRewards?.pets?.includes(petId);
 
                                             return (
                                                 <div

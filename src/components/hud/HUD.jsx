@@ -413,7 +413,21 @@ const HUD = () => {
                                     }}
                                 >
                                     <span>👔</span>
-                                    <span>스킨</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>스킨</span>
+                                        {(state.currentStage.chapter < 75 || (state.currentStage.chapter === 75 && state.currentStage.stage < 1)) && (
+                                            <span style={{
+                                                fontSize: '0.65rem',
+                                                color: '#FFD700',
+                                                background: 'rgba(255, 215, 0, 0.2)',
+                                                padding: '1px 4px',
+                                                borderRadius: '6px',
+                                                border: '1px solid #FFD700'
+                                            }}>
+                                                75-1
+                                            </span>
+                                        )}
+                                    </div>
                                 </button>
 
                                 <div style={{

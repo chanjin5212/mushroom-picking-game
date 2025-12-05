@@ -14,7 +14,7 @@ import StageSelectMenu from '../modals/StageSelectMenu';
 import Toast from '../hud/Toast';
 
 const GameCanvas = () => {
-    const { state, dispatch, setChatOpen } = useGame();
+    const { state, dispatch, setChatOpen, getCollectionBonuses } = useGame();
     const containerRef = useRef(null);
     const [damageNumbers, setDamageNumbers] = useState([]);
     const [toast, setToast] = useState(null);
@@ -34,6 +34,15 @@ const GameCanvas = () => {
     // Removed attackIntervalRef, using game loop for attacks
     const lastAttackTimeRef = useRef(0);
     const isManualAttackingRef = useRef(false);
+    const getCollectionBonusesRef = useRef(getCollectionBonuses);
+
+    useEffect(() => {
+        getCollectionBonusesRef.current = getCollectionBonuses;
+    }, [getCollectionBonuses]);
+
+    useEffect(() => {
+        getCollectionBonusesRef.current = getCollectionBonuses;
+    }, [getCollectionBonuses]);
 
     // Game Loop Logic (Ref-based to avoid stale closures)
     const loopRef = useRef();
@@ -134,9 +143,9 @@ const GameCanvas = () => {
     const handleBossChallenge = () => {
         const { chapter, stage } = state.currentStage;
         const difficultyLevel = (chapter - 1) * 10 + stage;
-        const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.05) * 100);
+        const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
         const bossHp = baseHp * 1000;
-        const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.04) * 50) * 100;
+        const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50) * 100;
 
         const bossMushroom = [{
             id: 'BOSS',
@@ -482,11 +491,15 @@ const GameCanvas = () => {
 
             if (dist < range) {
                 // Artifact Bonuses
-                const attackBonus = (currentState.artifacts?.attackBonus?.level || 0) * 0.5;
+                const artifactAttackBonus = (currentState.artifacts?.attackBonus?.level || 0) * 0.5;
                 const critDamageBonus = (currentState.artifacts?.critDamageBonus?.level || 0) * 10;
 
+                // Collection Bonuses
+                const collectionBonuses = getCollectionBonusesRef.current ? getCollectionBonusesRef.current() : { gold: 0, attack: 0, critDamage: 0, finalDamage: 0 };
+                const collectionAttackMultiplier = 1 + (collectionBonuses.attack / 100);
+
                 // Calculate damage
-                const baseDamage = Math.floor(currentState.clickDamage * (1 + attackBonus / 100));
+                const baseDamage = Math.floor(currentState.clickDamage * (1 + artifactAttackBonus / 100) * collectionAttackMultiplier);
                 const isCritical = Math.random() * 100 < currentState.criticalChance;
                 let damage = baseDamage;
                 let isHyperCritical = false;
@@ -505,7 +518,7 @@ const GameCanvas = () => {
                 let isAbsoluteCritical = false;
 
                 if (isCritical) {
-                    const totalCritDamage = currentState.criticalDamage + critDamageBonus;
+                    const totalCritDamage = currentState.criticalDamage + critDamageBonus + collectionBonuses.critDamage;
                     damage = Math.floor(baseDamage * (totalCritDamage / 100));
 
                     isHyperCritical = Math.random() * 100 < currentState.hyperCriticalChance;
@@ -606,6 +619,11 @@ const GameCanvas = () => {
                     }
                 }
 
+                // Apply Collection Final Damage Bonus
+                if (collectionBonuses.finalDamage > 0) {
+                    damage = Math.floor(damage * (1 + (collectionBonuses.finalDamage / 100)));
+                }
+
                 // Pet Effects
                 const equippedPets = currentState.pets?.equipped || [];
 
@@ -668,6 +686,9 @@ const GameCanvas = () => {
                     dispatch({ type: 'DAMAGE_MUSHROOM', payload: { id: mushroom.id, damage: damage } });
 
                     if (mushroom.hp - damage <= 0) {
+                        // Calculate Gold Reward with all bonuses
+                        const collectionBonuses = getCollectionBonusesRef.current ? getCollectionBonusesRef.current() : { gold: 0, attack: 0, critDamage: 0, finalDamage: 0 };
+
                         // Slime Pet: Gold Bonus
                         const slimeBonus = equippedPets.reduce((bonus, petId) => {
                             const [type, rarity] = petId.split('_');
@@ -677,7 +698,13 @@ const GameCanvas = () => {
                             }
                             return bonus;
                         }, 0);
-                        const goldReward = Math.floor(mushroom.reward * (1 + slimeBonus));
+
+                        // Artifact Gold Bonus
+                        const artifactGoldBonus = (currentState.artifacts?.goldBonus?.level || 0) * 1; // 1% per level
+
+                        // Total Gold Multiplier = 1 + Artifact% + Pet% + Collection%
+                        const goldMultiplier = 1 + (artifactGoldBonus / 100) + slimeBonus + (collectionBonuses.gold / 100);
+                        const goldReward = Math.floor(mushroom.reward * goldMultiplier);
                         dispatch({ type: 'ADD_GOLD', payload: goldReward });
 
                         // Give diamond reward if mushroom has diamondReward (Unique mushrooms)
@@ -1007,29 +1034,44 @@ const GameCanvas = () => {
                         ⚔️ 스테이지 {state.currentStage.chapter}-{state.currentStage.stage}
                     </button>
 
-                    {/* World Mushroom Button - Only available from stage 20-1 */}
-                    {(state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) && (
-                        <button
-                            onClick={() => dispatch({ type: 'OPEN_WORLD_BOSS' })}
-                            style={{
-                                position: 'absolute',
-                                top: 120, // Below stage button
-                                right: 15,
-                                padding: '8px 16px',
-                                background: 'linear-gradient(45deg, #FFD700, #FFA500)',
-                                color: 'black',
-                                border: '2px solid white',
-                                borderRadius: '20px',
-                                cursor: 'pointer',
-                                zIndex: 300,
-                                fontWeight: 'bold',
-                                boxShadow: '0 0 10px rgba(255, 215, 0, 0.5)',
-                                animation: 'pulse 2s infinite'
-                            }}
-                        >
-                            🍄 월드버섯
-                        </button>
-                    )}
+                    {/* World Mushroom Button - Always visible, locked until 20-1 */}
+                    <button
+                        onClick={() => {
+                            const isUnlocked = state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1);
+                            if (isUnlocked) {
+                                dispatch({ type: 'OPEN_WORLD_BOSS' });
+                            }
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: 120, // Below stage button
+                            right: 15,
+                            padding: '8px 16px',
+                            background: (state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1))
+                                ? 'linear-gradient(45deg, #FFD700, #FFA500)'
+                                : 'linear-gradient(45deg, #666, #444)',
+                            color: (state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) ? 'black' : '#888',
+                            border: '2px solid white',
+                            borderRadius: '20px',
+                            cursor: (state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) ? 'pointer' : 'not-allowed',
+                            zIndex: 300,
+                            fontWeight: 'bold',
+                            boxShadow: (state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1))
+                                ? '0 0 10px rgba(255, 215, 0, 0.5)'
+                                : '0 2px 5px rgba(0,0,0,0.3)',
+                            animation: (state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) ? 'pulse 2s infinite' : 'none',
+                            opacity: (state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) ? 1 : 0.7,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }}
+                    >
+                        {(state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) ? '🍄' : '🔒'}
+                        월드버섯
+                        {!(state.currentStage.chapter > 20 || (state.currentStage.chapter === 20 && state.currentStage.stage >= 1)) && (
+                            <span style={{ fontSize: '0.7rem', color: '#FFD700' }}>(20-1)</span>
+                        )}
+                    </button>
                     <style>{`
                         @keyframes pulse {
                             0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
