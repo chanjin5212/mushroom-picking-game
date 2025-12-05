@@ -2,7 +2,7 @@ import React, { createContext, useReducer, useContext, useEffect, useState } fro
 import { supabase } from '../lib/supabase';
 import { WEAPONS } from '../data/weapons';
 import { getMushroomName } from '../data/mushrooms';
-import { initialState, SAVE_KEY } from '../data/constants';
+import { initialState, SAVE_KEY, BALANCE } from '../data/constants';
 
 const GameContext = createContext();
 
@@ -89,8 +89,8 @@ const generateMaps = () => {
         const mushroomCount = 100;
 
         for (let i = 0; i < mushroomCount; i++) {
-            const baseHp = level === 1 ? 10 : Math.floor(Math.pow(10, level * 0.065) * 100);
-            const baseReward = Math.floor(Math.pow(10, level * 0.025) * 50);
+            const baseHp = level === 1 ? 10 : Math.floor(Math.pow(10, level * BALANCE.HP_EXPONENT) * 100);
+            const baseReward = Math.floor(Math.pow(10, level * BALANCE.GOLD_EXPONENT) * 50);
             const x = 30 + Math.random() * 340;
             const y = 80 + Math.random() * 380;
 
@@ -897,8 +897,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50);
             const mushroomName = getMushroomName(chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -987,8 +987,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (nextStage.chapter - 1) * 10 + nextStage.stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50);
             const mushroomName = getMushroomName(nextStage.chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -1044,8 +1044,8 @@ const gameReducer = (state, action) => {
             const difficultyLevel = (chapter - 1) * 10 + stage;
             let newMushrooms = [];
 
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50);
             const mushroomName = getMushroomName(chapter);
 
             for (let i = 0; i < 100; i++) {
@@ -1132,8 +1132,8 @@ const gameReducer = (state, action) => {
             const mushroomName = getMushroomName(nextChapter);
 
             for (let i = 0; i < 100; i++) {
-                const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
-                const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
+                const baseHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
+                const baseReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50);
                 const x = 30 + Math.random() * 340;
                 const y = 80 + Math.random() * 380;
 
@@ -1171,9 +1171,9 @@ const gameReducer = (state, action) => {
         case 'SPAWN_BOSS': {
             // Clear all mobs and spawn ONE big boss
             const difficultyLevel = (state.stage.chapter - 1) * 10 + state.stage.level;
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
             const bossHp = baseHp * 1000; // 1000x HP
-            const bossReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50) * 100; // 100x Reward
+            const bossReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50) * 100; // 100x Reward
 
             const bossMushroom = {
                 id: 'boss-' + Date.now(),
@@ -1239,8 +1239,8 @@ const gameReducer = (state, action) => {
             // Calculate current difficulty to get base stats
             // Use currentStage instead of stage, and stage property instead of level
             const difficultyLevel = (state.currentStage.chapter - 1) * 10 + state.currentStage.stage;
-            const baseHp = Math.floor(Math.pow(10, difficultyLevel * 0.065) * 100);
-            const baseReward = Math.floor(Math.pow(10, difficultyLevel * 0.025) * 50);
+            const baseHp = Math.floor(Math.pow(10, difficultyLevel * BALANCE.HP_EXPONENT) * 100);
+            const baseReward = Math.floor(Math.pow(10, difficultyLevel * BALANCE.GOLD_EXPONENT) * 50);
 
             return {
                 ...state,
