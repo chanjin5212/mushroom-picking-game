@@ -74,6 +74,17 @@ const AdminPage = () => {
     const [editData, setEditData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [activeTab, setActiveTab] = useState('users'); // 'users' or 'mail'
+
+    // Mail sending state
+    const [mailForm, setMailForm] = useState({
+        title: '',
+        message: '',
+        diamond: 0,
+        gold: 0,
+        targetType: 'all' // 'all' or 'specific'
+    });
+    const [sendingMail, setSendingMail] = useState(false);
 
     useEffect(() => {
         fetchUsers();
@@ -184,6 +195,95 @@ const AdminPage = () => {
         }
     };
 
+    const sendMail = async () => {
+        if (!mailForm.title || !mailForm.message) {
+            alert('제목과 메시지를 입력해주세요.');
+            return;
+        }
+
+        if (mailForm.diamond === 0 && mailForm.gold === 0) {
+            if (!confirm('보상이 없는 우편을 발송하시겠습니까?')) {
+                return;
+            }
+        }
+
+        setSendingMail(true);
+        try {
+            const mail = {
+                id: Date.now().toString(),
+                title: mailForm.title,
+                message: mailForm.message,
+                rewards: {
+                    diamond: Number(mailForm.diamond) || 0,
+                    gold: parseAlphabetNumber(mailForm.gold) || 0
+                },
+                isRead: false,
+                isRewardClaimed: false,
+                createdAt: Date.now()
+            };
+
+            // Get target users
+            let targetUsers = [];
+            if (mailForm.targetType === 'all') {
+                targetUsers = users;
+            } else if (selectedUser) {
+                targetUsers = [selectedUser];
+            }
+
+            if (targetUsers.length === 0) {
+                alert('발송 대상이 없습니다.');
+                return;
+            }
+
+            // Send mail to each user
+            for (const user of targetUsers) {
+                // Fetch latest game_data from server to get current mailbox
+                const { data: latestUserData, error: fetchError } = await supabase
+                    .from('users')
+                    .select('game_data')
+                    .eq('id', user.id)
+                    .single();
+
+                if (fetchError) {
+                    console.error(`Failed to fetch user ${user.id}:`, fetchError);
+                    continue;
+                }
+
+                const currentMailbox = latestUserData.game_data?.mailbox || [];
+                const updatedMailbox = [...currentMailbox, mail];
+
+                await supabase
+                    .from('users')
+                    .update({
+                        game_data: {
+                            ...latestUserData.game_data,
+                            mailbox: updatedMailbox
+                        }
+                    })
+                    .eq('id', user.id);
+            }
+
+            alert(`${targetUsers.length}명에게 우편이 발송되었습니다!`);
+
+            // Reset form
+            setMailForm({
+                title: '',
+                message: '',
+                diamond: 0,
+                gold: 0,
+                targetType: 'all'
+            });
+
+            // Refresh users
+            await fetchUsers();
+        } catch (err) {
+            console.error('Error sending mail:', err);
+            alert('우편 발송 실패');
+        } finally {
+            setSendingMail(false);
+        }
+    };
+
     if (loading) {
         return <div style={{ padding: '20px', color: 'white' }}>로딩 중...</div>;
     }
@@ -198,28 +298,242 @@ const AdminPage = () => {
                 color: 'white'
             }}>
                 <h1 style={{ marginBottom: '20px' }}>🛠️ 관리자 페이지</h1>
-                <div style={{ display: 'grid', gap: '10px', maxWidth: '600px' }}>
-                    {users.map(user => (
-                        <div
-                            key={user.id}
-                            onClick={() => handleUserClick(user)}
-                            style={{
-                                padding: '15px',
-                                backgroundColor: '#2a2a2a',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#3a3a3a'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2a2a2a'}
-                        >
-                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{user.username}</div>
-                            <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
-                                ID: {user.id.substring(0, 8)}...
+
+                {/* Tab Navigation */}
+                <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    marginBottom: '20px',
+                    borderBottom: '2px solid #444'
+                }}>
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        style={{
+                            padding: '12px 24px',
+                            backgroundColor: activeTab === 'users' ? '#4CAF50' : 'transparent',
+                            color: 'white',
+                            border: 'none',
+                            borderBottom: activeTab === 'users' ? '3px solid #4CAF50' : 'none',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        👥 사용자 관리
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('mail')}
+                        style={{
+                            padding: '12px 24px',
+                            backgroundColor: activeTab === 'mail' ? '#FFD700' : 'transparent',
+                            color: activeTab === 'mail' ? '#000' : 'white',
+                            border: 'none',
+                            borderBottom: activeTab === 'mail' ? '3px solid #FFD700' : 'none',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        📬 우편 발송
+                    </button>
+                </div>
+
+                {/* Users Tab */}
+                {activeTab === 'users' && (
+                    <div style={{ display: 'grid', gap: '10px', maxWidth: '600px' }}>
+                        {users.map(user => (
+                            <div
+                                key={user.id}
+                                onClick={() => handleUserClick(user)}
+                                style={{
+                                    padding: '15px',
+                                    backgroundColor: '#2a2a2a',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#3a3a3a'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#2a2a2a'}
+                            >
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{user.username}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>
+                                    ID: {user.id.substring(0, 8)}...
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Mail Tab */}
+                {activeTab === 'mail' && (
+                    <div style={{ maxWidth: '600px' }}>
+                        <h2 style={{ marginBottom: '20px' }}>📬 우편 발송</h2>
+
+                        {/* Target Type */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', color: '#aaa' }}>
+                                발송 대상
+                            </label>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => setMailForm({ ...mailForm, targetType: 'all' })}
+                                    style={{
+                                        padding: '10px 20px',
+                                        backgroundColor: mailForm.targetType === 'all' ? '#4CAF50' : '#2a2a2a',
+                                        color: 'white',
+                                        border: '2px solid ' + (mailForm.targetType === 'all' ? '#4CAF50' : '#444'),
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    전체 사용자 ({users.length}명)
+                                </button>
                             </div>
                         </div>
-                    ))}
-                </div>
+
+                        {/* Title */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', color: '#aaa' }}>
+                                제목
+                            </label>
+                            <input
+                                type="text"
+                                value={mailForm.title}
+                                onChange={(e) => setMailForm({ ...mailForm, title: e.target.value })}
+                                placeholder="우편 제목을 입력하세요"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    backgroundColor: '#2a2a2a',
+                                    border: '1px solid #444',
+                                    borderRadius: '8px',
+                                    color: 'white',
+                                    fontSize: '1rem'
+                                }}
+                            />
+                        </div>
+
+                        {/* Message */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', color: '#aaa' }}>
+                                메시지
+                            </label>
+                            <textarea
+                                value={mailForm.message}
+                                onChange={(e) => setMailForm({ ...mailForm, message: e.target.value })}
+                                placeholder="우편 내용을 입력하세요"
+                                rows={6}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    backgroundColor: '#2a2a2a',
+                                    border: '1px solid #444',
+                                    borderRadius: '8px',
+                                    color: 'white',
+                                    fontSize: '1rem',
+                                    resize: 'vertical'
+                                }}
+                            />
+                        </div>
+
+                        {/* Rewards */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', color: '#aaa' }}>
+                                보상
+                            </label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '5px', color: '#888', fontSize: '0.9rem' }}>
+                                        💎 다이아
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={mailForm.diamond}
+                                        onChange={(e) => setMailForm({ ...mailForm, diamond: e.target.value })}
+                                        placeholder="0"
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#2a2a2a',
+                                            border: '1px solid #444',
+                                            borderRadius: '8px',
+                                            color: 'white',
+                                            fontSize: '1rem'
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '5px', color: '#888', fontSize: '0.9rem' }}>
+                                        💰 골드 (알파벳 가능)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={mailForm.gold}
+                                        onChange={(e) => setMailForm({ ...mailForm, gold: e.target.value })}
+                                        placeholder="예: 100K, 1M"
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#2a2a2a',
+                                            border: '1px solid #444',
+                                            borderRadius: '8px',
+                                            color: 'white',
+                                            fontSize: '1rem'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div style={{
+                            backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                            border: '2px solid rgba(255, 215, 0, 0.3)',
+                            borderRadius: '10px',
+                            padding: '15px',
+                            marginBottom: '20px'
+                        }}>
+                            <div style={{ color: '#FFD700', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                                📋 미리보기
+                            </div>
+                            <div style={{ color: 'white', fontWeight: 'bold', marginBottom: '5px' }}>
+                                {mailForm.title || '(제목 없음)'}
+                            </div>
+                            <div style={{ color: '#ddd', fontSize: '0.9rem', marginBottom: '10px', whiteSpace: 'pre-wrap' }}>
+                                {mailForm.message || '(메시지 없음)'}
+                            </div>
+                            {(mailForm.diamond > 0 || mailForm.gold > 0) && (
+                                <div style={{ display: 'flex', gap: '10px', fontSize: '0.9rem' }}>
+                                    {mailForm.diamond > 0 && <span>💎 {mailForm.diamond}</span>}
+                                    {mailForm.gold > 0 && <span>💰 {mailForm.gold}</span>}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Send Button */}
+                        <button
+                            onClick={sendMail}
+                            disabled={sendingMail}
+                            style={{
+                                width: '100%',
+                                padding: '15px',
+                                backgroundColor: '#FFD700',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontSize: '1.1rem',
+                                fontWeight: 'bold',
+                                cursor: sendingMail ? 'not-allowed' : 'pointer',
+                                opacity: sendingMail ? 0.6 : 1
+                            }}
+                        >
+                            {sendingMail ? '발송 중...' : `📬 ${mailForm.targetType === 'all' ? `전체 사용자 (${users.length}명)` : '선택한 사용자'}에게 발송`}
+                        </button>
+                    </div>
+                )}
             </div>
         );
     }

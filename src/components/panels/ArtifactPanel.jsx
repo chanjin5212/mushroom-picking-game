@@ -22,7 +22,7 @@ const ArtifactPanel = () => {
         { id: 'critDamageBonus', name: '암살자의 단검', icon: '🗡️', desc: '치명타 데미지 증가', bonusPerLevel: 10, unit: '%' },
         { id: 'moveSpeed', name: '헤르메스의 신발', icon: '👞', desc: '이동 속도 증가', bonusPerLevel: 0.005, unit: '' },
         { id: 'attackRange', name: '매의 눈', icon: '👁️', desc: '공격 범위 증가', bonusPerLevel: 0.04, unit: '' },
-        { id: 'goldBonus', name: '황금 성배', icon: '🏆', desc: '골드 획득량 증가', bonusPerLevel: 1, unit: '%' }
+        { id: 'goldBonus', name: '황금 성배', icon: '🏆', desc: '골드 획득량 증가', bonusPerLevel: 0.5, unit: '%' }
     ];
 
     // Show lock screen if not unlocked

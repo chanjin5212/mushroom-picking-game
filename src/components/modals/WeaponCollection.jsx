@@ -433,10 +433,10 @@ const WeaponCollection = ({ onClose }) => {
                                                 const progress = Math.min(100, (count / goal) * 100);
 
                                                 const bonusText = {
-                                                    normal: '골드+0.1%',
-                                                    rare: '공격+0.2%',
-                                                    epic: '치피+0.5%',
-                                                    unique: '최종+0.1%'
+                                                    normal: '골드+2%',
+                                                    rare: '공격+1.0%',
+                                                    epic: '치피+2.5%',
+                                                    unique: '최종+0.5%'
                                                 };
 
                                                 const labels = {

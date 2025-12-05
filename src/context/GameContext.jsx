@@ -1933,6 +1933,47 @@ const gameReducer = (state, action) => {
                 }
             };
 
+        // Mailbox System Actions
+        case 'MARK_MAIL_READ':
+            return {
+                ...state,
+                mailbox: state.mailbox.map(mail =>
+                    mail.id === action.payload
+                        ? { ...mail, isRead: true }
+                        : mail
+                )
+            };
+
+        case 'CLAIM_MAIL_REWARD': {
+            const mail = state.mailbox.find(m => m.id === action.payload);
+            if (!mail || !mail.rewards || mail.isRewardClaimed) {
+                return state;
+            }
+
+            return {
+                ...state,
+                diamond: state.diamond + (mail.rewards.diamond || 0),
+                gold: state.gold + (mail.rewards.gold || 0),
+                mailbox: state.mailbox.map(m =>
+                    m.id === action.payload
+                        ? { ...m, isRewardClaimed: true }
+                        : m
+                )
+            };
+        }
+
+        case 'DELETE_MAIL':
+            return {
+                ...state,
+                mailbox: state.mailbox.filter(mail => mail.id !== action.payload)
+            };
+
+        case 'ADD_TEST_MAIL':
+            return {
+                ...state,
+                mailbox: [...state.mailbox, action.payload]
+            };
+
 
 
         case 'RESET_GAME':
@@ -1985,7 +2026,8 @@ export const GameProvider = ({ children }) => {
                         artifacts: currentState.artifacts,
                         worldBoss: currentState.worldBoss,
                         pets: currentState.pets,
-                        skins: currentState.skins
+                        skins: currentState.skins,
+                        mailbox: currentState.mailbox
                     }
                 })
                 .eq('id', currentState.user.id);
@@ -2656,37 +2698,64 @@ export const GameProvider = ({ children }) => {
         if (!state.mushroomCollection) return bonuses;
 
         Object.values(state.mushroomCollection).forEach(collection => {
-            // Normal: 1000 kills -> Gold +0.1%
+            // Normal: 1000 kills -> Gold +2% (total 200% for 100 types)
             let normalCount = collection.normal;
             if (normalCount === true) normalCount = 1; // Legacy
             if (typeof normalCount === 'number' && normalCount >= 1000) {
-                bonuses.gold += 0.1;
+                bonuses.gold += 2;
             }
 
-            // Rare: 100 kills -> Attack +0.2%
+            // Rare: 100 kills -> Attack +1.0% (5x from 0.2%)
             let rareCount = collection.rare;
             if (rareCount === true) rareCount = 1;
             if (typeof rareCount === 'number' && rareCount >= 100) {
-                bonuses.attack += 0.2;
+                bonuses.attack += 1.0;
             }
 
-            // Epic: 50 kills -> Crit Damage +0.5%
+            // Epic: 50 kills -> Crit Damage +2.5% (5x from 0.5%)
             let epicCount = collection.epic;
             if (epicCount === true) epicCount = 1;
             if (typeof epicCount === 'number' && epicCount >= 50) {
-                bonuses.critDamage += 0.5;
+                bonuses.critDamage += 2.5;
             }
 
-            // Unique: 10 kills -> Final Damage +0.1%
+            // Unique: 10 kills -> Final Damage +0.5% (5x from 0.1%)
             let uniqueCount = collection.unique;
             if (uniqueCount === true) uniqueCount = 1;
             if (typeof uniqueCount === 'number' && uniqueCount >= 10) {
-                bonuses.finalDamage += 0.1;
+                bonuses.finalDamage += 0.5;
             }
         });
 
         return bonuses;
     };
+
+    // Test Mail Function (for development)
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.addTestMail = () => {
+                dispatch({
+                    type: 'ADD_TEST_MAIL',
+                    payload: {
+                        id: Date.now().toString(),
+                        title: '테스트 우편',
+                        message: '테스트 메시지입니다.\n\n이것은 우편함 시스템 테스트용 우편입니다.',
+                        rewards: { diamond: 100, gold: 10000 },
+                        isRead: false,
+                        isRewardClaimed: false,
+                        createdAt: Date.now()
+                    }
+                });
+                console.log('테스트 우편이 추가되었습니다!');
+            };
+        }
+
+        return () => {
+            if (typeof window !== 'undefined') {
+                delete window.addTestMail;
+            }
+        };
+    }, []);
 
     return (
         <GameContext.Provider value={{

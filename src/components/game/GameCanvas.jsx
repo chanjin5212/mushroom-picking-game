@@ -704,7 +704,7 @@ const GameCanvas = () => {
                         }, 0);
 
                         // Artifact Gold Bonus
-                        const artifactGoldBonus = (currentState.artifacts?.goldBonus?.level || 0) * 1; // 1% per level
+                        const artifactGoldBonus = (currentState.artifacts?.goldBonus?.level || 0) * 0.5; // 0.5% per level (max 500% at level 1000)
 
                         // Total Gold Multiplier = 1 + Artifact% + Pet% + Collection%
                         const goldMultiplier = 1 + (artifactGoldBonus / 100) + slimeBonus + (collectionBonuses.gold / 100);

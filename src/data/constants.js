@@ -141,7 +141,9 @@ export const initialState = {
         timeLeft: 0, // Timer
         dailyAttempts: 3, // Daily entry limit (3 per day)
         lastResetDate: new Date().toDateString() // Last reset date for daily limit
-    }
+    },
+    // Mailbox System
+    mailbox: [] // Array of mail objects: { id, title, message, rewards: { diamond?, gold? }, isRead, isRewardClaimed, createdAt }
 };
 
 // LocalStorage key
