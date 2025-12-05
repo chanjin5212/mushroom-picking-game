@@ -64,6 +64,135 @@ const InputField = ({ label, path, type = 'text', isAlphabetNumber = false, edit
                     실제 저장될 값: {parseAlphabetNumber(value).toExponential(2)}
                 </div>
             )}
+
+            {/* Welcome Mails Tab */}
+            {activeTab === 'welcome' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{
+                        backgroundColor: '#333',
+                        padding: '20px',
+                        borderRadius: '8px'
+                    }}>
+                        <h2 style={{ marginTop: 0 }}>신규 유저 우편 설정</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <input
+                                type="text"
+                                placeholder="제목"
+                                value={welcomeMailForm.title}
+                                onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, title: e.target.value })}
+                                style={{ padding: '10px', backgroundColor: '#444', border: '1px solid #555', color: 'white', borderRadius: '4px' }}
+                            />
+                            <textarea
+                                placeholder="메시지"
+                                value={welcomeMailForm.message}
+                                onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, message: e.target.value })}
+                                style={{ padding: '10px', backgroundColor: '#444', border: '1px solid #555', color: 'white', borderRadius: '4px', minHeight: '100px' }}
+                            />
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <input
+                                    type="number"
+                                    placeholder="다이아몬드"
+                                    value={welcomeMailForm.diamond}
+                                    onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, diamond: Number(e.target.value) })}
+                                    style={{ flex: 1, padding: '10px', backgroundColor: '#444', border: '1px solid #555', color: 'white', borderRadius: '4px' }}
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="골드"
+                                    value={welcomeMailForm.gold}
+                                    onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, gold: Number(e.target.value) })}
+                                    style={{ flex: 1, padding: '10px', backgroundColor: '#444', border: '1px solid #555', color: 'white', borderRadius: '4px' }}
+                                />
+                            </div>
+                            <button
+                                onClick={handleCreateWelcomeMail}
+                                style={{
+                                    padding: '15px',
+                                    backgroundColor: '#9C27B0',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                신규 우편 생성
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{
+                        backgroundColor: '#333',
+                        padding: '20px',
+                        borderRadius: '8px'
+                    }}>
+                        <h2 style={{ marginTop: 0 }}>등록된 우편 목록</h2>
+                        <div style={{ display: 'grid', gap: '10px' }}>
+                            {welcomeMails.map(mail => (
+                                <div
+                                    key={mail.id}
+                                    style={{
+                                        padding: '15px',
+                                        backgroundColor: '#444',
+                                        borderRadius: '4px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        opacity: mail.is_active ? 1 : 0.6
+                                    }}
+                                >
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            {mail.title}
+                                            {!mail.is_active && <span style={{ fontSize: '0.8rem', backgroundColor: '#666', padding: '2px 6px', borderRadius: '4px' }}>비활성</span>}
+                                        </div>
+                                        <div style={{ color: '#aaa', fontSize: '0.9rem', marginTop: '5px' }}>
+                                            {mail.message}
+                                        </div>
+                                        <div style={{ color: '#FFD700', fontSize: '0.9rem', marginTop: '5px' }}>
+                                            보상: 💎 {mail.rewards?.diamond || 0} / 💰 {formatNumber(mail.rewards?.gold || 0)}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button
+                                            onClick={() => handleToggleWelcomeMail(mail.id, mail.is_active)}
+                                            style={{
+                                                padding: '5px 10px',
+                                                backgroundColor: mail.is_active ? '#FF9800' : '#4CAF50',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {mail.is_active ? '비활성화' : '활성화'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteWelcomeMail(mail.id)}
+                                            style={{
+                                                padding: '5px 10px',
+                                                backgroundColor: '#F44336',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {welcomeMails.length === 0 && (
+                                <div style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
+                                    등록된 신규 유저 우편이 없습니다.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -74,7 +203,7 @@ const AdminPage = () => {
     const [editData, setEditData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState('users'); // 'users' or 'mail'
+    const [activeTab, setActiveTab] = useState('users'); // 'users', 'mail', 'welcome'
 
     // Mail sending state
     const [mailForm, setMailForm] = useState({
@@ -86,8 +215,18 @@ const AdminPage = () => {
     });
     const [sendingMail, setSendingMail] = useState(false);
 
+    // Welcome Mail state
+    const [welcomeMails, setWelcomeMails] = useState([]);
+    const [welcomeMailForm, setWelcomeMailForm] = useState({
+        title: '',
+        message: '',
+        diamond: 0,
+        gold: 0
+    });
+
     useEffect(() => {
         fetchUsers();
+        fetchWelcomeMails();
 
         // body와 root 스타일 변경
         const originalOverflow = document.body.style.overflow;
@@ -192,6 +331,83 @@ const AdminPage = () => {
             alert('저장 실패');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const fetchWelcomeMails = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('system_mails')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setWelcomeMails(data || []);
+        } catch (error) {
+            console.error('Failed to fetch welcome mails:', error);
+        }
+    };
+
+    const handleCreateWelcomeMail = async (e) => {
+        e.preventDefault();
+        if (!welcomeMailForm.title || !welcomeMailForm.message) {
+            alert('제목과 내용을 입력해주세요.');
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('system_mails')
+                .insert([{
+                    title: welcomeMailForm.title,
+                    message: welcomeMailForm.message,
+                    rewards: {
+                        diamond: Number(welcomeMailForm.diamond),
+                        gold: Number(welcomeMailForm.gold)
+                    },
+                    is_active: true
+                }]);
+
+            if (error) throw error;
+
+            alert('신규 유저 우편이 생성되었습니다.');
+            setWelcomeMailForm({ title: '', message: '', diamond: 0, gold: 0 });
+            fetchWelcomeMails();
+        } catch (error) {
+            console.error('Failed to create welcome mail:', error);
+            alert('우편 생성 실패: ' + error.message);
+        }
+    };
+
+    const handleDeleteWelcomeMail = async (id) => {
+        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('system_mails')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchWelcomeMails();
+        } catch (error) {
+            console.error('Failed to delete welcome mail:', error);
+            alert('삭제 실패: ' + error.message);
+        }
+    };
+
+    const handleToggleWelcomeMail = async (id, currentStatus) => {
+        try {
+            const { error } = await supabase
+                .from('system_mails')
+                .update({ is_active: !currentStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchWelcomeMails();
+        } catch (error) {
+            console.error('Failed to toggle welcome mail:', error);
+            alert('상태 변경 실패: ' + error.message);
         }
     };
 
@@ -337,6 +553,22 @@ const AdminPage = () => {
                         }}
                     >
                         📬 우편 발송
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('welcome')}
+                        style={{
+                            padding: '12px 24px',
+                            backgroundColor: activeTab === 'welcome' ? '#9C27B0' : 'transparent',
+                            color: activeTab === 'welcome' ? '#fff' : 'white',
+                            border: 'none',
+                            borderBottom: activeTab === 'welcome' ? '3px solid #9C27B0' : 'none',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🎁 신규 유저 우편
                     </button>
                 </div>
 
@@ -532,6 +764,158 @@ const AdminPage = () => {
                         >
                             {sendingMail ? '발송 중...' : `📬 ${mailForm.targetType === 'all' ? `전체 사용자 (${users.length}명)` : '선택한 사용자'}에게 발송`}
                         </button>
+                    </div>
+                )}
+
+                {/* Welcome Mails Tab */}
+                {activeTab === 'welcome' && (
+                    <div style={{ maxWidth: '600px' }}>
+                        <h2 style={{ marginBottom: '20px' }}>🎁 신규 유저 우편 설정</h2>
+
+                        {/* Create New Welcome Mail */}
+                        <div style={{
+                            backgroundColor: '#2a2a2a',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            marginBottom: '30px',
+                            border: '1px solid #444'
+                        }}>
+                            <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#9C27B0' }}>새 우편 생성</h3>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', color: '#aaa' }}>제목</label>
+                                <input
+                                    type="text"
+                                    value={welcomeMailForm.title}
+                                    onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, title: e.target.value })}
+                                    placeholder="환영합니다!"
+                                    style={{ width: '100%', padding: '10px', backgroundColor: '#333', border: '1px solid #555', color: 'white', borderRadius: '4px' }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', color: '#aaa' }}>메시지</label>
+                                <textarea
+                                    value={welcomeMailForm.message}
+                                    onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, message: e.target.value })}
+                                    placeholder="환영 메시지를 입력하세요"
+                                    rows={4}
+                                    style={{ width: '100%', padding: '10px', backgroundColor: '#333', border: '1px solid #555', color: 'white', borderRadius: '4px', resize: 'vertical' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '5px', color: '#aaa' }}>💎 다이아</label>
+                                    <input
+                                        type="number"
+                                        value={welcomeMailForm.diamond}
+                                        onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, diamond: e.target.value })}
+                                        style={{ width: '100%', padding: '10px', backgroundColor: '#333', border: '1px solid #555', color: 'white', borderRadius: '4px' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '5px', color: '#aaa' }}>💰 골드</label>
+                                    <input
+                                        type="number"
+                                        value={welcomeMailForm.gold}
+                                        onChange={(e) => setWelcomeMailForm({ ...welcomeMailForm, gold: e.target.value })}
+                                        style={{ width: '100%', padding: '10px', backgroundColor: '#333', border: '1px solid #555', color: 'white', borderRadius: '4px' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleCreateWelcomeMail}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    backgroundColor: '#9C27B0',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '1rem',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                신규 우편 생성
+                            </button>
+                        </div>
+
+                        {/* List Existing Welcome Mails */}
+                        <h3 style={{ marginBottom: '15px' }}>등록된 우편 목록 ({welcomeMails.length})</h3>
+                        <div style={{ display: 'grid', gap: '15px' }}>
+                            {welcomeMails.map(mail => (
+                                <div
+                                    key={mail.id}
+                                    style={{
+                                        backgroundColor: '#2a2a2a',
+                                        padding: '15px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #444',
+                                        opacity: mail.is_active ? 1 : 0.6
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                {mail.title}
+                                                {!mail.is_active && <span style={{ fontSize: '0.8rem', backgroundColor: '#666', padding: '2px 6px', borderRadius: '4px' }}>비활성</span>}
+                                            </div>
+                                            <div style={{ color: '#aaa', fontSize: '0.9rem', marginTop: '5px' }}>
+                                                {new Date(mail.created_at).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                onClick={() => handleToggleWelcomeMail(mail.id, mail.is_active)}
+                                                style={{
+                                                    padding: '5px 10px',
+                                                    backgroundColor: mail.is_active ? '#FF9800' : '#4CAF50',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.8rem'
+                                                }}
+                                            >
+                                                {mail.is_active ? '비활성화' : '활성화'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteWelcomeMail(mail.id)}
+                                                style={{
+                                                    padding: '5px 10px',
+                                                    backgroundColor: '#F44336',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.8rem'
+                                                }}
+                                            >
+                                                삭제
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ color: '#ddd', fontSize: '0.95rem', marginBottom: '10px', whiteSpace: 'pre-wrap' }}>
+                                        {mail.message}
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '15px', fontSize: '0.9rem', color: '#FFD700', backgroundColor: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
+                                        <span>💎 {mail.rewards?.diamond || 0}</span>
+                                        <span>💰 {formatNumber(mail.rewards?.gold || 0)}</span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {welcomeMails.length === 0 && (
+                                <div style={{ textAlign: 'center', color: '#888', padding: '30px', backgroundColor: '#2a2a2a', borderRadius: '8px' }}>
+                                    등록된 신규 유저 우편이 없습니다.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

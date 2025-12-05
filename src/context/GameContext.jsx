@@ -2381,6 +2381,29 @@ export const GameProvider = ({ children }) => {
 
             if (existing) throw new Error('이미 존재하는 아이디입니다.');
 
+            // Fetch active welcome mails
+            let initialMailbox = [];
+            try {
+                const { data: welcomeMails } = await supabase
+                    .from('system_mails')
+                    .select('*')
+                    .eq('is_active', true);
+
+                if (welcomeMails && welcomeMails.length > 0) {
+                    initialMailbox = welcomeMails.map(mail => ({
+                        id: `welcome-${Date.now()}-${mail.id}`,
+                        title: mail.title,
+                        message: mail.message,
+                        rewards: mail.rewards,
+                        isRead: false,
+                        isRewardClaimed: false,
+                        createdAt: Date.now()
+                    }));
+                }
+            } catch (err) {
+                console.error('Failed to fetch welcome mails:', err);
+            }
+
             // Create new user
             const { data, error } = await supabase
                 .from('users')
@@ -2407,7 +2430,8 @@ export const GameProvider = ({ children }) => {
                                 inventory: {},
                                 equipped: [],
                                 unlockedSlots: 1
-                            }
+                            },
+                            mailbox: initialMailbox // Add welcome mails
                         }
                     }
                 ])
